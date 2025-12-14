@@ -1,7 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <ui:VisualElement name="TileTypesItem" style="flex-grow: 1; flex-direction: row; min-height: 30px; -unity-text-align: middle-left;">
-        <ui:Label tabindex="-1" text="0" parse-escape-sequences="true" display-tooltip-when-elided="true" focusable="false" name="Index" style="height: 20px; align-items: auto; flex-wrap: nowrap; flex-shrink: 1; flex-grow: 0.1; align-self: center; flex-direction: column; -unity-text-align: middle-right; width: 50px; white-space: nowrap; font-size: 13px; justify-content: flex-start;" />
-        <ui:TextField picking-mode="Ignore" value="类型名称" name="TileTypeInput" style="flex-grow: 1; flex-shrink: 1; align-items: center; justify-content: center; align-self: center; -unity-text-align: middle-right;" />
-        <ui:Button text="-" parse-escape-sequences="true" display-tooltip-when-elided="true" name="RemoveButton" style="max-width: 20px; max-height: 20px; align-self: center; margin-left: 10px;" />
-    </ui:VisualElement>
-</ui:UXML>
