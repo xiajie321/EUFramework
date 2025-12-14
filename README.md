@@ -1,4 +1,34 @@
-# PureCore
+# # FramworkerCore分支
+
+该分支是进行工具链整合的分支,内容包含:Unity客户端框架、工具的编辑器集成。
+
+## 已经完成的工作
+
+- 引入Luban并附带一个Tools\Luban\Data\GamConfig\Luban配置工具.exe便于配置鲁班路径跟解析方式。
+
+- 引入PrimeTween动画库。
+
+- 引入Zlinq查询库。
+
+- 引入NuGetForUnity集成在Unity内的NuGet管理库。
+
+- 引入UniTask。
+
+- 引入YooAsset资源管理方案。
+
+- 引入HybridCLR。
+
+## 正在进行的工作
+
+- 引入Fantasy框架。
+
+## 计划
+
+- 将LuBan工具集成到Unity编辑器中,而非外置,可以通过编辑器内面板修改数据映射到Exl再进行生成Json的操作。
+
+---
+
+# PureCore分支
 
 该框架的PureCore分支仅包含常用库,无任何额外的编辑器工具或者框架,省去游戏开发新建项目时引入常用库时的各种导包操作,仅需下载该分支作为模板即可。
 
@@ -22,7 +52,13 @@
 
 ## 正在进行的工作
 
+暂无
+
 ## 计划
+
+暂无
+
+---
 
 ## 引用
 
