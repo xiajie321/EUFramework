@@ -1,8 +1,8 @@
-# EUFramworker
+# PureCore
 
- 这是一个Unity的2D游戏工具合集,便于团队快速合作开发。
+该框架的PureCore分支仅包含常用库,无任何额外的编辑器工具或者框架,省去游戏开发新建项目时引入常用库时的各种导包操作,仅需下载该分支作为模板即可。
 
-该集合的大部分工具都可以单独拎出来,单独使用。
+注: 该模板创建版本为Unity 2022.3.62f2c1版本 渲染管线为urp(仅安装了2d相关库,如需3d开发请自行安装)
 
 ## 已经完成的工作
 
@@ -22,11 +22,7 @@
 
 ## 正在进行的工作
 
-- 引入Fantasy框架。
-
 ## 计划
-
-- 将LuBan工具集成到Unity编辑器中,而非外置,可以通过编辑器内面板修改数据映射到Exl再进行生成Json的操作。
 
 ## 引用
 
@@ -44,4 +40,4 @@
 
 - [UniTask][Cysharp/UniTask: Provides an efficient allocation free async/await integration for Unity.](https://github.com/Cysharp/UniTask)
 
-- [Fantasy] [qq362946/奇幻：C # 游戏框架，但不限于游戏。可用于非游戏业务开发](https://github.com/qq362946/Fantasy)(https://github.com/annulusgames/Alchemy)**
+- [Fantasy] [qq362946/奇幻：C # 游戏框架，但不限于游戏。可用于非游戏业务开发](https://github.com/qq362946/Fantasy)([GitHub - annulusgames/Alchemy: Provides a rich set of editor extensions and serialization extensions for Unity.](https://github.com/annulusgames/Alchemy))**
