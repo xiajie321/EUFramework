@@ -16,13 +16,13 @@
 
 - 引入UniTask。
 
+- 引入YooAsset资源管理方案。
+
+- 引入HybridCLR。
+
 ## 正在进行的工作
 
-- 引入HybridCLR热更。
-
 - 引入Fantasy框架。
-
-- 引入YooAsset资源管理方案。
 
 ## 计划
 
