@@ -2,9 +2,9 @@
 
 ## 目录 (API 导航)
 
-*   [1. 设计来源](#1-设计来源)
-*   [2. 设计思路与架构分层](#2-设计思路与架构分层)
-*   [3. 核心优势：为什么这样设计？](#3-核心优势为什么这样设计)
+*   [1. 项目概述](#1-项目概述)
+*   [2. 架构设计原则](#2-架构设计原则)
+*   [3. 性能优化与技术实现](#3-性能优化与技术实现)
 *   [4. 详细使用说明](#4-详细使用说明)
     *   [4.1 定义架构 (Architecture)](#41-定义架构-architecture)
     *   [4.2 定义模型 (Model)](#42-定义模型-model)
@@ -16,72 +16,109 @@
     *   [4.8 自动管理生命周期 (Extensions)](#48-自动管理生命周期-extensions)
 *   [5. 最佳实践](#5-最佳实践)
 
-## 1. 设计来源
+## 1. 项目概述
 
-本架构的核心设计思想深受 **QFramework** 的启发。QFramework 以其简洁的 API 设计（如 `this.GetSystem`、`this.SendCommand`）和清晰的分层架构（MVC/DDD 混合体）在 Unity 开发者中广受欢迎。
+**EUFarmworker Core** 是一套专为 Unity 开发的高性能、轻量级 **游戏架构框架 (Game Architecture Framework)**。
+它基于 **IOC (控制反转)** 和 **CQRS (命令查询职责分离)** 思想设计，旨在解决中大型 Unity 项目中常见的代码耦合严重、逻辑混乱和维护困难等问题。
 
-**EUFarmworker Core** 旨在继承 QFramework **"易于上手、代码整洁"** 的优良基因，同时针对高性能场景（如移动端游戏、高频逻辑循环）进行了底层的重构与优化。
+### 1.1 灵感来源与致敬
 
-## 2. 设计思路与架构分层
+本架构的核心设计灵感主要来源于 **QFramework**。
+QFramework 以其优雅的 API 设计（如 `this.GetSystem`、`this.SendCommand`）和清晰的架构分层，在 Unity 中文社区中树立了良好的标杆。
 
-本架构遵循经典的 **四层架构** 设计：
+EUFarmworker Core 继承了 QFramework **"易于上手、代码整洁"** 的优良基因，保留了其广受好评的 API 风格和架构思想。
+在此基础上，我们针对 **运行时性能 (Runtime Performance)** 进行了深度的底层重构。我们的目标是在维持 OOP (面向对象) 开发便利性的前提下，将框架层面的性能开销降至最低。
 
-1.  **表现层 (View/Controller)**：
-    *   负责处理用户输入和界面显示。
-    *   **只做**：发送 Command、发送 Query、监听 Event。
-    *   **不做**：直接修改 Model、直接处理复杂业务逻辑。
-2.  **系统层 (System)**：
-    *   负责处理业务逻辑（Business Logic）。
-    *   管理多个 Model 的状态变更。
-    *   响应 Command，发送 Event。
-3.  **模型层 (Model)**：
-    *   负责管理数据（Data）。
-    *   使用 `BindableProperty` 提供响应式数据。
-    *   **只做**：存储数据、数据的序列化/反序列化。
-4.  **工具层 (Utility)**：
-    *   负责提供通用的基础设施（如存储、网络、算法）。
-    *   无状态，纯功能性支持。
+## 2. 架构设计原则
 
-### 核心交互规则
+本框架遵循严格的分层设计与单向数据流原则，确保系统的可维护性与可扩展性。
 
-*   **Command (命令)**：用于**修改**数据。View -> System/Model。
-*   **Query (查询)**：用于**获取**数据。View <- System/Model。
-*   **Event (事件)**：用于**通知**变化。Model/System -> View。
+### 2.1 四层架构体系
 
-## 3. 核心优势：为什么这样设计？
+1.  **表现层 (Presentation Layer / View)**
+    *   **定义**：负责图形渲染、UI 交互及用户输入捕获。
+    *   **职责**：只做"表面功夫"。它通过发送 Command 修改数据，通过 Query 获取数据，通过监听 Event 响应变化。
+    *   **禁忌**：严禁直接修改 Model，严禁包含复杂的业务逻辑算法。
+    *   **组件**：`MonoBehaviour` 脚本、UI 面板、特效控制器。
 
-相较于原版 QFramework 或传统的 OOP 架构，EUFarmworker Core 最大的改进在于 **"零 GC (Zero Garbage Collection)"**。
+2.  **系统层 (System Layer)**
+    *   **定义**：承载核心业务逻辑 (Business Logic) 的容器。
+    *   **职责**：维护系统的整体状态，协调多个 Model 的工作。响应 Command，触发 Event。
+    *   **组件**：如 `AchievementSystem` (成就系统), `InventorySystem` (背包系统)。
 
-### 3.1 传统架构的痛点
+3.  **模型层 (Model Layer)**
+    *   **定义**：数据的持有者与管理者。
+    *   **职责**：维护数据的持久化状态 (State)。使用 `BindableProperty<T>` 提供响应式数据能力。
+    *   **禁忌**：不应包含复杂的业务流程逻辑，只负责数据的存取与基础校验。
+    *   **组件**：如 `PlayerModel` (玩家数据), `SettingModel` (设置数据)。
 
-在传统的命令模式实现中，每次操作通常需要创建一个对象：
+4.  **工具层 (Utility Layer)**
+    *   **定义**：提供通用的、无状态的基础设施支持。
+    *   **职责**：封装底层技术细节，提供易用的 API。与具体业务逻辑完全解耦。
+    *   **组件**：`Storage` (存储), `Network` (网络), `Math` (算法库)。
 
-```csharp
-// 传统方式：每次调用都会在堆(Heap)上分配一个新的对象
-this.SendCommand(new AttackCommand(target)); 
-// 结果：产生 GC Garbage，导致内存碎片，增加 GC 触发频率，引起卡顿。
-```
+### 2.2 核心交互模式 (CQRS)
 
-### 3.2 EUFarmworker 的解决方案
+框架采用 **CQRS (Command Query Responsibility Segregation)** 模式来规范模块间的通信，清晰分离了"读"与"写"的关注点：
 
-我们利用 C# 的 **Struct (结构体)** 和 **泛型约束** 彻底解决了这个问题：
+*   **Command (写操作)**：
+    *   用于**修改**系统状态或数据。
+    *   **特征**：无返回值，语义明确（如 `UpgradeSkillCommand`）。
+    *   **流向**：View -> System/Model。
+*   **Query (读操作)**：
+    *   用于**获取**系统数据。
+    *   **特征**：必须有返回值，无副作用（不修改任何状态）。
+    *   **流向**：View <- System/Model。
+*   **Event (事件通知)**：
+    *   用于**广播**状态的变化。
+    *   **特征**：发布/订阅模式，实现模块间的解耦。
+    *   **流向**：Model/System -> View。
 
-1.  **Struct 代替 Class**：Command、Query 和 Event 全部定义为 `struct`。结构体是值类型，分配在栈(Stack)上，随作用域结束自动销毁，不经过 GC。
-2.  **泛型约束避免装箱**：
+## 3. 性能优化与技术实现
+
+本框架的核心竞争力在于对 **GC (Garbage Collection)** 的极致控制与运行时性能优化。
+
+### 3.1 性能定位：OOP 架构中的极限
+
+在讨论性能时，我们必须严谨地区分 **架构类型**。
+
+*   **ECS (Entity Component System)**：如 Unity DOTS 或 Entitas。通过数据导向设计 (DOD) 和内存连续布局，极大提高了 CPU 缓存命中率，适合处理海量（10万+）同类实体。
+*   **OOP (Object Oriented Programming)**：如传统的 MVC/IOC 框架。优势在于代码组织直观、开发效率高，但在处理海量对象时，因内存分散导致的 Cache Miss 是其天然劣势。
+
+**EUFarmworker Core 的定位是：在 OOP 范畴内做到性能极致。**
+
+我们不追求替代 ECS 去处理海量单位的物理运算。我们的目标是解决 **UI 系统、游戏流程控制、业务逻辑模块** 中的性能痛点——即在这些传统 OOP 领域中，消除因框架设计不当（如滥用装箱、频繁 new 对象）导致的额外 GC 开销。
+
+### 3.2 零分配通信 (Zero-Allocation Communication)
+
+在传统的 C# OOP 框架中，消息传递通常伴随着对象的创建（`new Command()`），这在高频逻辑循环中会产生大量的内存垃圾，导致 GC 峰值。
+
+EUFarmworker Core 采用了以下策略彻底解决此问题：
+
+*   **Struct over Class**：所有的 `ICommand`、`IQuery`、`IEvent` 实现均采用 `struct` (结构体)。结构体在栈 (Stack) 上分配，随作用域结束立即回收，**不产生任何 GC 压力**。
+*   **泛型约束避免装箱 (No Boxing)**：
+    框架接口采用严格的泛型约束（`where T : struct`），确保结构体在传递过程中**不会**被装箱为引用类型（Interface）。
     ```csharp
-    // 架构层定义
+    // 编译器会生成专门的泛型代码，直接传递结构体，无堆内存分配
     void SendCommand<T>(T command) where T : struct, ICommand;
     ```
-    通过 `where T : struct` 约束，编译器会生成专门的泛型代码路径，避免将 struct 装箱(Boxing)成接口对象（装箱会导致堆分配）。
 
-### 3.3 性能对比
+> **技术说明**：这意味着，如果您的业务逻辑（Command/Event 内部）不自行产生 GC，那么使用本框架进行高频的模块间通信将**不会引入任何额外的 GC 负担**。
 
-| 特性 | 传统 QFramework (Class) | EUFarmworker Core (Struct) |
-| :--- | :--- | :--- |
-| **内存分配** | 每次调用都在堆上分配 | **0 分配** (栈上分配) |
-| **GC 压力** | 高 (高频调用时) | **无** |
-| **调用开销** | 虚方法调用 | 直接调用 (泛型特化) |
-| **数据局部性** | 差 (分散在堆中) | 好 (连续在栈上) |
+### 3.2 静态泛型缓存 (Static Generic Caching)
+
+为了解决 IOC 容器常见的性能瓶颈（字典查找开销），框架内部实现了 **静态泛型缓存**。
+
+*   **机制**：利用 C# 泛型类的静态字段特性 (`static class InstanceCache<T>`)。
+*   **效果**：首次获取模块时进行查找并缓存，后续所有的 `GetSystem<T>()` 或 `GetModel<T>()` 调用等同于直接访问静态变量。
+*   **复杂度**：从 O(1) 的哈希查找优化为 **纯内存寻址**，极大地提升了模块获取速度。
+
+### 3.3 响应式数据优化
+
+内置的 `BindableProperty<T>` 针对值类型进行了特殊优化：
+*   在 Setter 中使用 `EqualityComparer<T>.Default` 进行比对。
+*   避免了传统 `object.Equals` 导致的装箱操作。
+*   确保只有数据真正变化时才触发事件，减少不必要的逻辑执行与 UI 刷新。
 
 ## 4. 详细使用说明
 
