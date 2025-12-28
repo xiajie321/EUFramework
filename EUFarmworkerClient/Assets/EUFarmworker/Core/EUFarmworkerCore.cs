@@ -311,6 +311,16 @@ namespace EUFarmworker.Core
             }
         }
 
+        // --- 极速缓存 (Zero-Cost Access) ---
+        // 利用静态泛型类的特性，为每个 T (Architecture) 下的每个模块类型提供极速访问
+        private static class InstanceCache<TInstance>
+        {
+            public static TInstance Instance;
+        }
+
+        // 用于在架构销毁时重置所有静态缓存
+        private static List<Action> mResetActions = new List<Action>();
+
         // --- 内部状态 ---
         private IOCContainer mContainer = new IOCContainer();
         private TypeEventSystem mEventSystem = new TypeEventSystem();
@@ -328,6 +338,13 @@ namespace EUFarmworker.Core
             system.SetArchitecture(this);
             mContainer.Register<TSystem>(system);
 
+            // 写入静态缓存
+            if (InstanceCache<TSystem>.Instance == null)
+            {
+                mResetActions.Add(() => InstanceCache<TSystem>.Instance = null);
+            }
+            InstanceCache<TSystem>.Instance = system;
+
             if (mArchitecture == null) // 还在 Init 阶段
             {
                 mSystems.Add(system);
@@ -343,6 +360,13 @@ namespace EUFarmworker.Core
             model.SetArchitecture(this);
             mContainer.Register<TModel>(model);
 
+            // 写入静态缓存
+            if (InstanceCache<TModel>.Instance == null)
+            {
+                mResetActions.Add(() => InstanceCache<TModel>.Instance = null);
+            }
+            InstanceCache<TModel>.Instance = model;
+
             if (mArchitecture == null)
             {
                 mModels.Add(model);
@@ -357,20 +381,42 @@ namespace EUFarmworker.Core
         {
             utility.SetArchitecture(this);
             mContainer.Register<TUtility>(utility);
+
+            // 写入静态缓存
+            if (InstanceCache<TUtility>.Instance == null)
+            {
+                mResetActions.Add(() => InstanceCache<TUtility>.Instance = null);
+            }
+            InstanceCache<TUtility>.Instance = utility;
         }
 
         public TSystem GetSystem<TSystem>() where TSystem : class, ISystem
         {
+            // 优先读取静态缓存 (极速路径)
+            if (InstanceCache<TSystem>.Instance != null)
+            {
+                return InstanceCache<TSystem>.Instance;
+            }
             return mContainer.Get<TSystem>();
         }
 
         public TModel GetModel<TModel>() where TModel : class, IModel
         {
+            // 优先读取静态缓存 (极速路径)
+            if (InstanceCache<TModel>.Instance != null)
+            {
+                return InstanceCache<TModel>.Instance;
+            }
             return mContainer.Get<TModel>();
         }
 
         public TUtility GetUtility<TUtility>() where TUtility : class, IUtility
         {
+            // 优先读取静态缓存 (极速路径)
+            if (InstanceCache<TUtility>.Instance != null)
+            {
+                return InstanceCache<TUtility>.Instance;
+            }
             return mContainer.Get<TUtility>();
         }
 
@@ -416,6 +462,13 @@ namespace EUFarmworker.Core
         
         protected virtual void OnDestroy()
         {
+            // 清空静态缓存
+            foreach (var action in mResetActions)
+            {
+                action();
+            }
+            mResetActions.Clear();
+
             mContainer.Clear();
             mEventSystem.Clear();
         }
@@ -463,7 +516,7 @@ namespace EUFarmworker.Core
             get => mValue;
             set
             {
-                if (!object.Equals(mValue, value))
+                if (!EqualityComparer<T>.Default.Equals(mValue, value))
                 {
                     mValue = value;
                     OnValueChanged?.Invoke(value);
@@ -536,9 +589,7 @@ namespace EUFarmworker.Core
     {
         public static void UnRegisterWhenGameObjectDestroyed(this IUnRegister self, GameObject gameObject)
         {
-            var trigger = gameObject.GetComponent<UnRegisterTrigger>();
-
-            if (!trigger)
+            if (!gameObject.TryGetComponent<UnRegisterTrigger>(out var trigger))
             {
                 trigger = gameObject.AddComponent<UnRegisterTrigger>();
             }
@@ -548,9 +599,7 @@ namespace EUFarmworker.Core
 
         public static void UnRegisterWhenGameObjectDisabled(this IUnRegister self, GameObject gameObject)
         {
-            var trigger = gameObject.GetComponent<UnRegisterOnDisableTrigger>();
-
-            if (!trigger)
+            if (!gameObject.TryGetComponent<UnRegisterOnDisableTrigger>(out var trigger))
             {
                 trigger = gameObject.AddComponent<UnRegisterOnDisableTrigger>();
             }

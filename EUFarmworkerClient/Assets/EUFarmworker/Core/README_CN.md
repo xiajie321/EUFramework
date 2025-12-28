@@ -1,5 +1,21 @@
 # EUFarmworker Core 架构文档
 
+## 目录 (API 导航)
+
+*   [1. 设计来源](#1-设计来源)
+*   [2. 设计思路与架构分层](#2-设计思路与架构分层)
+*   [3. 核心优势：为什么这样设计？](#3-核心优势为什么这样设计)
+*   [4. 详细使用说明](#4-详细使用说明)
+    *   [4.1 定义架构 (Architecture)](#41-定义架构-architecture)
+    *   [4.2 定义模型 (Model)](#42-定义模型-model)
+    *   [4.3 定义系统 (System)](#43-定义系统-system)
+    *   [4.4 定义 Command (写操作)](#44-定义-command-写操作)
+    *   [4.5 定义 Query (读操作)](#45-定义-query-读操作)
+    *   [4.6 定义 Event (事件)](#46-定义-event-事件)
+    *   [4.7 在 View (MonoBehaviour) 中使用](#47-在-view-monobehaviour-中使用)
+    *   [4.8 自动管理生命周期 (Extensions)](#48-自动管理生命周期-extensions)
+*   [5. 最佳实践](#5-最佳实践)
+
 ## 1. 设计来源
 
 本架构的核心设计思想深受 **QFramework** 的启发。QFramework 以其简洁的 API 设计（如 `this.GetSystem`、`this.SendCommand`）和清晰的分层架构（MVC/DDD 混合体）在 Unity 开发者中广受欢迎。
@@ -89,6 +105,10 @@ public class GameApp : Architecture<GameApp>
 
 ### 4.2 定义模型 (Model)
 
+**使用场景**：
+*   定义游戏中的数据状态（如：分数、玩家生命值、背包物品列表）。
+*   需要数据变更通知时（BindableProperty）。
+
 使用 `BindableProperty` 来管理需要响应式更新的数据。
 
 ```csharp
@@ -110,6 +130,10 @@ public class ScoreModel : AbstractModel, IScoreModel
 ```
 
 ### 4.3 定义系统 (System)
+
+**使用场景**：
+*   实现具体的游戏规则和业务逻辑（如：计算得分、判断游戏胜负、处理技能释放）。
+*   需要跨模型交互或管理复杂状态变更时。
 
 系统负责具体的逻辑实现。
 
@@ -175,6 +199,11 @@ public struct GetScoreQuery : IQuery<int>
 ```
 
 ### 4.6 定义 Event (事件)
+
+**使用场景**：
+*   **System 通知 View**：游戏结束、成就解锁、受到伤害。
+*   **Model 通知 View**：金币变化、血量变化（也可使用 BindableProperty）。
+*   **跨模块通信**：敌人死亡通知任务系统计数。
 
 **关键：使用 `struct`**。
 
