@@ -8,26 +8,69 @@ namespace EUFarmworker.Core
     // 1. 核心架构接口 (Architecture Interface)
     // ==================================================================================
 
+    /// <summary>
+    /// 架构接口，定义了模块注册、获取、命令、查询和事件系统的基本功能。
+    /// </summary>
     public interface IArchitecture
     {
-        // 注册模块
+        /// <summary>
+        /// 注册系统 (System)。
+        /// </summary>
         void RegisterSystem<T>(T system) where T : class, ISystem;
+        
+        /// <summary>
+        /// 注册模型 (Model)。
+        /// </summary>
         void RegisterModel<T>(T model) where T : class, IModel;
+        
+        /// <summary>
+        /// 注册工具 (Utility)。
+        /// </summary>
         void RegisterUtility<T>(T utility) where T : class, IUtility;
 
-        // 获取模块
+        /// <summary>
+        /// 获取系统 (System)。
+        /// </summary>
         T GetSystem<T>() where T : class, ISystem;
+        
+        /// <summary>
+        /// 获取模型 (Model)。
+        /// </summary>
         T GetModel<T>() where T : class, IModel;
+        
+        /// <summary>
+        /// 获取工具 (Utility)。
+        /// </summary>
         T GetUtility<T>() where T : class, IUtility;
 
-        // 命令与查询
+        /// <summary>
+        /// 发送命令 (Command) - 写操作。
+        /// </summary>
         void SendCommand<T>(T command) where T : struct, ICommand;
+        
+        /// <summary>
+        /// 发送查询 (Query) - 读操作。
+        /// </summary>
         TResult SendQuery<T, TResult>(T query) where T : struct, IQuery<TResult>;
 
-        // 事件系统
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         void SendEvent<T>() where T : new();
+        
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         void SendEvent<T>(T e);
+        
+        /// <summary>
+        /// 注册事件监听。
+        /// </summary>
         IUnRegister RegisterEvent<T>(Action<T> onEvent);
+        
+        /// <summary>
+        /// 注销事件监听。
+        /// </summary>
         void UnRegisterEvent<T>(Action<T> onEvent);
     }
 
@@ -35,22 +78,34 @@ namespace EUFarmworker.Core
     // 2. 模块与规则接口
     // ==================================================================================
 
+    /// <summary>
+    /// 属于架构的接口，用于设置和获取架构引用。
+    /// </summary>
     public interface IBelongToArchitecture
     {
         IArchitecture GetArchitecture();
         void SetArchitecture(IArchitecture architecture);
     }
 
+    /// <summary>
+    /// 系统接口，负责业务逻辑。
+    /// </summary>
     public interface ISystem : IBelongToArchitecture, ICanSetArchitecture, ICanGetModel, ICanGetUtility, ICanRegisterEvent, ICanSendEvent, ICanGetSystem
     {
         void Init();
     }
 
+    /// <summary>
+    /// 模型接口，负责数据管理。
+    /// </summary>
     public interface IModel : IBelongToArchitecture, ICanSetArchitecture, ICanGetUtility, ICanSendEvent
     {
         void Init();
     }
 
+    /// <summary>
+    /// 工具接口，负责基础设施。
+    /// </summary>
     public interface IUtility : IBelongToArchitecture, ICanSetArchitecture
     {
     }
@@ -69,11 +124,17 @@ namespace EUFarmworker.Core
     // 3. Command & Query (Struct Optimized)
     // ==================================================================================
 
+    /// <summary>
+    /// 命令接口，用于修改数据的写操作。
+    /// </summary>
     public interface ICommand
     {
         void Execute(IArchitecture architecture);
     }
 
+    /// <summary>
+    /// 查询接口，用于获取数据的读操作。
+    /// </summary>
     public interface IQuery<TResult>
     {
         TResult Do(IArchitecture architecture);
@@ -83,49 +144,78 @@ namespace EUFarmworker.Core
     // 4. 扩展方法 (Extensions)
     // ==================================================================================
 
+    /// <summary>
+    /// 架构扩展方法，提供便捷的 API 调用。
+    /// </summary>
     public static class ArchitectureExtensions
     {
+        /// <summary>
+        /// 获取模型 (Model)。
+        /// </summary>
         public static T GetModel<T>(this ICanGetModel self) where T : class, IModel
         {
             return ((IBelongToArchitecture)self).GetArchitecture().GetModel<T>();
         }
 
+        /// <summary>
+        /// 获取系统 (System)。
+        /// </summary>
         public static T GetSystem<T>(this ICanGetSystem self) where T : class, ISystem
         {
             return ((IBelongToArchitecture)self).GetArchitecture().GetSystem<T>();
         }
 
+        /// <summary>
+        /// 获取工具 (Utility)。
+        /// </summary>
         public static T GetUtility<T>(this ICanGetUtility self) where T : class, IUtility
         {
             return ((IBelongToArchitecture)self).GetArchitecture().GetUtility<T>();
         }
 
+        /// <summary>
+        /// 发送命令 (Command)。
+        /// </summary>
         public static void SendCommand<T>(this ICanSendCommand self, T command) where T : struct, ICommand
         {
             ((IBelongToArchitecture)self).GetArchitecture().SendCommand(command);
         }
         
-        // 支持非 ICanSendCommand 的对象直接使用 (如 MonoBehaviour)
+        /// <summary>
+        /// 发送命令 (Command) - 支持非 ICanSendCommand 的对象直接使用 (如 MonoBehaviour)。
+        /// </summary>
         public static void SendCommand<T>(this IBelongToArchitecture self, T command) where T : struct, ICommand
         {
             self.GetArchitecture().SendCommand(command);
         }
 
+        /// <summary>
+        /// 发送查询 (Query)。
+        /// </summary>
         public static TResult SendQuery<T, TResult>(this ICanSendQuery self, T query) where T : struct, IQuery<TResult>
         {
             return ((IBelongToArchitecture)self).GetArchitecture().SendQuery<T, TResult>(query);
         }
 
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         public static void SendEvent<T>(this ICanSendEvent self) where T : new()
         {
             ((IBelongToArchitecture)self).GetArchitecture().SendEvent<T>();
         }
 
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         public static void SendEvent<T>(this ICanSendEvent self, T e)
         {
             ((IBelongToArchitecture)self).GetArchitecture().SendEvent(e);
         }
 
+        /// <summary>
+        /// 注册事件监听。
+        /// </summary>
         public static IUnRegister RegisterEvent<T>(this ICanRegisterEvent self, Action<T> onEvent)
         {
             return ((IBelongToArchitecture)self).GetArchitecture().RegisterEvent(onEvent);
@@ -136,13 +226,16 @@ namespace EUFarmworker.Core
     // 5. 优化后的 IOC 容器 (IOC Container)
     // ==================================================================================
 
+    /// <summary>
+    /// 简单的 IOC 容器，用于存储和获取模块实例。
+    /// </summary>
     public class IOCContainer
     {
         // 使用 Dictionary 存储实例
         private Dictionary<Type, object> mInstances = new Dictionary<Type, object>();
 
         /// <summary>
-        /// 注册具体实例
+        /// 注册具体实例。
         /// </summary>
         public void Register<T>(T instance)
         {
@@ -159,7 +252,7 @@ namespace EUFarmworker.Core
         }
 
         /// <summary>
-        /// 获取实例
+        /// 获取实例。
         /// </summary>
         public T Get<T>() where T : class
         {
@@ -171,6 +264,9 @@ namespace EUFarmworker.Core
             return null;
         }
 
+        /// <summary>
+        /// 清空容器。
+        /// </summary>
         public void Clear()
         {
             mInstances.Clear();
@@ -181,6 +277,9 @@ namespace EUFarmworker.Core
     // 6. 极速事件系统 (TypeEventSystem Optimized)
     // ==================================================================================
 
+    /// <summary>
+    /// 注销接口，用于取消注册。
+    /// </summary>
     public interface IUnRegister
     {
         void UnRegister();
@@ -206,6 +305,9 @@ namespace EUFarmworker.Core
         // 存储所有类型的事件容器
         private Dictionary<Type, IEventContainer> mEvents = new Dictionary<Type, IEventContainer>();
 
+        /// <summary>
+        /// 发送事件。
+        /// </summary>
         public void Send<T>(T e)
         {
             var type = typeof(T);
@@ -216,6 +318,9 @@ namespace EUFarmworker.Core
             }
         }
 
+        /// <summary>
+        /// 发送事件 (无参)。
+        /// </summary>
         public void Send<T>() where T : new()
         {
             // 对于无参数 struct 事件，推荐使用 Send(new T())
@@ -223,6 +328,9 @@ namespace EUFarmworker.Core
             Send(new T());
         }
 
+        /// <summary>
+        /// 注册事件监听。
+        /// </summary>
         public IUnRegister Register<T>(Action<T> onEvent)
         {
             var type = typeof(T);
@@ -248,6 +356,9 @@ namespace EUFarmworker.Core
             };
         }
 
+        /// <summary>
+        /// 注销事件监听。
+        /// </summary>
         public void UnRegister<T>(Action<T> onEvent)
         {
             var type = typeof(T);
@@ -281,11 +392,17 @@ namespace EUFarmworker.Core
     // 7. 架构抽象基类 (Base Architecture)
     // ==================================================================================
 
+    /// <summary>
+    /// 架构抽象基类，实现单例和模块管理。
+    /// </summary>
     public abstract class Architecture<T> : IArchitecture where T : Architecture<T>, new()
     {
         // --- 单例管理 ---
         private static T mArchitecture;
         
+        /// <summary>
+        /// 获取架构的单例实例。
+        /// </summary>
         public static IArchitecture Interface
         {
             get
@@ -295,6 +412,9 @@ namespace EUFarmworker.Core
             }
         }
 
+        /// <summary>
+        /// 确保架构已初始化。
+        /// </summary>
         public static void MakeSureArchitecture()
         {
             if (mArchitecture == null)
@@ -333,6 +453,9 @@ namespace EUFarmworker.Core
 
         // --- IArchitecture 实现 ---
 
+        /// <summary>
+        /// 注册系统 (System)。
+        /// </summary>
         public void RegisterSystem<TSystem>(TSystem system) where TSystem : class, ISystem
         {
             system.SetArchitecture(this);
@@ -355,6 +478,9 @@ namespace EUFarmworker.Core
             }
         }
 
+        /// <summary>
+        /// 注册模型 (Model)。
+        /// </summary>
         public void RegisterModel<TModel>(TModel model) where TModel : class, IModel
         {
             model.SetArchitecture(this);
@@ -377,6 +503,9 @@ namespace EUFarmworker.Core
             }
         }
 
+        /// <summary>
+        /// 注册工具 (Utility)。
+        /// </summary>
         public void RegisterUtility<TUtility>(TUtility utility) where TUtility : class, IUtility
         {
             utility.SetArchitecture(this);
@@ -390,6 +519,9 @@ namespace EUFarmworker.Core
             InstanceCache<TUtility>.Instance = utility;
         }
 
+        /// <summary>
+        /// 获取系统 (System)。
+        /// </summary>
         public TSystem GetSystem<TSystem>() where TSystem : class, ISystem
         {
             // 优先读取静态缓存 (极速路径)
@@ -400,6 +532,9 @@ namespace EUFarmworker.Core
             return mContainer.Get<TSystem>();
         }
 
+        /// <summary>
+        /// 获取模型 (Model)。
+        /// </summary>
         public TModel GetModel<TModel>() where TModel : class, IModel
         {
             // 优先读取静态缓存 (极速路径)
@@ -410,6 +545,9 @@ namespace EUFarmworker.Core
             return mContainer.Get<TModel>();
         }
 
+        /// <summary>
+        /// 获取工具 (Utility)。
+        /// </summary>
         public TUtility GetUtility<TUtility>() where TUtility : class, IUtility
         {
             // 优先读取静态缓存 (极速路径)
@@ -420,37 +558,57 @@ namespace EUFarmworker.Core
             return mContainer.Get<TUtility>();
         }
 
+        /// <summary>
+        /// 发送命令 (Command)。
+        /// </summary>
         public void SendCommand<TCommand>(TCommand command) where TCommand : struct, ICommand
         {
             command.Execute(this);
         }
 
+        /// <summary>
+        /// 发送查询 (Query)。
+        /// </summary>
         public TResult SendQuery<TQuery, TResult>(TQuery query) where TQuery : struct, IQuery<TResult>
         {
             return query.Do(this);
         }
 
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         public void SendEvent<TEvent>() where TEvent : new()
         {
             mEventSystem.Send<TEvent>();
         }
 
+        /// <summary>
+        /// 发送事件 (Event)。
+        /// </summary>
         public void SendEvent<TEvent>(TEvent e)
         {
             mEventSystem.Send(e);
         }
 
+        /// <summary>
+        /// 注册事件监听。
+        /// </summary>
         public IUnRegister RegisterEvent<TEvent>(Action<TEvent> onEvent)
         {
             return mEventSystem.Register(onEvent);
         }
 
+        /// <summary>
+        /// 注销事件监听。
+        /// </summary>
         public void UnRegisterEvent<TEvent>(Action<TEvent> onEvent)
         {
             mEventSystem.UnRegister(onEvent);
         }
         
-        // 销毁架构（如果需要重置游戏状态）
+        /// <summary>
+        /// 销毁架构，重置状态。
+        /// </summary>
         public static void DestroyArchitecture()
         {
             if (mArchitecture != null)
@@ -508,9 +666,16 @@ namespace EUFarmworker.Core
     // 9. 可绑定属性 (Bindable Property)
     // ==================================================================================
 
+    /// <summary>
+    /// 可绑定属性，用于实现响应式数据。
+    /// </summary>
     public class BindableProperty<T>
     {
         private T mValue;
+        
+        /// <summary>
+        /// 获取或设置属性值，值变化时会触发事件。
+        /// </summary>
         public T Value
         {
             get => mValue;
@@ -531,6 +696,9 @@ namespace EUFarmworker.Core
 
         public event Action<T> OnValueChanged = _ => { };
 
+        /// <summary>
+        /// 注册值变化监听。
+        /// </summary>
         public IUnRegister Register(Action<T> onValueChanged)
         {
             OnValueChanged += onValueChanged;
@@ -541,17 +709,26 @@ namespace EUFarmworker.Core
             };
         }
         
+        /// <summary>
+        /// 注册值变化监听，并立即调用一次当前值。
+        /// </summary>
         public IUnRegister RegisterWithInitValue(Action<T> onValueChanged)
         {
             onValueChanged(mValue);
             return Register(onValueChanged);
         }
 
+        /// <summary>
+        /// 注销监听。
+        /// </summary>
         public void UnRegister(Action<T> onValueChanged)
         {
             OnValueChanged -= onValueChanged;
         }
         
+        /// <summary>
+        /// 设置值但不触发事件。
+        /// </summary>
         public void SetValueWithoutEvent(T value)
         {
             mValue = value;
@@ -585,8 +762,14 @@ namespace EUFarmworker.Core
     // 10. Unity 扩展 (Unity Extensions)
     // ==================================================================================
 
+    /// <summary>
+    /// 自动注销扩展，用于管理事件生命周期。
+    /// </summary>
     public static class UnRegisterExtension
     {
+        /// <summary>
+        /// 当 GameObject 销毁时自动注销。
+        /// </summary>
         public static void UnRegisterWhenGameObjectDestroyed(this IUnRegister self, GameObject gameObject)
         {
             if (!gameObject.TryGetComponent<UnRegisterTrigger>(out var trigger))
@@ -597,6 +780,9 @@ namespace EUFarmworker.Core
             trigger.Add(self);
         }
 
+        /// <summary>
+        /// 当 GameObject 禁用时自动注销。
+        /// </summary>
         public static void UnRegisterWhenGameObjectDisabled(this IUnRegister self, GameObject gameObject)
         {
             if (!gameObject.TryGetComponent<UnRegisterOnDisableTrigger>(out var trigger))
