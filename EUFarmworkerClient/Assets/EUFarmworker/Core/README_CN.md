@@ -230,6 +230,26 @@ public class GamePanel : MonoBehaviour, IBelongToArchitecture
 
 *(注：`UnRegisterWhenGameObjectDestroyed` 是一个推荐的扩展方法，需自行实现以自动管理生命周期，核心库中提供了基础的 `UnRegister` 接口)*
 
+### 4.8 自动管理生命周期 (Extensions)
+
+核心库内置了两个便捷的扩展方法来自动管理事件注销：
+
+1.  `UnRegisterWhenGameObjectDestroyed(gameObject)`: 当 GameObject 销毁 (OnDestroy) 时自动注销。适用于 `Start` 或 `Awake` 中注册的事件。
+2.  `UnRegisterWhenGameObjectDisabled(gameObject)`: 当 GameObject 禁用 (OnDisable) 时自动注销。适用于 `OnEnable` 中注册的事件。
+
+#### 示例：在 OnEnable/OnDisable 中使用
+
+```csharp
+    void OnEnable()
+    {
+        // 在 OnEnable 中注册，并在 OnDisable 时自动注销
+        this.RegisterEvent<GamePassEvent>(e => 
+        {
+            Debug.Log("游戏通关！");
+        }).UnRegisterWhenGameObjectDisabled(gameObject);
+    }
+```
+
 ## 5. 最佳实践
 
 1.  **始终使用 Struct**：对于 Command、Query 和 Event，永远不要使用 `class`，否则将失去本框架的核心优势。

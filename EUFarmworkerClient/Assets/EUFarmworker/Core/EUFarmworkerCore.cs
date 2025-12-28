@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace EUFarmworker.Core
 {
@@ -524,6 +525,77 @@ namespace EUFarmworker.Core
             BindableProperty.UnRegister(OnValueChanged);
             BindableProperty = null;
             OnValueChanged = null;
+        }
+    }
+
+    // ==================================================================================
+    // 10. Unity 扩展 (Unity Extensions)
+    // ==================================================================================
+
+    public static class UnRegisterExtension
+    {
+        public static void UnRegisterWhenGameObjectDestroyed(this IUnRegister self, GameObject gameObject)
+        {
+            var trigger = gameObject.GetComponent<UnRegisterTrigger>();
+
+            if (!trigger)
+            {
+                trigger = gameObject.AddComponent<UnRegisterTrigger>();
+            }
+
+            trigger.Add(self);
+        }
+
+        public static void UnRegisterWhenGameObjectDisabled(this IUnRegister self, GameObject gameObject)
+        {
+            var trigger = gameObject.GetComponent<UnRegisterOnDisableTrigger>();
+
+            if (!trigger)
+            {
+                trigger = gameObject.AddComponent<UnRegisterOnDisableTrigger>();
+            }
+
+            trigger.Add(self);
+        }
+    }
+
+    public class UnRegisterTrigger : MonoBehaviour
+    {
+        private readonly HashSet<IUnRegister> mUnRegisters = new HashSet<IUnRegister>();
+
+        public void Add(IUnRegister unRegister)
+        {
+            mUnRegisters.Add(unRegister);
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var unRegister in mUnRegisters)
+            {
+                unRegister.UnRegister();
+            }
+
+            mUnRegisters.Clear();
+        }
+    }
+
+    public class UnRegisterOnDisableTrigger : MonoBehaviour
+    {
+        private readonly HashSet<IUnRegister> mUnRegisters = new HashSet<IUnRegister>();
+
+        public void Add(IUnRegister unRegister)
+        {
+            mUnRegisters.Add(unRegister);
+        }
+
+        private void OnDisable()
+        {
+            foreach (var unRegister in mUnRegisters)
+            {
+                unRegister.UnRegister();
+            }
+
+            mUnRegisters.Clear();
         }
     }
 }
