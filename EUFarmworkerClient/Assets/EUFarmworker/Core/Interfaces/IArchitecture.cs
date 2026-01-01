@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace EUFarmworker.Core.Interfaces
 {
@@ -30,6 +30,10 @@ namespace EUFarmworker.Core.Interfaces
         T SendQuery<T>(T query) where T : struct,IQuery<T>;//查询
         
         void SendEvent<T>(T tEvent) where T : struct;//发送事件
+
+        void RegisterEvent<T>(Action<T> onEvent) where T : struct;
+
+        void UnRegisterEvent<T>(Action<T> onEvent) where T : struct;
         
     }
 }

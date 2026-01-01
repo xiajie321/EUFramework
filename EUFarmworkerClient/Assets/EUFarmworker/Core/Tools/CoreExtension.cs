@@ -1,4 +1,5 @@
-﻿using EUFarmworker.Core.Interfaces;
+﻿using System;
+using EUFarmworker.Core.Interfaces;
 using EUFarmworker.Core.Interfaces.Can;
 
 namespace EUFarmworker.Core.Tools
@@ -49,6 +50,16 @@ namespace EUFarmworker.Core.Tools
         public static void SendEvent<T>(this ICanSendEvent canSendEvent, T Tevent) where T : struct
         {
             _architecture.SendEvent(Tevent);
+        }
+
+        public static void RegisterEvent<T>(this ICanRegisterEvent canRegisterEvent, Action<T> onEvent) where T : struct
+        {
+            _architecture.RegisterEvent(onEvent);
+        }
+
+        public static void UnRegisterEvent<T>(this ICanRegisterEvent canRegisterEvent, Action<T> onEvent) where T : struct
+        {
+            _architecture.UnRegisterEvent(onEvent);
         }
     }
 }

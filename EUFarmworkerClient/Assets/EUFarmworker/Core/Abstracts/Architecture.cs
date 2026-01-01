@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using EUFarmworker.Core.Interfaces;
 using EUFarmworker.Core.Tools;
@@ -13,6 +13,7 @@ namespace EUFarmworker.Core.Abstracts
         private static List<ISystem> _systems = new();
         private static List<IUtility> _utilities = new();
         private static List<IModel> _models = new();
+        private static TypeEventSystem _typeEventSystem = new TypeEventSystem();
         private static Action _dispose;
 
         public static IArchitecture Instance
@@ -65,6 +66,7 @@ namespace EUFarmworker.Core.Abstracts
             _systems.Clear();
             _utilities.Clear();
             _hashSet.Clear();
+            _typeEventSystem.Clear();
             _dispose = null;
             _instance = null;
         }
@@ -119,9 +121,14 @@ namespace EUFarmworker.Core.Abstracts
             CacheContainer<T1>.Value = utility;
         }
 
-        public void RegisterEvent()
+        public void RegisterEvent<T1>(Action<T1> onEvent) where T1 : struct
         {
-            
+            _typeEventSystem.Register(onEvent);
+        }
+
+        public void UnRegisterEvent<T1>(Action<T1> onEvent) where T1 : struct
+        {
+            _typeEventSystem.UnRegister(onEvent);
         }
 
         public T1 GetSystem<T1>() where T1 : class, ISystem
@@ -156,7 +163,7 @@ namespace EUFarmworker.Core.Abstracts
 
         public void SendEvent<T1>(T1 tEvent) where T1 : struct
         {
-            
+            _typeEventSystem.Send(tEvent);
         }
     }
 }
