@@ -3,12 +3,15 @@ using EUFarmworker.Core.Tools;
 
 namespace EUFarmworker.Core
 {
+    /// <summary>
+    /// 核心入口类，用于设置和管理架构
+    /// </summary>
     public static class EUCore
     {
         /// <summary>
         /// 该方法用于设置框架(会自动释放上一次的框架的注册信息)
         /// </summary>
-        /// <param name="architecture"></param>
+        /// <param name="architecture">架构实例</param>
         public static void SetArchitecture(IArchitecture architecture)
         {
             CoreExtension.SetArchitecture(architecture);
