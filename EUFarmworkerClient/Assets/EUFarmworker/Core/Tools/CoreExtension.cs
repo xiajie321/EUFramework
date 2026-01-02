@@ -7,7 +7,7 @@ namespace EUFarmworker.Core.Tools
     /// <summary>
     /// 核心扩展类，提供基于接口的扩展方法，简化架构使用
     /// </summary>
-    public static class CoreExtension
+    public static partial class CoreExtension
     {
         private static IArchitecture _architecture;
 

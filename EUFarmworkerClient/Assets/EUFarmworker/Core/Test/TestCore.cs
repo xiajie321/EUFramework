@@ -1,3 +1,4 @@
+using System;
 using EUFarmworker.Core.Abstracts;
 using EUFarmworker.Core.Interfaces;
 using EUFarmworker.Core.Tools;
@@ -24,13 +25,21 @@ namespace EUFarmworker.Core.Test
             EUCore.SetArchitecture(TestArchitecture.Instance);
             
             // 注册事件监听
-            this.RegisterEvent<TestEvent>(e =>
-            {
-                Debug.Log("TestEvent");
-            });
+            this.RegisterEvent<TestEvent>(Run);
             
             // 发送事件
             this.SendEvent<TestEvent>(new TestEvent());
+        }
+
+        public void Run(TestEvent testEvent)
+        {
+            Debug.Log("TestEvent");
+        }
+
+        private void OnDestroy()
+        {
+            //注销事件
+            this.UnRegisterEvent<TestEvent>(Run);
         }
     }
 
