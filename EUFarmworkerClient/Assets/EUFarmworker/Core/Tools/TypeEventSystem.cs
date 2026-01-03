@@ -20,7 +20,7 @@ namespace EUFarmworker.Core.Tools
             var type = typeof(T);
             if (_eventRegisterations.TryGetValue(type, out var registerations))
             {
-                var reg = registerations as Registerations<T>;
+                var reg = (Registerations<T>)registerations;
                 reg.OnEvent += onEvent;
             }
             else
@@ -41,7 +41,7 @@ namespace EUFarmworker.Core.Tools
             var type = typeof(T);
             if (_eventRegisterations.TryGetValue(type, out var registerations))
             {
-                var reg = registerations as Registerations<T>;
+                var reg = (Registerations<T>)registerations;
                 reg.OnEvent -= onEvent;
             }
         }
@@ -56,7 +56,7 @@ namespace EUFarmworker.Core.Tools
             var type = typeof(T);
             if (_eventRegisterations.TryGetValue(type, out var registerations))
             {
-                var reg = registerations as Registerations<T>;
+                var reg = (Registerations<T>)registerations;
                 reg.OnEvent?.Invoke(tEvent);
             }
         }
@@ -71,6 +71,7 @@ namespace EUFarmworker.Core.Tools
 
         private interface IRegisterations
         {
+            
         }
 
         private class Registerations<T> : IRegisterations
