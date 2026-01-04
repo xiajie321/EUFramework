@@ -55,7 +55,7 @@ namespace EUFarmworker.Core.Tools
         /// <summary>
         /// 扩展方法：发送命令（无返回值）
         /// </summary>
-        public static void SendCommand<T>(this ICanSendCommand canSendCommand,T command) where T : struct,ICommand
+        public static void SendCommand<T>(this ICanSendCommand canSendCommand,in T command) where T : struct,ICommand
         {
             _architecture.SendCommand(command);
         }
@@ -63,7 +63,7 @@ namespace EUFarmworker.Core.Tools
         /// <summary>
         /// 扩展方法：发送命令（有返回值）
         /// </summary>
-        public static T SendCommand<TCommand, T>(this ICanSendCommand sendCommand, TCommand command)where TCommand : struct, ICommand<T>
+        public static T SendCommand<TCommand, T>(this ICanSendCommand sendCommand,in TCommand command)where TCommand : struct, ICommand<T>
         {
             return _architecture.SendCommand<TCommand,T>(command);
         }
@@ -71,7 +71,7 @@ namespace EUFarmworker.Core.Tools
         /// <summary>
         /// 扩展方法：发送查询
         /// </summary>
-        public static T SendQuery<T>(this ICanSendQuery canSendQuery,T query) where T : struct, IQuery<T>
+        public static T SendQuery<T>(this ICanSendQuery canSendQuery,in T query) where T : struct, IQuery<T>
         {
             return _architecture.SendQuery(query);
         }

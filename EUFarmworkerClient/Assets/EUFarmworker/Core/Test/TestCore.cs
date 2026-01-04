@@ -19,16 +19,26 @@ namespace EUFarmworker.Core.Test
     /// </summary>
     public class TestCore:MonoBehaviour,IController
     {
-        private void Start()
+        private void Awake()
         {
             // 初始化架构
             EUCore.SetArchitecture(TestArchitecture.Instance);
-            
+        }
+
+        private void Start()
+        {
             // 注册事件监听
             this.RegisterEvent<TestEvent>(Run);
             
             // 发送事件
             this.SendEvent<TestEvent>(new TestEvent());
+            int a= this.SendCommand<TestCommandReturnInt,int>(new TestCommandReturnInt());//调用有返回值的命令
+            Debug.Log(a);
+            this.SendCommand(new TestCommand());//调用无返回值的命令
+            this.SendCommand(new TestCommand()//给命令赋值
+            {
+                lsValue = -1
+            });
         }
 
         public void Run(TestEvent testEvent)
@@ -54,7 +64,6 @@ namespace EUFarmworker.Core.Test
             RegisterModel(new TestModel());
             RegisterSystem(new TestSystem());
             RegisterUtility(new TestUtility());
-            
         }
     }
 
@@ -88,6 +97,31 @@ namespace EUFarmworker.Core.Test
         public override void Init()
         {
             Debug.Log("TestUtility");
+        }
+    }
+
+    public struct TestCommand : ICommand//无返回值的命令
+    {
+        public int lsValue;
+        public void Execute()
+        {
+            Debug.Log(lsValue);
+        }
+    }
+
+    public struct TestCommandReturnInt : ICommand<int>//有返回值的命令
+    {
+        public int Execute()
+        {
+            return 1;
+        }
+    }
+
+    public struct TestQuery : IQuery<int>
+    {
+        public int Execute()
+        {
+            return 1;
         }
     }
 }

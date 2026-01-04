@@ -145,7 +145,7 @@ public struct AddScoreCommand : ICommand
 
     public void Execute()
     {
-        var system = CoreExtension.GetArchitecture().GetSystem<ScoreSystem>();
+        var system = this.GetSystem<ScoreSystem>();
         system.AddScore(Amount);
     }
 }
@@ -159,7 +159,7 @@ public struct GetScoreQuery : IQuery<int>
 {
     public int Execute()
     {
-        var model = CoreExtension.GetArchitecture().GetModel<GameModel>();
+        var model = this.GetModel<GameModel>();
         return model.Score;
     }
 }
@@ -181,31 +181,33 @@ public struct ScoreChangedEvent
 ```csharp
 public class GamePanel : MonoBehaviour, IController
 {
-    void Start()
-    {
-        // 注册架构（通常在入口处做一次）
-        EUCore.SetArchitecture(GameArchitecture.Instance);
+        private void Awake()
+        {
+            // 初始化架构
+            EUCore.SetArchitecture(TestArchitecture.Instance);
+        }
+        void Start()
+        {
+            // 监听事件
+            this.RegisterEvent<ScoreChangedEvent>(OnScoreChanged);
+        }
 
-        // 监听事件
-        this.RegisterEvent<ScoreChangedEvent>(OnScoreChanged);
-    }
+        void OnDestroy()
+        {
+            // 注销事件
+            this.UnRegisterEvent<ScoreChangedEvent>(OnScoreChanged);
+        }
 
-    void OnDestroy()
-    {
-        // 注销事件
-        this.UnRegisterEvent<ScoreChangedEvent>(OnScoreChanged);
-    }
+        private void OnScoreChanged(ScoreChangedEvent e)
+        {
+            Debug.Log($"Score: {e.NewScore}");
+        }
 
-    private void OnScoreChanged(ScoreChangedEvent e)
-    {
-        Debug.Log($"Score: {e.NewScore}");
-    }
-
-    public void OnClickAddButton()
-    {
-        // 发送命令
-        this.SendCommand(new AddScoreCommand { Amount = 10 });
-    }
+        public void OnClickAddButton()
+        {
+            // 发送命令
+            this.SendCommand(new AddScoreCommand { Amount = 10 });
+        }
 }
 ```
 
