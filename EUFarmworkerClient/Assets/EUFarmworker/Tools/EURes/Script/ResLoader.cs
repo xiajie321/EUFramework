@@ -21,6 +21,11 @@ namespace EUFarmworker.Tools.EURes.Script
         private static readonly Stack<ResLoader> _pool = new Stack<ResLoader>();
 
         /// <summary>
+        /// 当前加载器的资源加载模式
+        /// </summary>
+        public ResLoadMode LoadMode { get; private set; }
+
+        /// <summary>
         /// 私有构造函数，强制使用 Allocate 获取实例
         /// </summary>
         private ResLoader() { }
@@ -28,10 +33,13 @@ namespace EUFarmworker.Tools.EURes.Script
         /// <summary>
         /// 从对象池分配一个加载器
         /// </summary>
+        /// <param name="mode">指定加载模式，如果不指定则使用全局默认配置 EUResUtility.LoadMode</param>
         /// <returns>ResLoader 实例</returns>
-        public static ResLoader Allocate()
+        public static ResLoader Allocate(ResLoadMode? mode = null)
         {
-            return _pool.Count > 0 ? _pool.Pop() : new ResLoader();
+            ResLoader loader = _pool.Count > 0 ? _pool.Pop() : new ResLoader();
+            loader.LoadMode = mode ?? EUResUtility.LoadMode;
+            return loader;
         }
 
         /// <summary>
@@ -61,7 +69,7 @@ namespace EUFarmworker.Tools.EURes.Script
         /// <returns>资源对象，如果加载失败返回 null</returns>
         public T LoadSync<T>(string address) where T : Object
         {
-            if (EUFarmworker.Tools.EURes.Script.EUResUtility.LoadMode == EUFarmworker.Tools.EURes.Script.ResLoadMode.Resources)
+            if (LoadMode == ResLoadMode.Resources)
             {
                 return Resources.Load<T>(address);
             }
@@ -147,7 +155,7 @@ namespace EUFarmworker.Tools.EURes.Script
         /// </summary>
         public void ReleaseAll()
         {
-            if (EUFarmworker.Tools.EURes.Script.EUResUtility.LoadMode == EUFarmworker.Tools.EURes.Script.ResLoadMode.YooAsset)
+            if (LoadMode == ResLoadMode.YooAsset)
             {
                 foreach (var handle in _handles)
                 {

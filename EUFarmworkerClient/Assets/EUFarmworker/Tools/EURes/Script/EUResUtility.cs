@@ -42,10 +42,11 @@ namespace EUFarmworker.Tools.EURes.Script
         /// <summary>
         /// 创建一个资源加载器
         /// </summary>
+        /// <param name="mode">指定加载模式，如果不指定则使用全局默认配置 LoadMode</param>
         /// <returns>资源加载器实例</returns>
-        public static ResLoader CreateLoader()
+        public static ResLoader CreateLoader(ResLoadMode? mode = null)
         {
-            return ResLoader.Allocate();
+            return ResLoader.Allocate(mode);
         }
     }
 }

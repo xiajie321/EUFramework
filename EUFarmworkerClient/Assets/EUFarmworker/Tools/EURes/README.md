@@ -27,18 +27,25 @@ public class MyArchitecture : Architecture<MyArchitecture>
 }
 ```
 
-### 2. 切换加载模式
+### 2. 设置加载模式
 
-可以通过 `EUResUtility.LoadMode` 属性切换加载模式。
+可以通过 `EUResUtility.LoadMode` 设置全局默认加载模式，也可以在创建 `ResLoader` 时指定特定的加载模式。
 
 ```csharp
 using EUFarmworker.Tools.EURes.Script;
 
-// 切换到 Resources 模式
+// 1. 设置全局默认模式
 EUResUtility.LoadMode = ResLoadMode.Resources;
 
-// 切换到 YooAsset 模式 (默认)
-EUResUtility.LoadMode = ResLoadMode.YooAsset;
+// 2. 创建 Loader 时指定模式 (覆盖全局默认值)
+// 强制使用 YooAsset 模式
+var yooLoader = ResLoader.Allocate(ResLoadMode.YooAsset);
+
+// 强制使用 Resources 模式
+var resLoader = ResLoader.Allocate(ResLoadMode.Resources);
+
+// 使用全局默认模式
+var defaultLoader = ResLoader.Allocate(); 
 ```
 
 ### 3. 加载资源
