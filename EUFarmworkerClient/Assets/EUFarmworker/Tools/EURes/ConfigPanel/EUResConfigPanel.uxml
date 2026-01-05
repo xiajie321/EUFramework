@@ -1,0 +1,26 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement class="root">
+        <ui:Label text="EURes 配置面板" class="title" />
+        
+        <ui:VisualElement name="warning-container" class="warning-box">
+            <ui:Label text="未找到配置文件 (Resources/EUResConfig.asset)" class="warning-label" />
+            <ui:Button name="create-btn" text="创建配置文件" class="create-btn" />
+        </ui:VisualElement>
+
+        <ui:ScrollView name="content-scroll">
+            <ui:VisualElement name="config-container">
+                <ui:VisualElement class="section-box">
+                    <ui:Label text="全局设置" class="section-header" />
+                    <uie:PropertyField binding-path="PlayMode" label="运行模式" class="property-field" />
+                    <uie:PropertyField binding-path="DefaultHostServer" label="默认资源服务器" class="property-field" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="section-box">
+                    <ui:Label text="资源包设置" class="section-header" />
+                    <uie:PropertyField binding-path="DefaultPackageName" label="默认包名" class="property-field" />
+                    <uie:PropertyField binding-path="AdditionalPackages" label="额外资源包列表" class="property-field" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
