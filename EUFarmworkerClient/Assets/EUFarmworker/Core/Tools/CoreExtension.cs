@@ -38,6 +38,7 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.GetModel<T>();
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T GetModel<TIModel, T>(ref this TIModel canGetModel)
             where TIModel : struct, ICanGetModel
             where T : class, IModel
@@ -54,6 +55,7 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.GetSystem<T>();
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T GetSystem<TISystem, T>(ref this TISystem canGetSystem)
             where TISystem : struct, ICanGetSystem
             where T : class, ISystem
