@@ -6,7 +6,7 @@ using Object = UnityEngine.Object;
 
 namespace EUFarmworker.Tools.EUAudio.Script
 {
-    public class EUAudio : AbstractUtility
+    public class EUAudioUtility : AbstractUtility
     {
         private EUAudioManagerMono _root;
 

@@ -38,9 +38,14 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.GetModel<T>();
         }
+        /// <summary>
+        /// 扩展方法：获取数据模型 (避免 struct 装箱)
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="T">要获取的 Model 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetModel<TIModel, T>(ref this TIModel canGetModel)
-            where TIModel : struct, ICanGetModel
+        public static T GetModel<TCaller, T>(ref this TCaller caller)
+            where TCaller : struct, ICanGetModel
             where T : class, IModel
         {
             return _architecture.GetModel<T>();
@@ -55,9 +60,15 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.GetSystem<T>();
         }
+
+        /// <summary>
+        /// 扩展方法：获取系统 (避免 struct 装箱)
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="T">要获取的 System 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetSystem<TISystem, T>(ref this TISystem canGetSystem)
-            where TISystem : struct, ICanGetSystem
+        public static T GetSystem<TCaller, T>(ref this TCaller caller)
+            where TCaller : struct, ICanGetSystem
             where T : class, ISystem
         {
             return _architecture.GetSystem<T>();
@@ -71,10 +82,16 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.GetUtility<T>();
         }
+
+        /// <summary>
+        /// 扩展方法：获取工具 (避免 struct 装箱)
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="T">要获取的 Utility 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetUtility<TIUitlity,T>(ref this TIUitlity canGetUtility) 
+        public static T GetUtility<TCaller,T>(ref this TCaller caller) 
             where T : class, IUtility
-            where TIUitlity : struct,ICanGetUtility
+            where TCaller : struct,ICanGetUtility
         {
             return _architecture.GetUtility<T>();
         }
@@ -89,9 +106,15 @@ namespace EUFarmworker.Core.Tools
         {
             _architecture.SendCommand(command);
         }
+
+        /// <summary>
+        /// 扩展方法：发送命令（无返回值，避免 struct 装箱）
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="T">要发送的 Command 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<TICommand,T>(this TICommand canSendCommand, in T command) 
-            where TICommand : struct,ICanSendCommand
+        public static void SendCommand<TCaller,T>(ref this TCaller caller, in T command) 
+            where TCaller : struct,ICanSendCommand
             where T : struct, ICommand
         {
             _architecture.SendCommand(command);
@@ -106,9 +129,16 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.SendCommand<TCommand, T>(command);
         }
+
+        /// <summary>
+        /// 扩展方法：发送命令（有返回值，避免 struct 装箱）
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="TCommand">要发送的 Command 类型</typeparam>
+        /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendCommand<TICommand, TCommand, T>(ref this TICommand canSendCommand, in TCommand command)
-        where TICommand : struct,ICanSendCommand
+        public static T SendCommand<TCaller, TCommand, T>(ref this TCaller caller, in TCommand command)
+        where TCaller : struct,ICanSendCommand
         where TCommand : struct,ICommand<T>
         {
             return _architecture.SendCommand<TCommand, T>(command);
@@ -124,10 +154,17 @@ namespace EUFarmworker.Core.Tools
         {
             return _architecture.SendQuery<TQuery, T>(query);
         }
+
+        /// <summary>
+        /// 扩展方法：发送查询 (避免 struct 装箱)
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="TQuery">要发送的 Query 类型</typeparam>
+        /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendQuery<TIQuery, TQuery, T>(ref this TIQuery canSendQuery, in TQuery query)
+        public static T SendQuery<TCaller, TQuery, T>(ref this TCaller caller, in TQuery query)
         where TQuery : struct, IQuery<T>
-        where TIQuery :struct,ICanSendQuery
+        where TCaller :struct,ICanSendQuery
         {
             return _architecture.SendQuery<TQuery, T>(query);
         }
@@ -142,10 +179,16 @@ namespace EUFarmworker.Core.Tools
         {
             _architecture.SendEvent(Tevent);
         }
+
+        /// <summary>
+        /// 扩展方法：发送事件 (避免 struct 装箱)
+        /// </summary>
+        /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
+        /// <typeparam name="T">要发送的 Event 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<TIEvent,T>(ref this TIEvent canSendEvent, in T Tevent) 
+        public static void SendEvent<TCaller,T>(ref this TCaller caller, in T Tevent) 
             where T : struct
-            where TIEvent : struct,ICanSendEvent
+            where TCaller : struct,ICanSendEvent
         {
             _architecture.SendEvent(Tevent);
         }

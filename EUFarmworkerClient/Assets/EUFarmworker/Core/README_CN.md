@@ -15,7 +15,8 @@
     - [Event (事件)](#event-事件)
     - [Controller (表现层)](#controller-表现层)
 6. [进阶指南：性能优化与最佳实践](#进阶指南性能优化与最佳实践)
-7. [示例代码](#示例代码)
+7. [实战教程：制作一个贪吃蛇游戏](#实战教程制作一个贪吃蛇游戏)
+8. [示例代码](#示例代码)
 
 ## 简介
 EUFarmworker Core 是一个基于 Unity 的轻量级架构框架，旨在提供清晰的代码结构和高效的开发体验。它深受 QFramework 的启发，并在此基础上进行了针对性的优化和改进，特别是在性能和类型安全方面。
@@ -285,6 +286,191 @@ public struct TestCommand : ICommand
 ```
 
 > **注意**：在 `class` (如 System, Model, MonoBehaviour Controller) 中，由于本身就是引用类型，直接使用 `this.GetModel<T>()` 等简化写法即可，不会有装箱问题。
+
+## 实战教程：制作一个贪吃蛇游戏
+
+为了更好地理解框架的使用，我们将通过一个简单的贪吃蛇游戏来演示如何组织代码。
+
+### 1. 架构定义 (SnakeApp)
+首先定义游戏的架构入口。
+
+```csharp
+public class SnakeApp : Architecture<SnakeApp>
+{
+    protected override void Init()
+    {
+        RegisterModel(new SnakeModel());
+        RegisterSystem(new SnakeSystem());
+    }
+}
+```
+
+### 2. 数据层 (SnakeModel)
+定义游戏的数据：蛇身位置、食物位置、移动方向。
+
+```csharp
+public class SnakeModel : AbstractModel
+{
+    public List<Vector2Int> Body { get; private set; }
+    public Vector2Int FoodPosition { get; set; }
+    public Vector2Int Direction { get; set; }
+
+    public override void Init()
+    {
+        Body = new List<Vector2Int> { new Vector2Int(0, 0) };
+        Direction = Vector2Int.right;
+        FoodPosition = new Vector2Int(5, 0);
+    }
+}
+```
+
+### 3. 事件定义 (Events)
+定义游戏中发生的事件。
+
+```csharp
+// 游戏重置/开始事件
+public struct GameStartEvent { }
+
+// 食物被吃掉事件
+public struct FoodEatenEvent { }
+
+// 游戏结束事件
+public struct GameOverEvent { }
+```
+
+### 4. 命令定义 (Commands)
+定义改变游戏状态的操作。
+
+```csharp
+// 开始游戏命令
+public struct StartGameCommand : ICommand
+{
+    public void Execute()
+    {
+        var model = this.GetModel<StartGameCommand, SnakeModel>();
+        model.Body.Clear();
+        model.Body.Add(new Vector2Int(0, 0));
+        model.Direction = Vector2Int.right;
+        
+        // 发送游戏开始事件
+        this.SendEvent<StartGameCommand, GameStartEvent>(new GameStartEvent());
+    }
+}
+
+// 改变方向命令
+public struct ChangeDirectionCommand : ICommand
+{
+    public Vector2Int NewDirection;
+    
+    public void Execute()
+    {
+        var model = this.GetModel<ChangeDirectionCommand, SnakeModel>();
+        // 简单的逻辑：不能直接掉头
+        if (model.Direction + NewDirection != Vector2Int.zero)
+        {
+            model.Direction = NewDirection;
+        }
+    }
+}
+```
+
+### 5. 系统层 (SnakeSystem)
+处理核心游戏逻辑：移动、碰撞检测。
+
+```csharp
+public class SnakeSystem : AbstractSystem
+{
+    private float _timer;
+    private const float MoveInterval = 0.5f;
+
+    public override void Init()
+    {
+        // 可以在这里监听事件或初始化其他资源
+    }
+
+    // 由 Controller 调用，驱动游戏逻辑
+    public void OnUpdate()
+    {
+        _timer += Time.deltaTime;
+        if (_timer >= MoveInterval)
+        {
+            _timer = 0;
+            Move();
+        }
+    }
+
+    private void Move()
+    {
+        var model = this.GetModel<SnakeModel>();
+        var head = model.Body[0];
+        var newHead = head + model.Direction;
+
+        // 碰撞检测（墙壁或自身）省略...
+        
+        // 移动蛇身
+        model.Body.Insert(0, newHead);
+
+        // 吃食物检测
+        if (newHead == model.FoodPosition)
+        {
+            // 生成新食物位置（简单逻辑）
+            model.FoodPosition += Vector2Int.one; 
+            this.SendEvent(new FoodEatenEvent());
+        }
+        else
+        {
+            model.Body.RemoveAt(model.Body.Count - 1);
+        }
+    }
+}
+```
+
+### 6. 表现层 (SnakeController)
+处理输入和渲染。
+
+```csharp
+public class SnakeController : MonoBehaviour, IController
+{
+    private void Awake()
+    {
+        EUCore.SetArchitecture(SnakeApp.Instance);
+    }
+
+    private void Start()
+    {
+        this.SendCommand(new StartGameCommand());
+        this.RegisterEvent<FoodEatenEvent>(OnFoodEaten);
+    }
+    
+    private void OnDestroy()
+    {
+        this.UnRegisterEvent<FoodEatenEvent>(OnFoodEaten);
+    }
+
+    private void Update()
+    {
+        // 处理输入
+        if (Input.GetKeyDown(KeyCode.W)) 
+            this.SendCommand(new ChangeDirectionCommand { NewDirection = Vector2Int.up });
+        if (Input.GetKeyDown(KeyCode.S)) 
+            this.SendCommand(new ChangeDirectionCommand { NewDirection = Vector2Int.down });
+        if (Input.GetKeyDown(KeyCode.A)) 
+            this.SendCommand(new ChangeDirectionCommand { NewDirection = Vector2Int.left });
+        if (Input.GetKeyDown(KeyCode.D)) 
+            this.SendCommand(new ChangeDirectionCommand { NewDirection = Vector2Int.right });
+            
+        // 驱动系统运行
+        this.GetSystem<SnakeSystem>().OnUpdate();
+    }
+
+    private void OnFoodEaten(FoodEatenEvent e)
+    {
+        Debug.Log("Food Eaten!");
+    }
+}
+```
+
+通过这个简单的例子，我们可以看到 EUFarmworker Core 如何帮助我们将**数据** (Model)、**逻辑** (System/Command) 和 **表现** (Controller) 清晰地分离，并通过 **事件** (Event) 进行解耦。
 
 ## 示例代码
 完整的测试示例可以在 `EUFarmworker/Core/Test/TestCore.cs` 中找到。
