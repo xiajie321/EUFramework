@@ -71,7 +71,7 @@ namespace EUFarmworker.Core.Interfaces
         /// <typeparam name="T">查询类型</typeparam>
         /// <param name="query">查询实例</param>
         /// <returns>查询结果</returns>
-        T SendQuery<T>(T query) where T : struct,IQuery<T>;
+        T SendQuery<TQuery,T>(TQuery query) where TQuery : struct,IQuery<T>;
         
         /// <summary>
         /// 发送事件

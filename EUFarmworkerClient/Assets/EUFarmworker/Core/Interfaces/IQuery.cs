@@ -7,7 +7,7 @@ namespace EUFarmworker.Core.Interfaces
     /// 可以获取模型和工具。
     /// </summary>
     /// <typeparam name="T">查询结果类型</typeparam>
-    public interface IQuery<out T>:ICanGetModel,ICanGetUtility
+    public interface IQuery<out T>:ICanGetModel,ICanGetUtility,ICanSendQuery
     {
         /// <summary>
         /// 执行查询

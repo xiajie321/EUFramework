@@ -75,6 +75,8 @@ namespace EUFarmworker.Core.Test
         public override void Init()
         {
             Debug.Log("TestModel");   
+            // this.SendEvent(new TestEvent());//不建议在结构体内使用(因为会产生装箱)
+            // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
         }
     }
 
@@ -86,13 +88,17 @@ namespace EUFarmworker.Core.Test
         public override void Init()
         {
             Debug.Log("TestSystem");
+            // this.SendEvent(new TestEvent());//不建议在结构体内使用(因为会产生装箱)
+            // this.GetModel<TestModel>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetSystem<TestSystem>();//不建议在结构体内使用(因为会产生装箱)
         }
     }
     
     /// <summary>
     /// 测试用的工具
     /// </summary>
-    public class TestUtility:AbstractUtility
+    public class TestUtility:AbstractUtility//工具本身仅起到辅助作用
     {
         public override void Init()
         {
@@ -106,6 +112,20 @@ namespace EUFarmworker.Core.Test
         public void Execute()
         {
             Debug.Log(lsValue);
+            // this.SendCommand<TestCommandReturnInt,int>(new  TestCommandReturnInt());//不建议在结构体内使用(因为会产生装箱)
+            // this.SendQuery<TestQuery,int>(new TestQuery());//不建议在结构体内使用(因为会产生装箱)
+            // this.SendEvent<TestEvent>(new TestEvent());//不建议在结构体内使用(因为会产生装箱)
+            // this.GetModel<TestModel>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetSystem<TestSystem>();//不建议在结构体内使用(因为会产生装箱)
+            
+            // this.SendCommand(new TestCommand());//无返回值默认通过泛型确定避免装箱问题
+            // this.SendCommand<TestCommand,TestCommandReturnInt,int>(new TestCommandReturnInt());//通过泛型确定避免装箱问题
+            // this.SendQuery<TestCommand,TestQuery,int>(new TestQuery());//通过泛型确定避免装箱问题
+            // this.SendEvent<TestCommand,TestEvent>(new TestEvent());//通过泛型确定类型避免装箱问题
+            // this.GetModel<TestCommand,TestModel>();//通过泛型确定类型避免装箱问题
+            // this.GetUtility<TestCommand,TestUtility>();//通过泛型确定类型避免装箱问题
+            // this.GetSystem<TestCommand,TestSystem>();//通过泛型确定类型避免装箱问题
         }
     }
 
@@ -113,6 +133,20 @@ namespace EUFarmworker.Core.Test
     {
         public int Execute()
         {
+            // this.SendCommand<TestCommandReturnInt,int>(new  TestCommandReturnInt());//不建议在结构体内使用(因为会产生装箱)
+            // this.SendQuery<TestQuery,int>(new TestQuery());//不建议在结构体内使用(因为会产生装箱)
+            // this.SendEvent<TestEvent>(new TestEvent());//不建议在结构体内使用(因为会产生装箱)
+            // this.GetModel<TestModel>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetSystem<TestSystem>();//不建议在结构体内使用(因为会产生装箱)
+            //
+            // this.SendCommand(new TestCommand());//无返回值默认通过泛型确定避免装箱问题
+            // this.SendCommand<TestCommandReturnInt,TestCommandReturnInt,int>(new TestCommandReturnInt());//通过泛型确定避免装箱问题
+            // this.SendQuery<TestCommandReturnInt,TestQuery,int>(new TestQuery());//通过泛型确定避免装箱问题
+            // this.SendEvent<TestCommandReturnInt,TestEvent>(new TestEvent());//通过泛型确定类型避免装箱问题
+            // this.GetModel<TestCommandReturnInt,TestModel>();//通过泛型确定类型避免装箱问题
+            // this.GetUtility<TestCommandReturnInt,TestUtility>();//通过泛型确定类型避免装箱问题
+            // this.GetSystem<TestCommandReturnInt,TestSystem>();//通过泛型确定类型避免装箱问题
             return 1;
         }
     }
@@ -121,6 +155,13 @@ namespace EUFarmworker.Core.Test
     {
         public int Execute()
         {
+            // this.SendQuery<TestQuery,int>(new TestQuery());//不建议在结构体内使用(因为会产生装箱)
+            // this.GetModel<TestModel>();//不建议在结构体内使用(因为会产生装箱)
+            // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
+            //
+            // this.SendQuery<TestQuery,TestQuery,int>(new TestQuery());//通过泛型确定类型避免装箱问题
+            // this.GetModel<TestQuery,TestModel>();//通过泛型确定类型避免装箱问题
+            // this.GetUtility<TestQuery,TestUtility>();//通过泛型确定类型避免装箱问题
             return 1;
         }
     }

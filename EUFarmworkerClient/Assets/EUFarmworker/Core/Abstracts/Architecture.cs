@@ -230,14 +230,13 @@ namespace EUFarmworker.Core.Abstracts
         {
             return command.Execute();
         }
-
         /// <summary>
         /// 发送查询
         /// </summary>
         /// <typeparam name="T1">查询类型</typeparam>
         /// <param name="query">查询实例</param>
         /// <returns>查询结果</returns>
-        public T1 SendQuery<T1>(T1 query) where T1 : struct, IQuery<T1>
+        public T1 SendQuery<TQuery, T1>(TQuery query) where TQuery : struct, IQuery<T1>
         {
             return query.Execute();
         }
