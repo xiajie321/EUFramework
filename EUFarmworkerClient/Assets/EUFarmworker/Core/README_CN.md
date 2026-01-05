@@ -14,7 +14,8 @@
     - [Query (查询)](#query-查询)
     - [Event (事件)](#event-事件)
     - [Controller (表现层)](#controller-表现层)
-6. [示例代码](#示例代码)
+6. [进阶指南：性能优化与最佳实践](#进阶指南性能优化与最佳实践)
+7. [示例代码](#示例代码)
 
 ## 简介
 EUFarmworker Core 是一个基于 Unity 的轻量级架构框架，旨在提供清晰的代码结构和高效的开发体验。它深受 QFramework 的启发，并在此基础上进行了针对性的优化和改进，特别是在性能和类型安全方面。
@@ -136,8 +137,9 @@ public class StorageUtility : AbstractUtility
 ```
 
 ### Command (命令)
-实现 `ICommand` 接口。
+实现 `ICommand` 接口（无返回值）或 `ICommand<TResult>` 接口（有返回值）。
 
+#### 无返回值命令
 ```csharp
 public struct AddScoreCommand : ICommand
 {
@@ -145,8 +147,21 @@ public struct AddScoreCommand : ICommand
 
     public void Execute()
     {
-        var system = this.GetSystem<ScoreSystem>();
+        // 在 struct 中调用 GetSystem 建议使用带 TCaller 的泛型版本以避免装箱
+        var system = this.GetSystem<AddScoreCommand, ScoreSystem>();
         system.AddScore(Amount);
+    }
+}
+```
+
+#### 有返回值命令
+```csharp
+public struct GetScoreCommand : ICommand<int>
+{
+    public int Execute()
+    {
+        var model = this.GetModel<GetScoreCommand, GameModel>();
+        return model.Score;
     }
 }
 ```
@@ -159,7 +174,8 @@ public struct GetScoreQuery : IQuery<int>
 {
     public int Execute()
     {
-        var model = this.GetModel<GameModel>();
+        // 建议使用带 TCaller 的泛型版本
+        var model = this.GetModel<GetScoreQuery, GameModel>();
         return model.Score;
     }
 }
@@ -210,6 +226,65 @@ public class GamePanel : MonoBehaviour, IController
         }
 }
 ```
+
+## 进阶指南：性能优化与最佳实践
+
+EUFarmworker Core 的一大特性是极致的性能优化，特别是在 Struct 类型的 Command、Query 和 Event 中。为了避免 Struct 在调用接口方法时产生装箱（Boxing）操作（即 `this` 指针从值类型转换为引用类型接口），框架提供了一套特定的泛型扩展方法。
+
+### 在 Struct 中调用架构方法
+
+当你在 `struct` (如 Command 或 Query) 内部调用 `GetModel`、`GetSystem`、`SendCommand` 等方法时，**强烈建议**使用包含 `TCaller` (调用者类型) 的重载版本。
+
+#### 推荐写法 (无 GC)
+通过泛型显式传入当前结构体的类型，编译器会生成专门的代码路径，避免装箱。
+
+```csharp
+public struct TestCommand : ICommand
+{
+    public void Execute()
+    {
+        // 获取 Model/System/Utility
+        // 格式: this.GetModel<TCaller, TModel>()
+        var model = this.GetModel<TestCommand, GameModel>();
+        
+        // 发送 Command
+        // 格式: this.SendCommand<TCaller, TCommand>(command)
+        this.SendCommand<TestCommand, OtherCommand>(new OtherCommand());
+        
+        // 发送有返回值的 Command
+        // 格式: this.SendCommand<TCaller, TCommand, TResult>(command)
+        int result = this.SendCommand<TestCommand, CommandWithResult, int>(new CommandWithResult());
+        
+        // 发送 Query
+        // 格式: this.SendQuery<TCaller, TQuery, TResult>(query)
+        int score = this.SendQuery<TestCommand, GetScoreQuery, int>(new GetScoreQuery());
+        
+        // 发送 Event
+        // 格式: this.SendEvent<TCaller, TEvent>(event)
+        this.SendEvent<TestCommand, GameStartEvent>(new GameStartEvent());
+    }
+}
+```
+
+#### 不推荐写法 (产生 GC)
+直接调用接口方法会导致 `struct` 被装箱为接口对象，产生不必要的内存分配。
+
+```csharp
+public struct TestCommand : ICommand
+{
+    public void Execute()
+    {
+        // ⚠️ 以下写法在 struct 中会产生装箱，不建议使用
+        
+        // this.GetModel<GameModel>(); 
+        // this.SendCommand(new OtherCommand());
+        // this.SendQuery<GetScoreQuery, int>(new GetScoreQuery());
+        // this.SendEvent(new GameStartEvent());
+    }
+}
+```
+
+> **注意**：在 `class` (如 System, Model, MonoBehaviour Controller) 中，由于本身就是引用类型，直接使用 `this.GetModel<T>()` 等简化写法即可，不会有装箱问题。
 
 ## 示例代码
 完整的测试示例可以在 `EUFarmworker/Core/Test/TestCore.cs` 中找到。
