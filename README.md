@@ -20,13 +20,15 @@
 
 ## 正在进行的工作
 
-- 引入Fantasy框架。
+- 资源加载EURes
+- 状态机EUFSM
+- 音频播放EUAudio
 
 ## 计划
 
-- 将LuBan工具集成到Unity编辑器中,而非外置,可以通过编辑器内面板修改数据映射到Exl再进行生成Json的操作。
 - 将框架核心移植到Godot中。
 - Unity编辑器中的工具管理器(使用UIToolKit可视化进行对工具包的管理<查看、删除>)。
+- 引入Fantasy框架。
 
 ---
 
