@@ -113,7 +113,7 @@ namespace EUFarmworker.Core.Tools
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Command 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<TCaller,T>(ref this TCaller caller, in T command) 
+        public static void SendCommand<TCaller,T>(this TCaller caller, in T command) 
             where TCaller : struct,ICanSendCommand
             where T : struct, ICommand
         {

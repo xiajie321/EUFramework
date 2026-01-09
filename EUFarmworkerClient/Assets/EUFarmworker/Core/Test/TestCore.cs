@@ -112,14 +112,14 @@ namespace EUFarmworker.Core.Test
         public void Execute()
         {
             Debug.Log(lsValue);
-            // this.SendCommand<TestCommandReturnInt,int>(new  TestCommandReturnInt());//不建议在结构体内使用(因为会产生装箱)
+            //this.SendCommand<TestCommandReturnInt,int>(new TestCommandReturnInt());//不建议在结构体内使用(因为会产生装箱)
             // this.SendQuery<TestQuery,int>(new TestQuery());//不建议在结构体内使用(因为会产生装箱)
             // this.SendEvent<TestEvent>(new TestEvent());//不建议在结构体内使用(因为会产生装箱)
             // this.GetModel<TestModel>();//不建议在结构体内使用(因为会产生装箱)
             // this.GetUtility<TestUtility>();//不建议在结构体内使用(因为会产生装箱)
             // this.GetSystem<TestSystem>();//不建议在结构体内使用(因为会产生装箱)
             
-            // this.SendCommand(new TestCommand());//无返回值默认通过泛型确定避免装箱问题
+            //this.SendCommand(new TestCommand());//无返回值默认通过泛型确定避免装箱问题
             // this.SendCommand<TestCommand,TestCommandReturnInt,int>(new TestCommandReturnInt());//通过泛型确定避免装箱问题
             // this.SendQuery<TestCommand,TestQuery,int>(new TestQuery());//通过泛型确定避免装箱问题
             // this.SendEvent<TestCommand,TestEvent>(new TestEvent());//通过泛型确定类型避免装箱问题
