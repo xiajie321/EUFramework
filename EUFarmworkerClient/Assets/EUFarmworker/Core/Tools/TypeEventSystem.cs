@@ -10,22 +10,41 @@ namespace EUFarmworker.Core.Tools
     //4、静态泛型中的方法很有可能被内联,这会导致方法体直接嵌入到调用点,避免了传统的方法调用开销。
     public class TypeEventSystem
     {
+        private static int _globalSystemIdCounter = 0;
+        private readonly int _systemId;
+
+        public TypeEventSystem()
+        {
+            _systemId = _globalSystemIdCounter++;
+        }
+
         private interface IRegistration
         {
-            void UnRegister(TypeEventSystem system);
+            void UnRegister(int systemId);
         }
 
         private class EventCache<T> : IRegistration where T : struct
         {
-            // 优化 1：使用单例实例，避免 Register 时重复 new 包装对象
             public static readonly EventCache<T> Instance = new EventCache<T>();
             
-            // 优化 2：静态字典存储实例映射
-            public static readonly Dictionary<TypeEventSystem, Action<T>> SystemToActions = new Dictionary<TypeEventSystem, Action<T>>();
+            // 使用数组存储，通过 systemId 直接索引
+            public Action<T>[] SystemActions = new Action<T>[2];
 
-            public void UnRegister(TypeEventSystem system)
+            public void UnRegister(int systemId)
             {
-                SystemToActions.Remove(system);
+                if (systemId < SystemActions.Length)
+                {
+                    SystemActions[systemId] = null;
+                }
+            }
+
+            public void EnsureCapacity(int index)
+            {
+                if (index >= SystemActions.Length)
+                {
+                    int newSize = Math.Max(index + 1, SystemActions.Length * 2);
+                    Array.Resize(ref SystemActions, newSize);
+                }
             }
         }
 
@@ -33,30 +52,33 @@ namespace EUFarmworker.Core.Tools
 
         public void Register<T>(Action<T> onEvent) where T : struct
         {
-                if (!EventCache<T>.SystemToActions.ContainsKey(this))
-                {
-                    EventCache<T>.SystemToActions[this] = obj => { };
-                    // 使用静态单例，彻底消除 Register 时的堆内存分配
-                    _registeredTypes.Add(EventCache<T>.Instance);
-                }
-                EventCache<T>.SystemToActions[this] += onEvent;
+            var cache = EventCache<T>.Instance;
+            cache.EnsureCapacity(_systemId);
+            
+            if (cache.SystemActions[_systemId] == null)
+            {
+                cache.SystemActions[_systemId] = _ => { };
+                _registeredTypes.Add(cache);
+            }
+            cache.SystemActions[_systemId] += onEvent;
         }
 
         public void UnRegister<T>(Action<T> onEvent) where T : struct
         {
-                if (EventCache<T>.SystemToActions.TryGetValue(this, out var actions))
-                {
-                    EventCache<T>.SystemToActions[this] -= onEvent;
-                }
+            var cache = EventCache<T>.Instance;
+            if (_systemId < cache.SystemActions.Length && cache.SystemActions[_systemId] != null)
+            {
+                cache.SystemActions[_systemId] -= onEvent;
+            }
         }
 
         public void Send<T>(T tEvent) where T : struct
         {
-            // Send 通常在主线程高频触发，TryGetValue 在“一写多读”环境下是线程安全的，
-            // 且 Key 只有 1 个时速度极快，无需加锁
-            if (EventCache<T>.SystemToActions.TryGetValue(this, out var action))
+            var actions = EventCache<T>.Instance.SystemActions;
+            // 消除哈希计算，通过 ID 直接索引
+            if (_systemId < actions.Length)
             {
-                action.Invoke(tEvent);
+                actions[_systemId]?.Invoke(tEvent);
             }
         }
 
@@ -64,7 +86,7 @@ namespace EUFarmworker.Core.Tools
         {
             foreach (var registration in _registeredTypes)
             {
-                registration.UnRegister(this);
+                registration.UnRegister(_systemId);
             }
             _registeredTypes.Clear();
         }
