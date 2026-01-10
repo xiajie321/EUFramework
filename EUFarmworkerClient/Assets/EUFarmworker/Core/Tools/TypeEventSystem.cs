@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 namespace EUFarmworker.Core.Tools
 {
+    //不使用typeof(T)与字典的原因:
+    //1、typeof(T)在JIT编译时会由编译时确定推迟变为运行时确定,运行时环境必须去编译器编译后的一个运行时字典中查找,而不是像(typeof(int))这样的运行时确定。
+    //2、typeof(T)的结果本身是一个Type类型的实例对象。
+    //3、字典属于逻辑查询,会涉及到大量的逻辑操作,而静态泛型会在生成机器码时将静态字段的内存嵌入到指令里可以直接访问。
+    //4、静态泛型中的方法很有可能被内联,这会导致方法体直接嵌入到调用点,避免了传统的方法调用开销。
     public class TypeEventSystem
     {
         private interface IRegistration
