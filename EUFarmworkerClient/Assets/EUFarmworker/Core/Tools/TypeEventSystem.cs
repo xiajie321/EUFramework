@@ -3,80 +3,65 @@ using System.Collections.Generic;
 
 namespace EUFarmworker.Core.Tools
 {
-    /// <summary>
-    /// 基于类型的事件系统，用于事件的注册、注销和分发
-    /// </summary>
     public class TypeEventSystem
     {
-        private readonly Dictionary<Type, IRegisterations> _eventRegisterations = new Dictionary<Type, IRegisterations>();
-
-        /// <summary>
-        /// 注册事件监听
-        /// </summary>
-        /// <typeparam name="T">事件类型</typeparam>
-        /// <param name="onEvent">事件回调</param>
-        public void Register<T>(Action<T> onEvent)where T:struct
+        private interface IRegistration
         {
-            var type = typeof(T);
-            if (_eventRegisterations.TryGetValue(type, out var registerations))
+            void UnRegister(TypeEventSystem system);
+        }
+
+        private class EventCache<T> : IRegistration where T : struct
+        {
+            // 优化 1：使用单例实例，避免 Register 时重复 new 包装对象
+            public static readonly EventCache<T> Instance = new EventCache<T>();
+            
+            // 优化 2：静态字典存储实例映射
+            public static readonly Dictionary<TypeEventSystem, Action<T>> SystemToActions = new Dictionary<TypeEventSystem, Action<T>>();
+
+            public void UnRegister(TypeEventSystem system)
             {
-                var reg = (Registerations<T>)registerations;
-                reg.OnEvent += onEvent;
-            }
-            else
-            {
-                var reg = new Registerations<T>();
-                reg.OnEvent += onEvent;
-                _eventRegisterations.Add(type, reg);
+                SystemToActions.Remove(system);
             }
         }
 
-        /// <summary>
-        /// 注销事件监听
-        /// </summary>
-        /// <typeparam name="T">事件类型</typeparam>
-        /// <param name="onEvent">事件回调</param>
-        public void UnRegister<T>(Action<T> onEvent)where T:struct
+        private readonly HashSet<IRegistration> _registeredTypes = new HashSet<IRegistration>();
+
+        public void Register<T>(Action<T> onEvent) where T : struct
         {
-            var type = typeof(T);
-            if (_eventRegisterations.TryGetValue(type, out var registerations))
+                if (!EventCache<T>.SystemToActions.ContainsKey(this))
+                {
+                    EventCache<T>.SystemToActions[this] = obj => { };
+                    // 使用静态单例，彻底消除 Register 时的堆内存分配
+                    _registeredTypes.Add(EventCache<T>.Instance);
+                }
+                EventCache<T>.SystemToActions[this] += onEvent;
+        }
+
+        public void UnRegister<T>(Action<T> onEvent) where T : struct
+        {
+                if (EventCache<T>.SystemToActions.TryGetValue(this, out var actions))
+                {
+                    EventCache<T>.SystemToActions[this] -= onEvent;
+                }
+        }
+
+        public void Send<T>(T tEvent) where T : struct
+        {
+            // Send 通常在主线程高频触发，TryGetValue 在“一写多读”环境下是线程安全的，
+            // 且 Key 只有 1 个时速度极快，无需加锁
+            if (EventCache<T>.SystemToActions.TryGetValue(this, out var action))
             {
-                var reg = (Registerations<T>)registerations;
-                reg.OnEvent -= onEvent;
+                action.Invoke(tEvent);
             }
         }
 
-        /// <summary>
-        /// 发送事件
-        /// </summary>
-        /// <typeparam name="T">事件类型</typeparam>
-        /// <param name="tEvent">事件数据</param>
-        public void Send<T>(T tEvent) where T:struct
-        {
-            var type = typeof(T);
-            if (_eventRegisterations.TryGetValue(type, out var registerations))
-            {
-                var reg = (Registerations<T>)registerations;
-                reg.OnEvent?.Invoke(tEvent);
-            }
-        }
-
-        /// <summary>
-        /// 清空所有事件注册
-        /// </summary>
         public void Clear()
         {
-            _eventRegisterations.Clear();
-        }
-
-        private interface IRegisterations
-        {
-            
-        }
-
-        private class Registerations<T> : IRegisterations
-        {
-            public Action<T> OnEvent = obj => { };
+            foreach (var registration in _registeredTypes)
+            {
+                registration.UnRegister(this);
+            }
+            _registeredTypes.Clear();
         }
     }
 }
