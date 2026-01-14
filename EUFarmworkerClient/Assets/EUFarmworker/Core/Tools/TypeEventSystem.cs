@@ -11,11 +11,25 @@ namespace EUFarmworker.Core.Tools
     public class TypeEventSystem
     {
         private static int _globalSystemIdCounter = 0;
+        private static readonly Queue<int> _availableSystemIds = new Queue<int>();
         private readonly int _systemId;
 
         public TypeEventSystem()
         {
-            _systemId = _globalSystemIdCounter++;
+            if (_availableSystemIds.Count > 0)
+            {
+                _systemId = _availableSystemIds.Dequeue();
+            }
+            else
+            {
+                _systemId = _globalSystemIdCounter++;
+            }
+        }
+
+        ~TypeEventSystem()
+        {
+            Clear();
+            _availableSystemIds.Enqueue(_systemId);
         }
 
         private interface IRegistration
