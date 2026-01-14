@@ -1,3 +1,7 @@
+# 框架简介
+
+本框架是专门服务于2D与2.5D开发者的高性能高效的OOP开发框架，分层来自于qf框架并对其核心逻辑进行重构，尽量去避免框架本身带来的GC开销，使用更加高效的分层通信方式，大部分扩展工具可以使用类似Unity的包管理器去管理卸载与装载，大部分EU框架内置的工具都会进行多线程优化，减少独立开发者重复造轮子的压力且插件文件文件夹乱飞的情况。
+
 # FramworkerCore分支
 
 该分支是进行工具链整合的分支,内容包含:Unity客户端框架、工具的编辑器集成。
@@ -18,13 +22,19 @@
 
 - 引入HybridCLR。
 
+- 引入Scriban。
+
 ## 正在进行的工作
 
-- 引入Fantasy框架。
+- 资源加载EURes
+- 状态机EUFSM
+- 音频播放EUAudio
 
 ## 计划
 
-- 将LuBan工具集成到Unity编辑器中,而非外置,可以通过编辑器内面板修改数据映射到Exl再进行生成Json的操作。
+- 将框架核心移植到Godot中。
+- Unity编辑器中的工具管理器(使用UIToolKit可视化进行对工具包的管理<查看、删除>)。
+- 引入Fantasy框架。
 
 ---
 
@@ -49,6 +59,8 @@
 - 引入YooAsset资源管理方案。
 
 - 引入HybridCLR。
+
+- 引入Scriban。
 
 ## 正在进行的工作
 
@@ -77,3 +89,5 @@
 - [UniTask][Cysharp/UniTask: Provides an efficient allocation free async/await integration for Unity.](https://github.com/Cysharp/UniTask)
 
 - [Fantasy] [qq362946/奇幻：C # 游戏框架，但不限于游戏。可用于非游戏业务开发](https://github.com/qq362946/Fantasy)([GitHub - annulusgames/Alchemy: Provides a rich set of editor extensions and serialization extensions for Unity.](https://github.com/annulusgames/Alchemy))**
+
+- [Scriban] [scriban/scriban：一种快速、强大、安全且轻量级的.NET脚本语言和引擎](https://github.com/scriban/scriban)
