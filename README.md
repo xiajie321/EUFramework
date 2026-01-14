@@ -22,6 +22,8 @@
 
 - 引入HybridCLR。
 
+- 引入Scriban。
+
 ## 正在进行的工作
 
 - 资源加载EURes
@@ -58,6 +60,8 @@
 
 - 引入HybridCLR。
 
+- 引入Scriban。
+
 ## 正在进行的工作
 
 暂无
@@ -85,3 +89,5 @@
 - [UniTask][Cysharp/UniTask: Provides an efficient allocation free async/await integration for Unity.](https://github.com/Cysharp/UniTask)
 
 - [Fantasy] [qq362946/奇幻：C # 游戏框架，但不限于游戏。可用于非游戏业务开发](https://github.com/qq362946/Fantasy)([GitHub - annulusgames/Alchemy: Provides a rich set of editor extensions and serialization extensions for Unity.](https://github.com/annulusgames/Alchemy))**
+
+- [Scriban] [scriban/scriban：一种快速、强大、安全且轻量级的.NET脚本语言和引擎](https://github.com/scriban/scriban)
