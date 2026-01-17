@@ -1,5 +1,5 @@
-﻿using EUFarmworker.Core.MVC.CoreTools;
-using EUFarmworker.Core.MVC.Interfaces;
+﻿using EUFarmworker.Core.MVC.CoreTool;
+using EUFarmworker.Core.MVC.Interface;
 
 namespace EUFarmworker.Core.MVC
 {

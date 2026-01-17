@@ -1,6 +1,6 @@
 using System;
 
-namespace EUFarmworker.Core.MVC.Interfaces
+namespace EUFarmworker.Core.MVC.Interface
 {
     /// <summary>
     /// 架构接口，定义了架构的基本功能，包括注册、获取模块以及发送命令、查询和事件。

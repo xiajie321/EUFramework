@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace EUFarmworker.Core.MVC.CoreTools
+namespace EUFarmworker.Core.MVC.CoreTool
 {
     //不使用typeof(T)与字典的原因:
     //1、typeof(T)在JIT编译时会由编译时确定推迟变为运行时确定。

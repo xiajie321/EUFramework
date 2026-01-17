@@ -1,11 +1,11 @@
-﻿using EUFarmworker.Core.MVC.Interfaces;
+﻿using EUFarmworker.Core.MVC.Interface;
 
-namespace EUFarmworker.Core.MVC.Abstracts
+namespace EUFarmworker.Core.MVC.Abstract
 {
     /// <summary>
     /// 系统抽象基类
     /// </summary>
-    public abstract class AbstractSystem:ISystem
+    public abstract class AbsSystemBase:ISystem
     {
         /// <summary>
         /// 初始化系统，需在子类实现

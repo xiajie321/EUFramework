@@ -1,11 +1,11 @@
-﻿using EUFarmworker.Core.MVC.Interfaces;
+﻿using EUFarmworker.Core.MVC.Interface;
 
-namespace EUFarmworker.Core.MVC.Abstracts
+namespace EUFarmworker.Core.MVC.Abstract
 {
     /// <summary>
     /// 数据模型抽象基类
     /// </summary>
-    public abstract class AbstractModel:IModel
+    public abstract class AbsModelBase:IModel
     {
         /// <summary>
         /// 初始化模型，需在子类实现

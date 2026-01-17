@@ -1,13 +1,11 @@
-﻿
+﻿using EUFarmworker.Core.MVC.Interface;
 
-using EUFarmworker.Core.MVC.Interfaces;
-
-namespace EUFarmworker.Core.MVC.Abstracts
+namespace EUFarmworker.Core.MVC.Abstract
 {
     /// <summary>
     /// 工具抽象基类
     /// </summary>
-    public abstract class AbstractUtility :IUtility
+    public abstract class AbsUtilityBase :IUtility
     {
         /// <summary>
         /// 初始化工具，可按需重写

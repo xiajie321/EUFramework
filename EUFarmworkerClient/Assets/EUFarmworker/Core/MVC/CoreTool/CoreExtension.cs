@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using EUFarmworker.Core.MVC.Interfaces;
-using EUFarmworker.Core.MVC.Interfaces.Can;
+using EUFarmworker.Core.MVC.Interface;
+using EUFarmworker.Core.MVC.Interface.Can;
 
-namespace EUFarmworker.Core.MVC.CoreTools
+namespace EUFarmworker.Core.MVC.CoreTool
 {
     /// <summary>
     /// 核心扩展类，提供基于接口的扩展方法，简化架构使用

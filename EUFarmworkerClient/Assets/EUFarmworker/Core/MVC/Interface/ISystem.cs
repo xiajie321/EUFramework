@@ -1,6 +1,6 @@
-using EUFarmworker.Core.MVC.Interfaces.Can;
+using EUFarmworker.Core.MVC.Interface.Can;
 
-namespace EUFarmworker.Core.MVC.Interfaces
+namespace EUFarmworker.Core.MVC.Interface
 {
     /// <summary>
     /// 系统接口，用于处理业务逻辑。

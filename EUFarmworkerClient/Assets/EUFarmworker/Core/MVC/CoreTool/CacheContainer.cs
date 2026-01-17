@@ -1,4 +1,4 @@
-namespace EUFarmworker.Core.MVC.CoreTools
+namespace EUFarmworker.Core.MVC.CoreTool
 {
     /// <summary>
     /// 缓存容器，用于静态存储对象实例，提高访问速度

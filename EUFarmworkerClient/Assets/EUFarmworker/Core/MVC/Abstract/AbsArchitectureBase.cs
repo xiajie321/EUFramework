@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
-using EUFarmworker.Core.MVC.CoreTools;
-using EUFarmworker.Core.MVC.Interfaces;
+using EUFarmworker.Core.MVC.CoreTool;
+using EUFarmworker.Core.MVC.Interface;
 using UnityEngine;
 
-namespace EUFarmworker.Core.MVC.Abstracts
+namespace EUFarmworker.Core.MVC.Abstract
 {
     /// <summary>
     /// 架构抽象基类，实现了 IArchitecture 接口。
     /// 管理系统、模型、工具的注册、获取和销毁，以及事件系统。
     /// </summary>
     /// <typeparam name="T">具体的架构类型</typeparam>
-    public abstract class Architecture<T>:IArchitecture where T: Architecture<T>,new()
+    public abstract class AbsArchitectureBase<T>:IArchitecture where T: AbsArchitectureBase<T>,new()
     {
         private static T _instance;
         private static HashSet<Type> _hashSet = new();//用于检查重复注册

@@ -1,4 +1,4 @@
-namespace EUFarmworker.Core.MVC.Interfaces.Can
+namespace EUFarmworker.Core.MVC.Interface.Can
 {
     /// <summary>
     /// 赋予对象获取工具（Utility）的能力

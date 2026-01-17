@@ -1,6 +1,6 @@
-using EUFarmworker.Core.MVC.Abstracts;
-using EUFarmworker.Core.MVC.CoreTools;
-using EUFarmworker.Core.MVC.Interfaces;
+using EUFarmworker.Core.MVC.Abstract;
+using EUFarmworker.Core.MVC.CoreTool;
+using EUFarmworker.Core.MVC.Interface;
 using UnityEngine;
 
 namespace EUFarmworker.Core.MVC.Example.Script
@@ -21,7 +21,7 @@ namespace EUFarmworker.Core.MVC.Example.Script
         private void Awake()
         {
             // 初始化架构
-            EUCore.SetArchitecture(TestArchitecture.Instance);
+            EUCore.SetArchitecture(TestAbsArchitectureBase.Instance);
         }
 
         private void Start()
@@ -55,21 +55,21 @@ namespace EUFarmworker.Core.MVC.Example.Script
     /// <summary>
     /// 测试用的架构实现
     /// </summary>
-    public class TestArchitecture : Architecture<TestArchitecture>
+    public class TestAbsArchitectureBase : AbsArchitectureBase<TestAbsArchitectureBase>
     {
         protected override void Init()
         {
             // 注册模块
-            RegisterModel(new TestModel());
-            RegisterSystem(new TestSystem());
-            RegisterUtility(new TestUtility());
+            RegisterModel(new TestModelBase());
+            RegisterSystem(new TestSystemBase());
+            RegisterUtility(new TestUtilityBase());
         }
     }
 
     /// <summary>
     /// 测试用的数据模型
     /// </summary>
-    public class TestModel : AbstractModel
+    public class TestModelBase : AbsModelBase
     {
         public override void Init()
         {
@@ -82,7 +82,7 @@ namespace EUFarmworker.Core.MVC.Example.Script
     /// <summary>
     /// 测试用的系统
     /// </summary>
-    public class TestSystem : AbstractSystem
+    public class TestSystemBase : AbsSystemBase
     {
         public override void Init()
         {
@@ -97,7 +97,7 @@ namespace EUFarmworker.Core.MVC.Example.Script
     /// <summary>
     /// 测试用的工具
     /// </summary>
-    public class TestUtility:AbstractUtility//工具本身仅起到辅助作用
+    public class TestUtilityBase:AbsUtilityBase//工具本身仅起到辅助作用
     {
         public override void Init()
         {
