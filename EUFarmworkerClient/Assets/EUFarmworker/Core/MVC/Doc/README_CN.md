@@ -47,9 +47,9 @@ EUFarmworker Core MVC 是一个基于 Unity 的轻量级架构框架，旨在提
 
 ### Architecture (架构)
 整个应用的容器，负责管理所有的 Model、System 和 Utility。它是单例的，作为访问所有模块的入口。
-> **重要提示**：由于 `Architecture` 使用静态泛型缓存（[CacheContainer.cs](file:///d%3A/Unity/UnityProject/EUFramworker/EUFarmworkerClient/Assets/EUFarmworker/Core/MVC/CoreTools/CacheContainer.cs)）来提升性能，它**不会**在对象销毁时自动清理。你**必须**在合适的时机显式调用 `Architecture.Instance.Dispose()`。
+> **重要提示**：由于 `Architecture` 使用静态泛型缓存（[CacheContainer.cs](file:///d%3A/Unity/UnityProject/EUFramworker/EUFarmworkerClient/Assets/EUFarmworker/Core/MVC/CoreTool/CacheContainer.cs)）来提升性能，它**不会**在对象销毁时自动清理。你**必须**在合适的时机显式调用 `YourArchitecture.Instance.Dispose()`。
 ### EUCore.SetArchitecture (游戏运行时的核心框架设置)
-使用EUCore.SetArchitecture可以设置和切换当前游戏运行时用到的唯一架构,会自动的去调用上次的架构Dispose()方法,即：`Architecture.Instance.Dispose()`。
+使用EUCore.SetArchitecture可以设置和切换当前游戏运行时用到的唯一架构,会自动的去调用上次的架构Dispose()方法,即：`YourArchitecture.Instance.Dispose()`。
 调用顺序：`LastArchitecture.Instance.Dispose()` ->`CurrentArchitecture.Instance.Dispose()`。
 
 ### Model (数据层)
@@ -73,10 +73,10 @@ EUFarmworker Core MVC 是一个基于 Unity 的轻量级架构框架，旨在提
 ## 使用指南
 
 ### 架构定义
-首先，你需要定义你的架构类，继承自 `Architecture<T>`。
+首先，你需要定义你的架构类，继承自 `AbsArchitectureBase<T>`。
 
 ```csharp
-public class GameArchitecture : Architecture<GameArchitecture>
+public class GameArchitecture : AbsArchitectureBase<GameArchitecture>
 {
     protected override void Init()
     {
@@ -89,10 +89,10 @@ public class GameArchitecture : Architecture<GameArchitecture>
 ```
 
 ### Model (数据层)
-继承自 `AbstractModel`。
+继承自 `AbsModelBase`。
 
 ```csharp
-public class GameModel : AbstractModel
+public class GameModel : AbsModelBase
 {
     public int Score { get; set; }
 
@@ -104,10 +104,10 @@ public class GameModel : AbstractModel
 ```
 
 ### System (系统层)
-继承自 `AbstractSystem`。
+继承自 `AbsSystemBase`。
 
 ```csharp
-public class ScoreSystem : AbstractSystem
+public class ScoreSystem : AbsSystemBase
 {
     public override void Init()
     {
@@ -126,10 +126,10 @@ public class ScoreSystem : AbstractSystem
 ```
 
 ### Utility (工具层)
-继承自 `AbstractUtility`。
+继承自 `AbsUtilityBase`。
 
 ```csharp
-public class StorageUtility : AbstractUtility
+public class StorageUtility : AbsUtilityBase
 {
     public override void Init()
     {
@@ -347,4 +347,4 @@ public struct TestCommand : ICommand
 > **注意**：在 `class` (如 System, Model, MonoBehaviour Controller) 中，由于本身就是引用类型，直接使用 `this.GetModel<T>()` 等简化写法即可，不会有装箱问题。
 
 ## 示例代码
-完整的测试示例可以在 `EUFarmworker/Core/Test/TestCore.cs` 中找到。
+完整的测试示例可以在 [TestCore.cs](file:///d%3A/Unity/UnityProject/EUFramworker/EUFarmworkerClient/Assets/EUFarmworker/Core/MVC/Example/Script/TestCore.cs) 中找到。
