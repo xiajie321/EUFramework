@@ -230,10 +230,12 @@ namespace EUFarmworker.Core.MVC.Abstract
         {
             return command.Execute();
         }
+
         /// <summary>
         /// 发送查询
         /// </summary>
         /// <typeparam name="T1">查询类型</typeparam>
+        /// <typeparam name="TQuery">具体查询类型</typeparam>
         /// <param name="query">查询实例</param>
         /// <returns>查询结果</returns>
         public T1 SendQuery<TQuery, T1>(TQuery query) where TQuery : struct, IQuery<T1>
