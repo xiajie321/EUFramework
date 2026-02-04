@@ -20,7 +20,7 @@ namespace EUFarmworker.ExtensionManager
         private const string PrefsKey_CoreInstallPath = "EUExtensionManager_CoreInstallPath";
         private const string DefaultCommunityUrl = "https://github.com/xiajie321/EUFramworkerCommunity";
         private const string DefaultExtensionRootPath = "Assets/EUFarmworker/Extension";
-        private const string DefaultCoreInstallPath = "Assets/EUFarmworker/Core/MVC";
+        private const string DefaultCoreInstallPath = "Assets/EUFarmworker/Core";
 
         public static string ExtensionRootPath
         {
@@ -43,10 +43,12 @@ namespace EUFarmworker.ExtensionManager
         /// <summary>
         /// 获取用于下载原始文件的URL (GitHub Raw)
         /// </summary>
-        private static string GetRawFileUrl(string dirName, string fileName)
+        private static string GetRawFileUrl(string dirName, string fileName, string branch = "main")
         {
             string url = CommunityUrl.TrimEnd('/');
-            return url.Replace("github.com", "raw.githubusercontent.com") + $"/main/{dirName}/{fileName}";
+            // 添加时间戳防止缓存
+            string baseUrl = url.Replace("github.com", "raw.githubusercontent.com") + $"/{branch}/{dirName}/{fileName}";
+            return $"{baseUrl}?t={DateTime.Now.Ticks}";
         }
         
         /// <summary>
@@ -74,8 +76,44 @@ namespace EUFarmworker.ExtensionManager
 
             // 扫描核心目录（核心本身作为一个特殊的扩展）
             ScanCoreDirectory(extensions);
+
+            // 扫描 EUExtensionManager 自身（无论它在哪里）
+            ScanSelf(extensions);
             
             return extensions;
+        }
+
+        private static void ScanSelf(List<EUExtensionInfo> extensions)
+        {
+            // 通过脚本定位自身目录
+            string[] guids = AssetDatabase.FindAssets("EUExtensionLoader t:Script");
+            if (guids.Length == 0) return;
+
+            string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+            if (string.IsNullOrEmpty(assetPath)) return;
+
+            // 假设结构: .../EUExtensionManager/Script/EUExtensionLoader.cs
+            //我们需要拿到 .../EUExtensionManager
+            string scriptDir = Path.GetDirectoryName(assetPath);
+            string managerDir = Path.GetDirectoryName(scriptDir);
+            
+            string fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", managerDir));
+
+            EUExtensionInfo info = LoadExtensionInfo(fullPath);
+            if (info != null)
+            {
+                // 避免重复添加
+                bool exists = extensions.Any(e => 
+                    e.name == info.name || 
+                    string.Equals(Path.GetFullPath(e.folderPath).TrimEnd('/', '\\'), 
+                                  Path.GetFullPath(info.folderPath).TrimEnd('/', '\\'), 
+                                  StringComparison.OrdinalIgnoreCase));
+
+                if (!exists)
+                {
+                    extensions.Add(info);
+                }
+            }
         }
 
         private static void ScanDirectoryForExtensions(string rootPath, List<EUExtensionInfo> extensions)
@@ -110,40 +148,54 @@ namespace EUFarmworker.ExtensionManager
 
             if (Directory.Exists(fullPath))
             {
-                // 检查是否包含 Doc 文件夹
-                string docPath = Path.Combine(fullPath, "Doc");
-                if (Directory.Exists(docPath))
+                // Core 路径可能包含多个子模块（如 MVC），也可能直接就是核心包
+                // 策略：扫描 Core 路径下的直接子目录，以及 Core 路径本身
+                
+                // 1. 检查 Core 路径本身
+                TryLoadExtensionInfo(fullPath, extensions, isCore: true);
+
+                // 2. 检查 Core 路径下的子目录
+                string[] directories = Directory.GetDirectories(fullPath);
+                foreach (string dir in directories)
                 {
-                    TryLoadExtensionInfo(fullPath, extensions, isCore: true);
+                    TryLoadExtensionInfo(dir, extensions, isCore: true);
                 }
+            }
+        }
+
+        private static EUExtensionInfo LoadExtensionInfo(string dir)
+        {
+            string jsonPath = Path.Combine(dir, ExtensionMarkerFile);
+            if (!File.Exists(jsonPath)) return null;
+
+            try
+            {
+                string jsonContent = File.ReadAllText(jsonPath);
+                EUExtensionInfo info = JsonUtility.FromJson<EUExtensionInfo>(jsonContent);
+                if (info != null)
+                {
+                    info.folderPath = dir.Replace("\\", "/");
+                    info.isInstalled = true;
+                }
+                return info;
+            }
+            catch
+            {
+                return null;
             }
         }
 
         private static void TryLoadExtensionInfo(string dir, List<EUExtensionInfo> extensions, bool isCore = false)
         {
-            string jsonPath = Path.Combine(dir, ExtensionMarkerFile);
-            if (File.Exists(jsonPath))
+            var info = LoadExtensionInfo(dir);
+            if (info != null)
             {
-                try
+                // 如果是核心，可以在这里标记，或者通过 category 区分
+                if (isCore && string.IsNullOrEmpty(info.category))
                 {
-                    string jsonContent = File.ReadAllText(jsonPath);
-                    EUExtensionInfo info = JsonUtility.FromJson<EUExtensionInfo>(jsonContent);
-                    if (info != null)
-                    {
-                        info.folderPath = dir.Replace("\\", "/");
-                        info.isInstalled = true;
-                        // 如果是核心，可以在这里标记，或者通过 category 区分
-                        if (isCore && string.IsNullOrEmpty(info.category))
-                        {
-                            info.category = "Core";
-                        }
-                        extensions.Add(info);
-                    }
+                    info.category = "Core";
                 }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"加载本地插件失败 {dir}: {e.Message}");
-                }
+                extensions.Add(info);
             }
         }
 
@@ -184,7 +236,6 @@ namespace EUFarmworker.ExtensionManager
             }
             else
             {
-                Debug.LogWarning($"未找到文档目录: {docPath}");
             }
         }
 
@@ -215,7 +266,6 @@ namespace EUFarmworker.ExtensionManager
         /// </summary>
         public static void FetchRemoteRegistry(Action<List<EUExtensionInfo>> callback)
         {
-            Debug.Log("[EUExtensionManager] 从 GitHub 获取扩展列表...");
             FetchRemoteRegistryViaGitHubApi(callback);
         }
         
@@ -226,8 +276,6 @@ namespace EUFarmworker.ExtensionManager
         {
             string url = CommunityUrl.TrimEnd('/');
             string apiUrl = url.Replace("github.com", "api.github.com/repos") + "/contents";
-            
-            Debug.Log($"[EUExtensionManager] API URL: {apiUrl}");
             
             var request = CreateRequest(apiUrl);
             request.SetRequestHeader("Accept", "application/vnd.github.v3+json");
@@ -241,8 +289,6 @@ namespace EUFarmworker.ExtensionManager
                     {
                         string json = request.downloadHandler.text;
                         List<string> directories = ParseGitHubDirectories(json);
-                        
-                        Debug.Log($"[EUExtensionManager] 找到 {directories.Count} 个目录");
                         
                         if (directories.Count == 0)
                         {
@@ -263,7 +309,6 @@ namespace EUFarmworker.ExtensionManager
                                     info.isInstalled = false;
                                     info.remoteFolderName = dirName;
                                     remoteExtensions.Add(info);
-                                    Debug.Log($"[EUExtensionManager] 加载扩展: {info.displayName}");
                                 }
                                 pending--;
                                 if (pending == 0) callback?.Invoke(remoteExtensions);
@@ -344,8 +389,24 @@ namespace EUFarmworker.ExtensionManager
 
         private static void FetchRemoteExtensionJson(string dirName, Action<EUExtensionInfo> callback)
         {
-            string rawUrl = GetRawFileUrl(dirName, ExtensionMarkerFile);
-            Debug.Log($"[EUExtensionManager] 获取 extension.json: {rawUrl}");
+            // 先尝试 main 分支
+            TryFetchRemoteJson(dirName, "main", (info) =>
+            {
+                if (info != null)
+                {
+                    callback?.Invoke(info);
+                }
+                else
+                {
+                    // 失败尝试 master 分支
+                    TryFetchRemoteJson(dirName, "master", callback);
+                }
+            });
+        }
+
+        private static void TryFetchRemoteJson(string dirName, string branch, Action<EUExtensionInfo> callback)
+        {
+            string rawUrl = GetRawFileUrl(dirName, ExtensionMarkerFile, branch);
             
             var request = CreateRequest(rawUrl);
             var operation = request.SendWebRequest();
@@ -363,19 +424,16 @@ namespace EUFarmworker.ExtensionManager
                         }
                         else
                         {
-                            Debug.LogWarning($"[EUExtensionManager] 无效的 extension.json: {dirName}");
                             callback?.Invoke(null);
                         }
                     }
-                    catch (Exception e) 
+                    catch 
                     { 
-                        Debug.LogError($"[EUExtensionManager] JSON 解析错误 {dirName}: {e.Message}");
                         callback?.Invoke(null); 
                     }
                 }
                 else 
                 { 
-                    Debug.LogWarning($"[EUExtensionManager] 获取 extension.json 失败 {dirName}: {request.error}");
                     callback?.Invoke(null); 
                 }
             };
@@ -403,7 +461,6 @@ namespace EUFarmworker.ExtensionManager
         /// </summary>
         public static void DownloadAndInstall(EUExtensionInfo info, string dirName, Action<bool> onComplete)
         {
-            Debug.Log($"[EUExtensionManager] 开始下载扩展: {info.displayName} (目录: {dirName})");
             DownloadExtensionViaZip(info, dirName, (success) =>
             {
                 if (success)
@@ -489,7 +546,6 @@ namespace EUFarmworker.ExtensionManager
                 // 尝试从社区仓库获取信息
                 // 这里我们没有当前的远程列表，可能需要重新获取或者假设调用者有 context
                 // 简单起见，如果通过 DownloadDependency 失败（没 url），则跳过
-                Debug.LogWarning($"依赖 {dep.name} 没有配置 gitUrl，无法自动安装。");
                 next(true); 
             }
         }
@@ -503,8 +559,6 @@ namespace EUFarmworker.ExtensionManager
                 return;
             }
 
-            Debug.Log($"[EUExtensionManager] 开始下载依赖: {dep.name} 来自 {dep.gitUrl}");
-            
             // 构建 ZIP 下载 URL
             string repoUrl = dep.gitUrl.TrimEnd('/');
             if (repoUrl.EndsWith(".git")) repoUrl = repoUrl.Substring(0, repoUrl.Length - 4);
@@ -531,7 +585,6 @@ namespace EUFarmworker.ExtensionManager
                 }
                 else
                 {
-                    Debug.Log("[EUExtensionManager] main 分支下载失败，尝试 master 分支...");
                     TryDownloadZip(info, dirName, "master", onComplete);
                 }
             });
@@ -553,7 +606,6 @@ namespace EUFarmworker.ExtensionManager
                 // 使用通用安装逻辑
                 InstallExtensionFromSource(extensionSourceDir, dirName, null);
                 
-                Debug.Log($"[EUExtensionManager] 安装完成: {info.displayName}");
             }, onComplete);
         }
 
@@ -570,7 +622,6 @@ namespace EUFarmworker.ExtensionManager
                 // 使用通用安装逻辑
                 InstallExtensionFromSource(repoRoot, dep.name, dep.installPath);
                 
-                Debug.Log($"[EUExtensionManager] 依赖安装完成: {dep.name}");
             }, onComplete);
         }
 
@@ -631,21 +682,61 @@ namespace EUFarmworker.ExtensionManager
 
         private static void InstallDirectory(string sourceDir, string targetDir)
         {
-            // 如果目标目录已存在，先删除
-            if (Directory.Exists(targetDir))
+            // 安全覆盖安装逻辑：不直接删除整个目录，而是同步文件内容
+            if (!Directory.Exists(targetDir))
             {
-                Directory.Delete(targetDir, true);
-                string metaPath = targetDir + ".meta";
-                if (File.Exists(metaPath)) File.Delete(metaPath);
+                Directory.CreateDirectory(targetDir);
             }
-            
-            // 复制扩展目录到目标位置
-            CopyDirectory(sourceDir, targetDir);
+
+            // 1. 复制/覆盖所有新文件
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                string fileName = Path.GetFileName(file);
+                string destFile = Path.Combine(targetDir, fileName);
+                File.Copy(file, destFile, true);
+            }
+
+            // 2. 递归处理子目录
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                string dirName = Path.GetFileName(dir);
+                string destDir = Path.Combine(targetDir, dirName);
+                InstallDirectory(dir, destDir);
+            }
+
+            // 3. 清理旧文件（目标有但源没有的文件）
+            // 注意：不要删除 .meta 文件，除非对应的源文件也没有
+            var sourceFiles = new HashSet<string>(Directory.GetFiles(sourceDir).Select(Path.GetFileName));
+            var sourceDirs = new HashSet<string>(Directory.GetDirectories(sourceDir).Select(Path.GetFileName));
+
+            foreach (var file in Directory.GetFiles(targetDir))
+            {
+                string fileName = Path.GetFileName(file);
+                if (fileName.EndsWith(".meta")) continue; // 跳过 meta 文件
+
+                if (!sourceFiles.Contains(fileName))
+                {
+                    try { File.Delete(file); } catch { /* Ignore lock errors */ }
+                    // 顺便尝试删除对应的 meta
+                    string meta = file + ".meta";
+                    if (File.Exists(meta)) try { File.Delete(meta); } catch { }
+                }
+            }
+
+            foreach (var dir in Directory.GetDirectories(targetDir))
+            {
+                string dirName = Path.GetFileName(dir);
+                if (!sourceDirs.Contains(dirName))
+                {
+                    try { Directory.Delete(dir, true); } catch { /* Ignore lock errors */ }
+                    string meta = dir + ".meta";
+                    if (File.Exists(meta)) try { File.Delete(meta); } catch { }
+                }
+            }
         }
 
         private static void DownloadAndExtractZip(string url, string progressTitle, Action<string> onExtracted, Action<bool> onComplete)
         {
-            Debug.Log($"[EUExtensionManager] 下载 ZIP: {url}");
             EditorUtility.DisplayProgressBar("下载中", progressTitle, 0.1f);
             
             var request = CreateRequest(url);
@@ -655,7 +746,6 @@ namespace EUFarmworker.ExtensionManager
                 if (request.result != UnityWebRequest.Result.Success)
                 {
                     EditorUtility.ClearProgressBar();
-                    Debug.LogWarning($"[EUExtensionManager] 下载失败: {request.error}");
                     onComplete?.Invoke(false);
                     return;
                 }

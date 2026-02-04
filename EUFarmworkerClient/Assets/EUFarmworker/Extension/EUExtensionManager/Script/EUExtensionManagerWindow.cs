@@ -59,9 +59,38 @@ namespace EUFarmworker.ExtensionManager
 
         public void CreateGUI()
         {
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss");
+            string scriptPath = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this));
+            string rootPath = "Assets/EUFarmworker/Extension/EUExtensionManager";
+
+            if (!string.IsNullOrEmpty(scriptPath))
+            {
+                try
+                {
+                    // 尝试动态获取: Script/../../ -> EUExtensionManager
+                    string dir = Path.GetDirectoryName(scriptPath); // .../Script
+                    if (!string.IsNullOrEmpty(dir))
+                    {
+                        string parentDir = Path.GetDirectoryName(dir); // .../EUExtensionManager
+                        if (!string.IsNullOrEmpty(parentDir))
+                        {
+                            rootPath = parentDir;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[EUExtensionManager] 无法动态获取路径: {e.Message}，使用默认路径。");
+                }
+            }
+
+            rootPath = rootPath.Replace("\\", "/");
+            string ussPath = $"{rootPath}/ConfigPanel/EUExtensionManager.uss";
+            
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             VisualElement root = rootVisualElement;
-            root.styleSheets.Add(styleSheet);
+            if (styleSheet != null)
+                root.styleSheets.Add(styleSheet);
+            
             root.AddToClassList("root-container");
 
             // 1. 左侧侧边栏
@@ -539,18 +568,20 @@ namespace EUFarmworker.ExtensionManager
             // 2. Sort
             if (m_CurrentSort == "名称")
             {
-                m_FilteredExtensions = filtered.OrderBy(e => e.displayName).ToList();
+                m_FilteredExtensions = filtered.OrderByDescending(e => e.name == "com.eu.extension-manager") // Manager first
+                                              .ThenBy(e => e.displayName).ToList();
             }
             else // 状态
             {
                 // Sort by update available (if installed) or just name
-                m_FilteredExtensions = filtered.OrderByDescending(e => {
-                    // Logic to put updates on top
-                    if (m_ShowRemote) return false; // In remote view, maybe sort by date if available?
-                    // In local view, check if update available
-                    var remote = m_RemoteExtensions?.FirstOrDefault(r => r.name == e.name);
-                    return remote != null && IsVersionNewer(remote.version, e.version);
-                }).ThenBy(e => e.displayName).ToList();
+                m_FilteredExtensions = filtered.OrderByDescending(e => e.name == "com.eu.extension-manager") // Manager first
+                                              .ThenByDescending(e => {
+                                                  // Logic to put updates on top
+                                                  if (m_ShowRemote) return false; // In remote view, maybe sort by date if available?
+                                                  // In local view, check if update available
+                                                  var remote = m_RemoteExtensions?.FirstOrDefault(r => r.name == e.name);
+                                                  return remote != null && IsVersionNewer(remote.version, e.version);
+                                              }).ThenBy(e => e.displayName).ToList();
             }
 
             m_ExtensionListView.itemsSource = m_FilteredExtensions;
@@ -675,12 +706,19 @@ namespace EUFarmworker.ExtensionManager
                 actionBar.Add(CreateActionButton("文档", "btn-secondary", () => EUExtensionLoader.OpenDocumentation(localInfo)));
                 actionBar.Add(CreateActionButton("定位", "btn-secondary", () => EditorUtility.RevealInFinder(localInfo.folderPath)));
                 
-                Button unBtn = CreateActionButton("卸载", "btn-danger", () => {
-                    if (m_IsProcessing) return;
-                    if (EditorUtility.DisplayDialog("卸载", "确定卸载吗？", "确定", "取消")) { EUExtensionLoader.Uninstall(localInfo); RefreshList(); }
-                });
-                if (m_IsProcessing) unBtn.SetEnabled(false);
-                actionBar.Add(unBtn);
+                // 管理器自身不允许卸载 (通过包名判断，假设包名为 com.eu.extension-manager)
+                // 也可以结合 category 判断，这里使用包名检查更准确
+                bool isSelf = localInfo.name == "com.eu.extension-manager";
+                
+                if (!isSelf)
+                {
+                    Button unBtn = CreateActionButton("卸载", "btn-danger", () => {
+                        if (m_IsProcessing) return;
+                        if (EditorUtility.DisplayDialog("卸载", "确定卸载吗？", "确定", "取消")) { EUExtensionLoader.Uninstall(localInfo); RefreshList(); }
+                    });
+                    if (m_IsProcessing) unBtn.SetEnabled(false);
+                    actionBar.Add(unBtn);
+                }
             }
             else
             {
