@@ -20,6 +20,14 @@ namespace EUFarmworker.ExtensionManager
         private ListView m_ExtensionListView;
         private VisualElement m_DetailPanel;
         private TextField m_SearchField;
+        
+        // Sorting & Filtering
+        private PopupField<string> m_SortPopup;
+        private PopupField<string> m_CategoryPopup;
+        private List<string> m_Categories = new List<string> { "全部" };
+        private string m_CurrentCategory = "全部";
+        private string m_CurrentSort = "名称";
+
         private bool m_ShowRemote = false;
         private string m_LastSelectedName;
         private bool m_IsProcessing = false;
@@ -117,7 +125,7 @@ namespace EUFarmworker.ExtensionManager
 
             m_SearchField = new TextField();
             m_SearchField.AddToClassList("search-field");
-            m_SearchField.RegisterValueChangedCallback(evt => FilterList(evt.newValue));
+            m_SearchField.RegisterValueChangedCallback(evt => FilterList());
             searchContainer.Add(m_SearchField);
 
             Label placeholder = new Label("搜索拓展...");
@@ -140,9 +148,36 @@ namespace EUFarmworker.ExtensionManager
             });
             clearBtn.style.display = DisplayStyle.None;
 
+            // Sort & Filter Controls
+            VisualElement filterContainer = new VisualElement();
+            filterContainer.style.flexDirection = FlexDirection.Row;
+            filterContainer.style.marginLeft = 10;
+            topBar.Add(filterContainer);
+
+            // Category Filter
+            m_CategoryPopup = new PopupField<string>(m_Categories, 0);
+            m_CategoryPopup.RegisterValueChangedCallback(evt => {
+                m_CurrentCategory = evt.newValue;
+                FilterList();
+            });
+            m_CategoryPopup.style.width = 100;
+            m_CategoryPopup.style.marginRight = 5;
+            filterContainer.Add(m_CategoryPopup);
+
+            // Sort
+            var sortOptions = new List<string> { "名称", "状态" };
+            m_SortPopup = new PopupField<string>(sortOptions, 0);
+            m_SortPopup.RegisterValueChangedCallback(evt => {
+                m_CurrentSort = evt.newValue;
+                FilterList();
+            });
+            m_SortPopup.style.width = 80;
+            filterContainer.Add(m_SortPopup);
+
             Button refreshBtn = new Button(() => RefreshList()) { text = "↻" };
             refreshBtn.tooltip = "刷新列表";
             refreshBtn.AddToClassList("icon-button");
+            refreshBtn.style.marginLeft = 10;
             topBar.Add(refreshBtn);
 
             // Split View (List + Detail)
@@ -407,10 +442,43 @@ namespace EUFarmworker.ExtensionManager
         {
             m_Extensions = m_ShowRemote ? m_RemoteExtensions : m_LocalExtensions;
             
+            // Update Categories
+            UpdateCategories();
+
             // 更新侧边栏计数
             UpdateSidebarCounts();
             
-            FilterList(m_SearchField?.value);
+            FilterList();
+        }
+
+        private void UpdateCategories()
+        {
+            var categories = new HashSet<string> { "全部" };
+            if (m_Extensions != null)
+            {
+                foreach (var ext in m_Extensions)
+                {
+                    if (!string.IsNullOrEmpty(ext.category))
+                        categories.Add(ext.category);
+                    else
+                        categories.Add("未分类");
+                }
+            }
+            
+            m_Categories = categories.OrderBy(c => c).ToList();
+            // Put 'All' first
+            m_Categories.Remove("全部");
+            m_Categories.Insert(0, "全部");
+
+            if (m_CategoryPopup != null)
+            {
+                string current = m_CategoryPopup.value;
+                m_CategoryPopup.choices = m_Categories;
+                if (m_Categories.Contains(current))
+                    m_CategoryPopup.value = current;
+                else
+                    m_CategoryPopup.value = "全部";
+            }
         }
         
         private void UpdateSidebarCounts()
@@ -450,20 +518,39 @@ namespace EUFarmworker.ExtensionManager
             }
         }
 
-        private void FilterList(string search)
+        private void FilterList(string search = null)
         {
-            if (string.IsNullOrEmpty(search))
+            if (search == null) search = m_SearchField?.value ?? "";
+            search = search.ToLower();
+
+            // 1. Filter
+            var filtered = m_Extensions.Where(e => 
+                // Search Text
+                (string.IsNullOrEmpty(search) || 
+                 (e.displayName != null && e.displayName.ToLower().Contains(search)) || 
+                 (e.name != null && e.name.ToLower().Contains(search)) ||
+                 (e.description != null && e.description.ToLower().Contains(search))) &&
+                // Category
+                (m_CurrentCategory == "全部" || 
+                 (string.IsNullOrEmpty(e.category) && m_CurrentCategory == "未分类") ||
+                 e.category == m_CurrentCategory)
+            );
+
+            // 2. Sort
+            if (m_CurrentSort == "名称")
             {
-                m_FilteredExtensions = m_Extensions;
+                m_FilteredExtensions = filtered.OrderBy(e => e.displayName).ToList();
             }
-            else
+            else // 状态
             {
-                search = search.ToLower();
-                m_FilteredExtensions = m_Extensions.Where(e => 
-                    (e.displayName != null && e.displayName.ToLower().Contains(search)) || 
-                    (e.name != null && e.name.ToLower().Contains(search)) ||
-                    (e.description != null && e.description.ToLower().Contains(search))
-                ).ToList();
+                // Sort by update available (if installed) or just name
+                m_FilteredExtensions = filtered.OrderByDescending(e => {
+                    // Logic to put updates on top
+                    if (m_ShowRemote) return false; // In remote view, maybe sort by date if available?
+                    // In local view, check if update available
+                    var remote = m_RemoteExtensions?.FirstOrDefault(r => r.name == e.name);
+                    return remote != null && IsVersionNewer(remote.version, e.version);
+                }).ThenBy(e => e.displayName).ToList();
             }
 
             m_ExtensionListView.itemsSource = m_FilteredExtensions;
@@ -647,10 +734,13 @@ namespace EUFarmworker.ExtensionManager
                     VisualElement depItem = new VisualElement();
                     depItem.AddToClassList("dep-item");
                     
-                    Label depLabel = new Label(dep);
+                    Label depLabel = new Label(dep.name);
                     depLabel.AddToClassList("dep-tag");
                     
-                    bool isInstalled = m_LocalExtensions.Any(e => e.name == dep);
+                    // 检查是否已安装：如果是本地扩展包名匹配，或者依赖指定的目录已存在
+                    bool isInstalled = m_LocalExtensions.Any(e => e.name == dep.name);
+                    // 或者检查指定安装路径
+                    
                     if (isInstalled) 
                     {
                         depLabel.AddToClassList("dep-tag--installed");
@@ -662,23 +752,45 @@ namespace EUFarmworker.ExtensionManager
                         depLabel.tooltip = "点击下载";
                         depLabel.RegisterCallback<ClickEvent>(evt => {
                             if (m_IsProcessing) return;
-                            // Find dependency in remote
-                            var depInfo = m_RemoteExtensions.FirstOrDefault(r => r.name == dep);
-                            if (depInfo != null)
+                            
+                            string msg = $"下载依赖 {dep.name}？\n";
+                            if (!string.IsNullOrEmpty(dep.gitUrl))
+                                msg += $"来源: {dep.gitUrl}\n";
+                            if (!string.IsNullOrEmpty(dep.installPath))
+                                msg += $"目标: {dep.installPath}";
+                            else
+                                msg += "目标: 默认扩展目录";
+
+                            if (EditorUtility.DisplayDialog("下载依赖", msg, "下载", "取消"))
                             {
-                                if (EditorUtility.DisplayDialog("下载依赖", $"确定要下载依赖项 {dep} 吗？", "下载", "取消"))
+                                m_IsProcessing = true;
+                                
+                                if (!string.IsNullOrEmpty(dep.gitUrl))
                                 {
-                                    m_IsProcessing = true;
-                                    string dirName = !string.IsNullOrEmpty(depInfo.remoteFolderName) ? depInfo.remoteFolderName : depInfo.name;
-                                    EUExtensionLoader.DownloadAndInstall(depInfo, dirName, s => { 
-                                        m_IsProcessing = false; 
-                                        if(s) RefreshList(); 
+                                    // 从外部 Git 下载
+                                    EUExtensionLoader.DownloadDependency(dep, s => {
+                                        m_IsProcessing = false;
+                                        if (s) RefreshList();
                                     });
                                 }
-                            }
-                            else
-                            {
-                                EditorUtility.DisplayDialog("提示", $"在远程仓库中未找到依赖项: {dep}\n请尝试刷新列表或检查仓库地址。", "确定");
+                                else
+                                {
+                                    // 尝试从社区仓库查找
+                                    var depInfo = m_RemoteExtensions.FirstOrDefault(r => r.name == dep.name);
+                                    if (depInfo != null)
+                                    {
+                                        string dirName = !string.IsNullOrEmpty(depInfo.remoteFolderName) ? depInfo.remoteFolderName : depInfo.name;
+                                        EUExtensionLoader.DownloadAndInstall(depInfo, dirName, s => { 
+                                            m_IsProcessing = false; 
+                                            if(s) RefreshList(); 
+                                        });
+                                    }
+                                    else
+                                    {
+                                        m_IsProcessing = false;
+                                        EditorUtility.DisplayDialog("提示", $"未配置 gitUrl 且在远程仓库中未找到依赖项: {dep.name}", "确定");
+                                    }
+                                }
                             }
                         });
                     }
@@ -733,13 +845,14 @@ namespace EUFarmworker.ExtensionManager
         private Action m_OnClose;
         private TextField m_UrlField;
         private TextField m_PathField;
+        private TextField m_CorePathField;
         private Label m_StatusLabel;
 
         public static void ShowSettings(Action onClose = null)
         {
             var wnd = GetWindow<EUExtensionSettingsWindow>(true, "EU 设置", true);
-            wnd.minSize = new Vector2(500, 450);
-            wnd.maxSize = new Vector2(600, 600);
+            wnd.minSize = new Vector2(500, 550);
+            wnd.maxSize = new Vector2(600, 700);
             wnd.m_OnClose = onClose;
             wnd.Show();
         }
@@ -800,6 +913,7 @@ namespace EUFarmworker.ExtensionManager
             group2Label.AddToClassList("settings-group-label");
             group2.Add(group2Label);
 
+            // Extension Path
             VisualElement row2 = new VisualElement();
             row2.AddToClassList("settings-row");
             group2.Add(row2);
@@ -818,7 +932,7 @@ namespace EUFarmworker.ExtensionManager
             m_PathField.value = EUExtensionLoader.ExtensionRootPath;
             inputRow.Add(m_PathField);
 
-            Button selectBtn = new Button(OnSelectPath) { text = "..." };
+            Button selectBtn = new Button(() => OnSelectPath(false)) { text = "..." };
             selectBtn.tooltip = "选择文件夹";
             selectBtn.AddToClassList("settings-icon-btn");
             inputRow.Add(selectBtn);
@@ -826,6 +940,34 @@ namespace EUFarmworker.ExtensionManager
             Label help2 = new Label("建议保持在 Assets 目录下，更改后可能需要重启编辑器。");
             help2.AddToClassList("settings-help-text");
             row2.Add(help2);
+
+            // Core Path
+            VisualElement row3 = new VisualElement();
+            row3.AddToClassList("settings-row");
+            group2.Add(row3);
+
+            Label label3 = new Label("核心安装路径");
+            label3.AddToClassList("settings-label");
+            row3.Add(label3);
+
+            VisualElement inputRow3 = new VisualElement();
+            inputRow3.AddToClassList("settings-input-row");
+            row3.Add(inputRow3);
+
+            m_CorePathField = new TextField();
+            m_CorePathField.AddToClassList("settings-text-field");
+            m_CorePathField.isReadOnly = true;
+            m_CorePathField.value = EUExtensionLoader.CoreInstallPath;
+            inputRow3.Add(m_CorePathField);
+
+            Button selectCoreBtn = new Button(() => OnSelectPath(true)) { text = "..." };
+            selectCoreBtn.tooltip = "选择文件夹";
+            selectCoreBtn.AddToClassList("settings-icon-btn");
+            inputRow3.Add(selectCoreBtn);
+
+            Label help3 = new Label("核心框架所在路径，将被视为特殊的本地扩展。");
+            help3.AddToClassList("settings-help-text");
+            row3.Add(help3);
 
             // Status Panel within Group 2
             VisualElement statusPanel = new VisualElement();
@@ -856,12 +998,15 @@ namespace EUFarmworker.ExtensionManager
         private void UpdateStatus()
         {
             if (m_StatusLabel == null) return;
-            m_StatusLabel.text = $"平台: GitHub\n路径: {EUExtensionLoader.ExtensionRootPath}";
+            m_StatusLabel.text = $"平台: GitHub\n扩展路径: {EUExtensionLoader.ExtensionRootPath}\n核心路径: {EUExtensionLoader.CoreInstallPath}";
         }
 
-        private void OnSelectPath()
+        private void OnSelectPath(bool isCore)
         {
-            string path = EditorUtility.OpenFolderPanel("选择插件安装路径", EUExtensionLoader.ExtensionRootPath, "");
+            string currentPath = isCore ? EUExtensionLoader.CoreInstallPath : EUExtensionLoader.ExtensionRootPath;
+            string title = isCore ? "选择核心安装路径" : "选择插件安装路径";
+            
+            string path = EditorUtility.OpenFolderPanel(title, currentPath, "");
             if (!string.IsNullOrEmpty(path))
             {
                 string projectPath = Path.GetFullPath(Application.dataPath).Replace("\\", "/");
@@ -870,8 +1015,17 @@ namespace EUFarmworker.ExtensionManager
                 {
                     path = "Assets" + path.Substring(projectPath.Length);
                 }
-                EUExtensionLoader.ExtensionRootPath = path;
-                m_PathField.value = path;
+                
+                if (isCore)
+                {
+                    EUExtensionLoader.CoreInstallPath = path;
+                    m_CorePathField.value = path;
+                }
+                else
+                {
+                    EUExtensionLoader.ExtensionRootPath = path;
+                    m_PathField.value = path;
+                }
                 UpdateStatus();
             }
         }
@@ -883,6 +1037,7 @@ namespace EUFarmworker.ExtensionManager
                 EUExtensionLoader.ResetSettings();
                 m_UrlField.value = EUExtensionLoader.CommunityUrl;
                 m_PathField.value = EUExtensionLoader.ExtensionRootPath;
+                m_CorePathField.value = EUExtensionLoader.CoreInstallPath;
                 UpdateStatus();
             }
         }

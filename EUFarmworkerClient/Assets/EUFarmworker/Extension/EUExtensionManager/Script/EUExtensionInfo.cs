@@ -4,6 +4,14 @@ using System;
 namespace EUFarmworker.ExtensionManager
 {
     [Serializable]
+    public class EUDependency
+    {
+        public string name;
+        public string gitUrl;
+        public string installPath;
+    }
+
+    [Serializable]
     public class EUExtensionInfo
     {
         public string name;
@@ -13,7 +21,7 @@ namespace EUFarmworker.ExtensionManager
         public string author;
         public string category;
         public string downloadUrl; // 远程跳转地址
-        public string[] dependencies; // 依赖项包名
+        public EUDependency[] dependencies; // 依赖项
         
         // 非序列化字段
         [NonSerialized]
