@@ -59,37 +59,12 @@ namespace EUFarmworker.ExtensionManager
 
         public void CreateGUI()
         {
-            string scriptPath = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this));
-            string rootPath = "Assets/EUFarmworker/Extension/EUExtensionManager";
-
-            if (!string.IsNullOrEmpty(scriptPath))
-            {
-                try
-                {
-                    // 尝试动态获取: Script/../../ -> EUExtensionManager
-                    string dir = Path.GetDirectoryName(scriptPath); // .../Script
-                    if (!string.IsNullOrEmpty(dir))
-                    {
-                        string parentDir = Path.GetDirectoryName(dir); // .../EUExtensionManager
-                        if (!string.IsNullOrEmpty(parentDir))
-                        {
-                            rootPath = parentDir;
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[EUExtensionManager] 无法动态获取路径: {e.Message}，使用默认路径。");
-                }
-            }
-
-            rootPath = rootPath.Replace("\\", "/");
-            string ussPath = $"{rootPath}/ConfigPanel/EUExtensionManager.uss";
-            
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
+            var styleSheet = LoadStyleSheet();
             VisualElement root = rootVisualElement;
             if (styleSheet != null)
                 root.styleSheets.Add(styleSheet);
+            else
+                Debug.LogError("[EUExtensionManager] 无法找到样式文件 EUExtensionManager.uss，请确保文件存在于项目中。");
             
             root.AddToClassList("root-container");
 
@@ -220,7 +195,7 @@ namespace EUFarmworker.ExtensionManager
             m_ExtensionListView.fixedItemHeight = 72; // 更高的列表项
             m_ExtensionListView.makeItem = MakeListItem;
             m_ExtensionListView.bindItem = BindListItem;
-            m_ExtensionListView.onSelectionChange += OnSelectionChanged;
+            m_ExtensionListView.selectionChanged += OnSelectionChanged;
             splitView.Add(m_ExtensionListView);
 
             // Detail View
@@ -876,6 +851,30 @@ namespace EUFarmworker.ExtensionManager
                 content.Add(empty); 
             }
         }
+
+        private StyleSheet LoadStyleSheet()
+        {
+            // 1. 尝试通过 GUID 查找（最稳健）
+            string[] guids = AssetDatabase.FindAssets("EUExtensionManager t:StyleSheet");
+            if (guids.Length > 0)
+            {
+                // 可能会有多个同名文件，优先匹配路径中包含 ConfigPanel 的
+                foreach (var guid in guids)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (path.EndsWith("ConfigPanel/EUExtensionManager.uss"))
+                    {
+                        return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                    }
+                }
+                // 如果没有完全匹配的，返回第一个找到的
+                return AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            }
+
+            // 2. 回退到默认路径
+            string defaultPath = "Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
+            return AssetDatabase.LoadAssetAtPath<StyleSheet>(defaultPath);
+        }
     }
 
     public class EUExtensionSettingsWindow : EditorWindow
@@ -897,9 +896,14 @@ namespace EUFarmworker.ExtensionManager
 
         public void CreateGUI()
         {
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss");
+            // 使用相同的方式加载 StyleSheet，确保兼容不同路径
+            var styleSheet = LoadStyleSheet();
             VisualElement root = rootVisualElement;
-            root.styleSheets.Add(styleSheet);
+            if (styleSheet != null)
+                root.styleSheets.Add(styleSheet);
+            else
+                Debug.LogError("[EUExtensionSettingsWindow] 无法找到样式文件 EUExtensionManager.uss，请确保文件存在于项目中。");
+
             root.AddToClassList("settings-window");
 
             // Scrollable Content
@@ -1083,6 +1087,30 @@ namespace EUFarmworker.ExtensionManager
         private void OnDestroy()
         {
             m_OnClose?.Invoke();
+        }
+
+        private StyleSheet LoadStyleSheet()
+        {
+            // 1. 尝试通过 GUID 查找（最稳健）
+            string[] guids = AssetDatabase.FindAssets("EUExtensionManager t:StyleSheet");
+            if (guids.Length > 0)
+            {
+                // 可能会有多个同名文件，优先匹配路径中包含 ConfigPanel 的
+                foreach (var guid in guids)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (path.EndsWith("ConfigPanel/EUExtensionManager.uss"))
+                    {
+                        return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                    }
+                }
+                // 如果没有完全匹配的，返回第一个找到的
+                return AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            }
+
+            // 2. 回退到默认路径
+            string defaultPath = "Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
+            return AssetDatabase.LoadAssetAtPath<StyleSheet>(defaultPath);
         }
     }
 
