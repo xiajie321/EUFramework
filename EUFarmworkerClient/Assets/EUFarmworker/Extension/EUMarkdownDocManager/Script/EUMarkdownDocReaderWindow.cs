@@ -24,9 +24,12 @@ namespace EUFarmworker.MarkdownDocManager
         private Label currentDocPathLabel;
         private ScrollView navScrollView;
         private ProgressBar searchProgressBar;
+        private VisualElement navDrawerContainer;
         private VisualElement navPanel;
+        private Button navToggleButton;
         private VisualElement navHeader;
         
+        private bool isNavOpen = true;
         private List<DocNode> docNodes = new List<DocNode>();
         private List<DocNode> allDocNodes = new List<DocNode>();
         private Dictionary<int, DocNode> nodeIdMap = new Dictionary<int, DocNode>();
@@ -281,7 +284,7 @@ namespace EUFarmworker.MarkdownDocManager
             
             // 导航面板
             BuildNavigationPanel();
-            contentSplitView.Add(navPanel);
+            contentSplitView.Add(navDrawerContainer);
             
             contentContainer.Add(contentSplitView);
             
@@ -292,6 +295,17 @@ namespace EUFarmworker.MarkdownDocManager
         
         private void BuildNavigationPanel()
         {
+            navDrawerContainer = new VisualElement();
+            navDrawerContainer.AddToClassList("nav-drawer-container");
+
+            // 切换按钮 (页签)
+            navToggleButton = new Button(ToggleNavDrawer);
+            navToggleButton.AddToClassList("nav-toggle-button");
+            navToggleButton.text = "》"; // 初始状态为展开，显示收起图标
+            navToggleButton.tooltip = "收起/展开导航";
+            navDrawerContainer.Add(navToggleButton);
+
+            // 导航面板主体
             navPanel = new VisualElement();
             navPanel.AddToClassList("nav-panel");
             
@@ -309,6 +323,26 @@ namespace EUFarmworker.MarkdownDocManager
             navScrollView = new ScrollView();
             navScrollView.AddToClassList("nav-scroll");
             navPanel.Add(navScrollView);
+            
+            navDrawerContainer.Add(navPanel);
+        }
+
+        private void ToggleNavDrawer()
+        {
+            isNavOpen = !isNavOpen;
+            
+            if (isNavOpen)
+            {
+                navPanel.RemoveFromClassList("nav-panel-collapsed");
+                navToggleButton.text = "》";
+                navToggleButton.RemoveFromClassList("nav-toggle-button-collapsed");
+            }
+            else
+            {
+                navPanel.AddToClassList("nav-panel-collapsed");
+                navToggleButton.text = "《"; // 收起状态，显示展开图标
+                navToggleButton.AddToClassList("nav-toggle-button-collapsed");
+            }
         }
         
         private void LoadDocuments()
