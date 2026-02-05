@@ -51,11 +51,11 @@ namespace EUFarmworker.MarkdownDocManager
             Content
         }
 
-        [MenuItem("EUFarmworker/文档阅读器")]
+        [MenuItem("EUFarmworker/Markdown文档阅读器")]
         public static void ShowWindow()
         {
             var window = GetWindow<EUMarkdownDocReaderWindow>();
-            window.titleContent = new GUIContent("文档阅读器");
+            window.titleContent = new GUIContent("Markdown文档阅读器");
             window.minSize = new Vector2(900, 600);
         }
         
@@ -269,6 +269,8 @@ namespace EUFarmworker.MarkdownDocManager
             
             contentScrollView = new ScrollView();
             contentScrollView.AddToClassList("content-scroll");
+            // 添加滚动监听以更新导航高亮
+            contentScrollView.verticalScroller.valueChanged += OnContentScroll;
             
             // 空状态提示
             emptyStateLabel = new Label("请从左侧选择文档");
@@ -920,7 +922,14 @@ namespace EUFarmworker.MarkdownDocManager
                 contentPanel.AddToClassList("markdown-content-visible");
             }).StartingIn(50);
 
-            // 更新导航
+            // 等待布局完成后更新导航
+            contentPanel.RegisterCallback<GeometryChangedEvent>(OnContentLayoutUpdated);
+        }
+
+        private void OnContentLayoutUpdated(GeometryChangedEvent evt)
+        {
+            var contentPanel = evt.target as VisualElement;
+            contentPanel.UnregisterCallback<GeometryChangedEvent>(OnContentLayoutUpdated);
             UpdateNavigation();
         }
 
@@ -1059,16 +1068,24 @@ namespace EUFarmworker.MarkdownDocManager
             try
             {
                 isAutoScrolling = true;
-                float targetY = headerElement.layout.y - 20;
+                // 目标位置：元素位置减去顶部偏移，留出一点空间
+                float targetY = headerElement.layout.y - 10;
+                // 限制在可滚动范围内
+                float maxScroll = contentScrollView.contentContainer.layout.height - contentScrollView.layout.height;
+                if (maxScroll < 0) maxScroll = 0;
+                targetY = Mathf.Clamp(targetY, 0, maxScroll);
                 
                 // 平滑滚动模拟
                 float startY = contentScrollView.scrollOffset.y;
-                float duration = 0.3f;
+                float duration = 0.25f; // 稍微加快一点
                 float startTime = Time.realtimeSinceStartup;
                 
-                IVisualElementScheduledItem scrollAnim = null;
-                scrollAnim = rootVisualElement.schedule.Execute(() => {
-                    float t = (Time.realtimeSinceStartup - startTime) / duration;
+                // 使用 Every 确保更稳定的更新频率
+                rootVisualElement.schedule.Execute(() => {
+                    // 如果已经被销毁或不再需要滚动
+                    if (contentScrollView == null || !isAutoScrolling) return;
+
+                    float t = (float)(Time.realtimeSinceStartup - startTime) / duration;
                     if (t >= 1.0f)
                     {
                         contentScrollView.scrollOffset = new Vector2(0, targetY);
@@ -1082,9 +1099,8 @@ namespace EUFarmworker.MarkdownDocManager
                         t = 1 - Mathf.Pow(1 - t, 3);
                         float currentY = Mathf.Lerp(startY, targetY, t);
                         contentScrollView.scrollOffset = new Vector2(0, currentY);
-                        scrollAnim.ExecuteLater(16); // ~60fps
                     }
-                });
+                }).Every(16).Until(() => !isAutoScrolling); // 每16ms执行一次，直到滚动结束
             }
             catch (Exception e)
             {
