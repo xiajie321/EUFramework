@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -32,6 +33,7 @@ namespace EUFarmworker.MarkdownDocManager
         // 左侧栏相关
         private VisualElement leftSidebar;
         private VisualElement docTreeContainer;
+        private ListView searchResultListView; // 新增：搜索结果列表
         private Button docTreeToggleButton;
         private bool isDocTreeOpen = true;
 
@@ -50,9 +52,21 @@ namespace EUFarmworker.MarkdownDocManager
         private double lastSearchTime;
         private const double SearchDelay = 0.3f; // 300ms 防抖
         
+        // 搜索结果数据
+        private List<SearchResultItem> searchResults = new List<SearchResultItem>();
+        
         // 滚动监听相关
         private bool isAutoScrolling = false;
         private VisualElement currentActiveNavItem = null;
+        
+        // 搜索结果导航
+        private List<VisualElement> currentSearchMatches = new List<VisualElement>();
+        private int currentMatchIndex = -1;
+        private VisualElement searchNavContainer;
+        private Label searchResultLabel;
+        
+        // 跳转目标
+        private int pendingScrollLineIndex = -1;
 
         public enum SearchMode
         {
@@ -102,7 +116,7 @@ namespace EUFarmworker.MarkdownDocManager
             if (isSearching && EditorApplication.timeSinceStartup - lastSearchTime > SearchDelay)
             {
                 isSearching = false;
-                PerformSearch();
+                PerformSearchAsync();
             }
         }
 
@@ -189,6 +203,27 @@ namespace EUFarmworker.MarkdownDocManager
             searchField.RegisterValueChangedCallback(evt => OnSearchTextChanged(evt.newValue));
             searchContainer.Add(searchField);
             
+            // 搜索导航 (在内容搜索模式下显示)
+            searchNavContainer = new VisualElement();
+            searchNavContainer.AddToClassList("search-nav-container");
+            searchNavContainer.style.display = DisplayStyle.None;
+            
+            searchResultLabel = new Label("0/0");
+            searchResultLabel.AddToClassList("search-result-label");
+            searchNavContainer.Add(searchResultLabel);
+            
+            var prevBtn = new Button(() => NavigateSearchMatch(-1)) { text = "↑" };
+            prevBtn.AddToClassList("search-nav-btn");
+            prevBtn.tooltip = "上一个匹配项";
+            searchNavContainer.Add(prevBtn);
+            
+            var nextBtn = new Button(() => NavigateSearchMatch(1)) { text = "↓" };
+            nextBtn.AddToClassList("search-nav-btn");
+            nextBtn.tooltip = "下一个匹配项";
+            searchNavContainer.Add(nextBtn);
+            
+            searchContainer.Add(searchNavContainer);
+            
             topBar.Add(searchContainer);
 
             // 搜索进度条
@@ -264,6 +299,52 @@ namespace EUFarmworker.MarkdownDocManager
             };
             docTreeView.selectionChanged += OnTreeSelectionChanged;
             docTreeContainer.Add(docTreeView);
+            
+            // 搜索结果列表 (初始隐藏)
+            searchResultListView = new ListView();
+            searchResultListView.AddToClassList("search-result-list");
+            searchResultListView.style.display = DisplayStyle.None;
+            searchResultListView.itemHeight = 44; // 增加高度以显示两行信息
+            searchResultListView.makeItem = () => 
+            {
+                var container = new VisualElement();
+                container.AddToClassList("search-result-item");
+                
+                var fileLabel = new Label();
+                fileLabel.AddToClassList("search-result-file");
+                container.Add(fileLabel);
+                
+                var contentLabel = new Label();
+                contentLabel.AddToClassList("search-result-content");
+                contentLabel.enableRichText = true;
+                container.Add(contentLabel);
+                
+                return container;
+            };
+            searchResultListView.bindItem = (element, index) => 
+            {
+                if (index >= 0 && index < searchResults.Count)
+                {
+                    var item = searchResults[index];
+                    var fileLabel = element.Q<Label>(className: "search-result-file");
+                    var contentLabel = element.Q<Label>(className: "search-result-content");
+                    
+                    fileLabel.text = item.docNode.name;
+                    
+                    // 高亮匹配内容
+                    string content = item.lineContent.Trim();
+                    if (content.Length > 50) content = content.Substring(0, 50) + "...";
+                    
+                    if (!string.IsNullOrEmpty(currentSearchText))
+                    {
+                        string pattern = Regex.Escape(currentSearchText);
+                        content = Regex.Replace(content, pattern, match => $"<color=#FFD700><b>{match.Value}</b></color>", RegexOptions.IgnoreCase);
+                    }
+                    contentLabel.text = content;
+                }
+            };
+            searchResultListView.selectionChanged += OnSearchResultSelected;
+            docTreeContainer.Add(searchResultListView);
             
             leftSidebar.Add(docTreeContainer);
 
@@ -558,55 +639,255 @@ namespace EUFarmworker.MarkdownDocManager
             lastSearchTime = EditorApplication.timeSinceStartup;
             isSearching = true;
             
+            // 更新搜索导航可见性
+            UpdateSearchNavVisibility();
+            
+            // 如果当前有打开的文档，重新渲染以更新高亮
+            if (!string.IsNullOrEmpty(currentDocPath) && File.Exists(currentDocPath))
+            {
+                // 延迟一点执行，避免输入时频繁刷新导致卡顿
+                // 这里我们暂不立即刷新内容，等搜索防抖结束后统一处理
+                // 但为了更好的体验，如果文档不大，可以尝试立即刷新
+                // 考虑到性能，我们还是在 PerformSearchAsync 中处理或者单独处理
+            }
+
             // 如果是清空搜索，立即执行
             if (string.IsNullOrEmpty(searchText))
             {
                 isSearching = false;
-                PerformSearch();
+                PerformSearchAsync();
             }
         }
-
-        private void PerformSearch()
+        
+        private void UpdateSearchNavVisibility()
         {
-            if (currentSearchMode == SearchMode.Content && !string.IsNullOrEmpty(currentSearchText))
+            if (searchNavContainer != null)
             {
-                searchProgressBar.style.display = DisplayStyle.Flex;
-                // 延迟一帧执行以显示进度条
-                rootVisualElement.schedule.Execute(() => {
-                    EnsureFileCache();
-                    FilterDocuments();
-                    searchProgressBar.style.display = DisplayStyle.None;
-                });
-            }
-            else
-            {
-                FilterDocuments();
-            }
-        }
-
-        private void EnsureFileCache()
-        {
-            // 简单的按需缓存
-            // 遍历所有节点，如果缓存中没有，则读取
-            foreach (var node in allDocNodes)
-            {
-                if (!fileContentCache.ContainsKey(node.path))
+                bool showNav = !string.IsNullOrEmpty(currentSearchText) && 
+                              currentSearchMode == SearchMode.Content && 
+                              currentSearchMatches.Count > 0;
+                searchNavContainer.style.display = showNav ? DisplayStyle.Flex : DisplayStyle.None;
+                
+                if (showNav)
                 {
-                    try
+                    searchResultLabel.text = $"{currentMatchIndex + 1}/{currentSearchMatches.Count}";
+                }
+            }
+        }
+        
+        private void NavigateSearchMatch(int direction)
+        {
+            if (currentSearchMatches.Count == 0) return;
+            
+            currentMatchIndex += direction;
+            
+            // 循环导航
+            if (currentMatchIndex >= currentSearchMatches.Count) currentMatchIndex = 0;
+            if (currentMatchIndex < 0) currentMatchIndex = currentSearchMatches.Count - 1;
+            
+            UpdateSearchNavVisibility();
+            ScrollToMatch(currentSearchMatches[currentMatchIndex]);
+        }
+        
+        private void ScrollToMatch(VisualElement matchElement)
+        {
+            if (matchElement == null || contentScrollView == null) return;
+            
+            try
+            {
+                // 移除旧的高亮
+                foreach (var match in currentSearchMatches)
+                {
+                    match.RemoveFromClassList("search-match-active");
+                    match.RemoveFromClassList("flash-highlight");
+                }
+                matchElement.AddToClassList("search-match-active");
+                
+                // 添加闪烁效果
+                matchElement.AddToClassList("flash-highlight");
+                // 延迟移除闪烁效果
+                rootVisualElement.schedule.Execute(() => {
+                    if (matchElement != null) matchElement.RemoveFromClassList("flash-highlight");
+                }).StartingIn(500);
+                
+                isAutoScrolling = true;
+                // 目标位置：元素位置减去顶部偏移，留出一点空间
+                // 注意：matchElement 可能是嵌套在 Label 中的，我们需要它的世界坐标或者相对于 ScrollView 的坐标
+                // 这里简化处理，假设 matchElement 是直接子元素或者我们可以获取其布局
+                
+                // 获取元素相对于 contentScrollView.contentContainer 的位置
+                float targetY = matchElement.layout.y;
+                VisualElement parent = matchElement.parent;
+                while (parent != null && parent != contentScrollView.contentContainer)
+                {
+                    targetY += parent.layout.y;
+                    parent = parent.parent;
+                }
+                
+                targetY -= 100; // 留出更多顶部空间
+                
+                // 限制在可滚动范围内
+                float maxScroll = contentScrollView.contentContainer.layout.height - contentScrollView.layout.height;
+                if (maxScroll < 0) maxScroll = 0;
+                targetY = Mathf.Clamp(targetY, 0, maxScroll);
+                
+                contentScrollView.scrollOffset = new Vector2(0, targetY);
+                
+                // 延迟重置滚动状态
+                rootVisualElement.schedule.Execute(() => isAutoScrolling = false).StartingIn(500);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"滚动到匹配项失败: {e.Message}");
+                isAutoScrolling = false;
+            }
+        }
+
+        private async void PerformSearchAsync()
+        {
+            if (string.IsNullOrEmpty(currentSearchText))
+            {
+                ShowSearchResults(false);
+                FilterDocuments(null);
+                return;
+            }
+
+            searchProgressBar.style.display = DisplayStyle.Flex;
+            
+            var searchText = currentSearchText;
+            var mode = currentSearchMode;
+            var nodesToCheck = new List<DocNode>(allDocNodes);
+            
+            // 用于普通模式（文件名搜索）
+            var matchedIds = new HashSet<int>();
+            
+            // 用于内容搜索模式
+            var newSearchResults = new List<SearchResultItem>();
+
+            // 异步执行搜索
+            await Task.Run(() => 
+            {
+                foreach (var node in nodesToCheck)
+                {
+                    if (mode == SearchMode.FileName)
                     {
-                        fileContentCache[node.path] = File.ReadAllText(node.path).ToLower();
+                        if (node.name.ToLower().Contains(searchText)) 
+                        {
+                            lock(matchedIds) matchedIds.Add(node.id);
+                        }
                     }
-                    catch
+                    else
                     {
-                        fileContentCache[node.path] = "";
+                        // 内容搜索
+                        string content = "";
+                        bool hasContent = false;
+                        
+                        lock(fileContentCache)
+                        {
+                            hasContent = fileContentCache.TryGetValue(node.path, out content);
+                        }
+                        
+                        if (!hasContent)
+                        {
+                            try 
+                            { 
+                                content = File.ReadAllText(node.path); // 保持原始大小写用于显示
+                                lock(fileContentCache)
+                                {
+                                    fileContentCache[node.path] = content;
+                                }
+                            }
+                            catch { }
+                        }
+                        
+                        if (content != null)
+                        {
+                            // 检查文件名
+                            if (node.name.ToLower().Contains(searchText))
+                            {
+                                lock(newSearchResults) newSearchResults.Add(new SearchResultItem 
+                                { 
+                                    docNode = node, 
+                                    lineContent = "文件名匹配", 
+                                    lineNumber = -1 
+                                });
+                            }
+                            
+                            // 检查内容，按行分割
+                            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                            for (int i = 0; i < lines.Length; i++)
+                            {
+                                if (lines[i].ToLower().Contains(searchText))
+                                {
+                                    lock(newSearchResults) newSearchResults.Add(new SearchResultItem 
+                                    { 
+                                        docNode = node, 
+                                        lineContent = lines[i].Trim(), 
+                                        lineNumber = i 
+                                    });
+                                    
+                                    // 限制每个文件的匹配数量，防止过多
+                                    // if (count > 10) break; 
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            searchProgressBar.style.display = DisplayStyle.None;
+            
+            // 确保搜索词没有在搜索过程中改变
+            if (currentSearchText == searchText)
+            {
+                if (mode == SearchMode.FileName)
+                {
+                    ShowSearchResults(false);
+                    FilterDocuments(matchedIds);
+                }
+                else
+                {
+                    // 内容搜索模式，显示结果列表
+                    searchResults = newSearchResults;
+                    ShowSearchResults(true);
+                    searchResultListView.itemsSource = searchResults;
+                    searchResultListView.Rebuild();
+                    
+                    // 同时更新计数
+                    if (docCountLabel != null)
+                    {
+                        docCountLabel.text = $"找到 {searchResults.Count} 个匹配项";
                     }
                 }
             }
         }
         
-        private void FilterDocuments()
+        private void ShowSearchResults(bool show)
         {
-            if (string.IsNullOrEmpty(currentSearchText))
+            if (show)
+            {
+                docTreeView.style.display = DisplayStyle.None;
+                searchResultListView.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                docTreeView.style.display = DisplayStyle.Flex;
+                searchResultListView.style.display = DisplayStyle.None;
+            }
+        }
+        
+        private void OnSearchResultSelected(IEnumerable<object> selectedItems)
+        {
+            var item = selectedItems.FirstOrDefault() as SearchResultItem;
+            if (item != null)
+            {
+                LoadMarkdownFile(item.docNode.path, item.lineNumber);
+            }
+        }
+        
+        private void FilterDocuments(HashSet<int> matchedIds)
+        {
+            if (matchedIds == null)
             {
                 // 显示所有文档
                 RebuildTreeView();
@@ -618,7 +899,7 @@ namespace EUFarmworker.MarkdownDocManager
             var filteredNodes = new List<DocNode>();
             foreach (var node in docNodes)
             {
-                var filteredNode = FilterNode(node);
+                var filteredNode = FilterNode(node, matchedIds);
                 if (filteredNode != null)
                 {
                     filteredNodes.Add(filteredNode);
@@ -634,10 +915,17 @@ namespace EUFarmworker.MarkdownDocManager
             
             docTreeView.SetRootItems(treeItems);
             docTreeView.Rebuild();
+            
+            // 如果有搜索结果，自动展开所有节点
+            if (matchedIds.Count > 0)
+            {
+                docTreeView.ExpandAll();
+            }
+            
             UpdateDocCount();
         }
         
-        private DocNode FilterNode(DocNode node)
+        private DocNode FilterNode(DocNode node, HashSet<int> matchedIds)
         {
             if (node.isDirectory)
             {
@@ -647,7 +935,7 @@ namespace EUFarmworker.MarkdownDocManager
                 {
                     foreach (var child in node.children)
                     {
-                        var filteredChild = FilterNode(child);
+                        var filteredChild = FilterNode(child, matchedIds);
                         if (filteredChild != null)
                         {
                             filteredChildren.Add(filteredChild);
@@ -670,48 +958,8 @@ namespace EUFarmworker.MarkdownDocManager
             }
             else
             {
-                // 文件匹配逻辑
-                bool isMatch = false;
-                
-                if (currentSearchMode == SearchMode.FileName)
-                {
-                    if (node.name.ToLower().Contains(currentSearchText))
-                    {
-                        isMatch = true;
-                    }
-                }
-                else // SearchMode.Content
-                {
-                    // 先检查文件名，如果匹配也算
-                    if (node.name.ToLower().Contains(currentSearchText))
-                    {
-                        isMatch = true;
-                    }
-                    else
-                    {
-                        // 检查内容
-                        if (fileContentCache.TryGetValue(node.path, out string content))
-                        {
-                            if (content.Contains(currentSearchText))
-                            {
-                                isMatch = true;
-                            }
-                        }
-                        else
-                        {
-                            // 如果缓存未命中（不应该发生，如果调用了EnsureFileCache），尝试直接读取
-                            try
-                            {
-                                string text = File.ReadAllText(node.path).ToLower();
-                                fileContentCache[node.path] = text;
-                                if (text.Contains(currentSearchText)) isMatch = true;
-                            }
-                            catch { }
-                        }
-                    }
-                }
-
-                return isMatch ? node : null;
+                // 文件匹配逻辑：检查ID是否在匹配集合中
+                return matchedIds.Contains(node.id) ? node : null;
             }
         }
         
@@ -813,7 +1061,7 @@ namespace EUFarmworker.MarkdownDocManager
             }
         }
         
-        private void LoadMarkdownFile(string filePath)
+        private void LoadMarkdownFile(string filePath, int targetLineIndex = -1)
         {
             try
             {
@@ -824,6 +1072,7 @@ namespace EUFarmworker.MarkdownDocManager
                 }
                 
                 currentDocPath = filePath;
+                pendingScrollLineIndex = targetLineIndex;
                 UpdateCurrentDocPath();
                 
                 // 使用UTF-8编码读取文件
@@ -871,6 +1120,10 @@ namespace EUFarmworker.MarkdownDocManager
         {
             contentScrollView.Clear();
             currentHeaders.Clear();
+            currentSearchMatches.Clear();
+            currentMatchIndex = -1;
+            UpdateSearchNavVisibility();
+            
             CleanupTextures(); // 清理旧图片的纹理
             
             var contentPanel = new VisualElement();
@@ -879,6 +1132,7 @@ namespace EUFarmworker.MarkdownDocManager
             // 标题
             var titleElement = new Label(title);
             titleElement.AddToClassList("markdown-title");
+            CheckAndRegisterSearchMatch(title, titleElement, -1);
             contentPanel.Add(titleElement);
             
             // 解析并渲染Markdown
@@ -942,7 +1196,7 @@ namespace EUFarmworker.MarkdownDocManager
                 if (line.TrimStart().StartsWith(">"))
                 {
                     inList = false;
-                    var quote = CreateBlockquote(line);
+                    var quote = CreateBlockquote(line, i);
                     contentPanel.Add(quote);
                     continue;
                 }
@@ -951,7 +1205,7 @@ namespace EUFarmworker.MarkdownDocManager
                 if (line.StartsWith("#"))
                 {
                     inList = false;
-                    var header = CreateHeader(line, contentPanel);
+                    var header = CreateHeader(line, contentPanel, i);
                     contentPanel.Add(header);
                     continue;
                 }
@@ -963,7 +1217,7 @@ namespace EUFarmworker.MarkdownDocManager
                     {
                         inList = true;
                     }
-                    var listItem = CreateListItem(line);
+                    var listItem = CreateListItem(line, i);
                     contentPanel.Add(listItem);
                     continue;
                 }
@@ -982,7 +1236,7 @@ namespace EUFarmworker.MarkdownDocManager
                 }
                 
                 // 普通段落
-                var paragraph = CreateParagraph(line);
+                var paragraph = CreateParagraph(line, i);
                 contentPanel.Add(paragraph);
             }
             
@@ -1002,6 +1256,59 @@ namespace EUFarmworker.MarkdownDocManager
             var contentPanel = evt.target as VisualElement;
             contentPanel.UnregisterCallback<GeometryChangedEvent>(OnContentLayoutUpdated);
             UpdateNavigation();
+            
+            // 处理跳转
+            if (pendingScrollLineIndex >= 0)
+            {
+                // 查找最接近的匹配项
+                int bestMatchIndex = -1;
+                int minDiff = int.MaxValue;
+                
+                for (int i = 0; i < currentSearchMatches.Count; i++)
+                {
+                    var match = currentSearchMatches[i];
+                    if (match.userData is int lineNum)
+                    {
+                        int diff = Mathf.Abs(lineNum - pendingScrollLineIndex);
+                        if (diff < minDiff)
+                        {
+                            minDiff = diff;
+                            bestMatchIndex = i;
+                        }
+                    }
+                }
+                
+                if (bestMatchIndex >= 0)
+                {
+                    currentMatchIndex = bestMatchIndex;
+                    UpdateSearchNavVisibility();
+                    ScrollToMatch(currentSearchMatches[currentMatchIndex]);
+                }
+                else if (currentSearchMatches.Count > 0)
+                {
+                    NavigateSearchMatch(1);
+                }
+                
+                pendingScrollLineIndex = -1;
+            }
+            else if (currentSearchMatches.Count > 0)
+            {
+                // 如果不是点击跳转，而是直接打开文件且有搜索词，也跳转第一个
+                NavigateSearchMatch(1);
+            }
+        }
+        
+        private void CheckAndRegisterSearchMatch(string text, VisualElement element, int lineNumber)
+        {
+            if (!string.IsNullOrEmpty(currentSearchText) && 
+                currentSearchMode == SearchMode.Content && 
+                !string.IsNullOrEmpty(text) &&
+                text.ToLower().Contains(currentSearchText))
+            {
+                element.AddToClassList("search-match-line");
+                element.userData = lineNumber;
+                currentSearchMatches.Add(element);
+            }
         }
 
         private void CreateImage(string path, string altText, VisualElement parent)
@@ -1079,7 +1386,7 @@ namespace EUFarmworker.MarkdownDocManager
             }
         }
         
-        private VisualElement CreateHeader(string line, VisualElement parent)
+        private VisualElement CreateHeader(string line, VisualElement parent, int lineNumber)
         {
             int level = 0;
             while (level < line.Length && line[level] == '#')
@@ -1091,6 +1398,8 @@ namespace EUFarmworker.MarkdownDocManager
             var label = new Label(text);
             label.AddToClassList("markdown-header");
             label.AddToClassList($"markdown-h{level}");
+            
+            CheckAndRegisterSearchMatch(text, label, lineNumber);
             
             // 记录标题信息用于导航
             var headerInfo = new HeaderInfo
@@ -1246,30 +1555,33 @@ namespace EUFarmworker.MarkdownDocManager
             }
         }
         
-        private VisualElement CreateParagraph(string line)
+        private VisualElement CreateParagraph(string line, int lineNumber)
         {
             var label = new Label(ProcessInlineMarkdown(line));
             label.AddToClassList("markdown-paragraph");
             label.enableRichText = true; // 启用富文本
+            CheckAndRegisterSearchMatch(line, label, lineNumber);
             return label;
         }
         
-        private VisualElement CreateListItem(string line)
+        private VisualElement CreateListItem(string line, int lineNumber)
         {
             // 移除列表标记（无序列表的 -、*、+ 或有序列表的数字.）
             string text = Regex.Replace(line, @"^\s*([-*+]|\d+\.)\s+", "");
             var label = new Label("• " + ProcessInlineMarkdown(text));
             label.AddToClassList("markdown-list-item");
             label.enableRichText = true; // 启用富文本
+            CheckAndRegisterSearchMatch(text, label, lineNumber);
             return label;
         }
 
-        private VisualElement CreateBlockquote(string line)
+        private VisualElement CreateBlockquote(string line, int lineNumber)
         {
             string text = line.TrimStart().Substring(1).Trim();
             var label = new Label(ProcessInlineMarkdown(text));
             label.AddToClassList("markdown-blockquote");
             label.enableRichText = true; // 启用富文本
+            CheckAndRegisterSearchMatch(text, label, lineNumber);
             return label;
         }
         
@@ -1316,6 +1628,15 @@ namespace EUFarmworker.MarkdownDocManager
             // 使用Unity支持的富文本标签替换Markdown标记
             // 性能优化：直接使用Regex替换为Rich Text Tags，减少VisualElement数量
             
+            // 搜索高亮
+            if (!string.IsNullOrEmpty(currentSearchText) && currentSearchMode == SearchMode.Content)
+            {
+                // 简单的替换，不区分大小写
+                string pattern = Regex.Escape(currentSearchText);
+                // 使用金色加粗高亮
+                text = Regex.Replace(text, pattern, match => $"<color=#FFD700><b>{match.Value}</b></color>", RegexOptions.IgnoreCase);
+            }
+            
             // 行内代码 `code` -> <color=#...>code</color>
             text = Regex.Replace(text, @"`([^`]+)`", "<color=#DCDCAA>$1</color>");
             
@@ -1352,6 +1673,13 @@ namespace EUFarmworker.MarkdownDocManager
             public int level;
             public string text;
             public VisualElement element;
+        }
+        
+        private class SearchResultItem
+        {
+            public DocNode docNode;
+            public string lineContent;
+            public int lineNumber;
         }
     }
 }
