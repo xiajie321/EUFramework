@@ -1,0 +1,8 @@
+{
+  "name": "com.eu.markdown-doc-manager",
+  "displayName": "Markdown文档管理器",
+  "version": "1.0.0",
+  "description": "基于UIToolkit的Markdown文档阅读器，自动扫描并展示所有EUFarmworker扩展的Doc文件夹下的Markdown文档，提供树形结构浏览和实时渲染功能。",
+  "author": "没有名字的丑兔子",
+  "category": "工具"
+}
