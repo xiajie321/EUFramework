@@ -1,7 +1,7 @@
 {
   "name": "com.eu.core.mvc",
   "displayName": "EU MVC Core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "EUFarmworker 核心 MVC 框架",
   "author": "没有名字的丑兔子",
   "category": "框架",
