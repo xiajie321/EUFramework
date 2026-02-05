@@ -29,6 +29,12 @@ namespace EUFarmworker.MarkdownDocManager
         private Button navToggleButton;
         private VisualElement navHeader;
         
+        // 左侧栏相关
+        private VisualElement leftSidebar;
+        private VisualElement docTreeContainer;
+        private Button docTreeToggleButton;
+        private bool isDocTreeOpen = true;
+
         private bool isNavOpen = true;
         private List<DocNode> docNodes = new List<DocNode>();
         private List<DocNode> allDocNodes = new List<DocNode>();
@@ -204,14 +210,18 @@ namespace EUFarmworker.MarkdownDocManager
             var splitView = new VisualElement();
             splitView.AddToClassList("split-view");
             
-            // 左侧文档树
-            var treeContainer = new VisualElement();
-            treeContainer.AddToClassList("doc-tree-container");
+            // 左侧侧边栏容器
+            leftSidebar = new VisualElement();
+            leftSidebar.AddToClassList("left-sidebar");
+
+            // 左侧文档树容器
+            docTreeContainer = new VisualElement();
+            docTreeContainer.AddToClassList("doc-tree-container");
             
             // 文档统计标签
             docCountLabel = new Label("文档: 0");
             docCountLabel.AddToClassList("doc-count-label");
-            treeContainer.Add(docCountLabel);
+            docTreeContainer.Add(docCountLabel);
             
             docTreeView = new TreeView();
             docTreeView.AddToClassList("doc-tree");
@@ -253,9 +263,18 @@ namespace EUFarmworker.MarkdownDocManager
                 }
             };
             docTreeView.selectionChanged += OnTreeSelectionChanged;
-            treeContainer.Add(docTreeView);
+            docTreeContainer.Add(docTreeView);
             
-            splitView.Add(treeContainer);
+            leftSidebar.Add(docTreeContainer);
+
+            // 左侧切换按钮
+            docTreeToggleButton = new Button(ToggleDocTree);
+            docTreeToggleButton.AddToClassList("doc-tree-toggle-button");
+            docTreeToggleButton.text = "《"; // 初始展开
+            docTreeToggleButton.tooltip = "收起/展开文档树";
+            leftSidebar.Add(docTreeToggleButton);
+            
+            splitView.Add(leftSidebar);
             
             // 右侧内容区域
             var contentContainer = new VisualElement();
@@ -342,6 +361,24 @@ namespace EUFarmworker.MarkdownDocManager
                 navPanel.AddToClassList("nav-panel-collapsed");
                 navToggleButton.text = "《"; // 收起状态，显示展开图标
                 navToggleButton.AddToClassList("nav-toggle-button-collapsed");
+            }
+        }
+
+        private void ToggleDocTree()
+        {
+            isDocTreeOpen = !isDocTreeOpen;
+            
+            if (isDocTreeOpen)
+            {
+                docTreeContainer.RemoveFromClassList("doc-tree-container-collapsed");
+                docTreeToggleButton.text = "《";
+                docTreeToggleButton.RemoveFromClassList("doc-tree-toggle-button-collapsed");
+            }
+            else
+            {
+                docTreeContainer.AddToClassList("doc-tree-container-collapsed");
+                docTreeToggleButton.text = "》";
+                docTreeToggleButton.AddToClassList("doc-tree-toggle-button-collapsed");
             }
         }
         
