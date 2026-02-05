@@ -248,7 +248,7 @@ namespace EUFarmworker.Core.MVC.Abstract
         /// </summary>
         /// <typeparam name="T1">事件类型</typeparam>
         /// <param name="tEvent">事件实例</param>
-        public void SendEvent<T1>(T1 tEvent) where T1 : struct
+        public void SendEvent<T1>(in T1 tEvent) where T1 : struct
         {
             _typeEventSystem.Send(tEvent);
         }

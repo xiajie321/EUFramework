@@ -64,11 +64,12 @@ namespace EUFarmworker.Core.MVC.Interface
         /// <param name="command">命令实例</param>
         /// <returns>命令执行结果</returns>
         T SendCommand<TCommand,T>(TCommand command) where TCommand : struct,ICommand<T>;
-        
+
         /// <summary>
         /// 发送查询
         /// </summary>
         /// <typeparam name="T">查询类型</typeparam>
+        /// <typeparam name="TQuery">查询事件</typeparam>
         /// <param name="query">查询实例</param>
         /// <returns>查询结果</returns>
         T SendQuery<TQuery,T>(TQuery query) where TQuery : struct,IQuery<T>;
@@ -78,7 +79,7 @@ namespace EUFarmworker.Core.MVC.Interface
         /// </summary>
         /// <typeparam name="T">事件类型</typeparam>
         /// <param name="tEvent">事件实例</param>
-        void SendEvent<T>(T tEvent) where T : struct;
+        void SendEvent<T>(in T tEvent) where T : struct;
 
         /// <summary>
         /// 注册事件监听
