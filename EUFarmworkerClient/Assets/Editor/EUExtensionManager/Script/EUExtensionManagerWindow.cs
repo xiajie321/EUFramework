@@ -888,7 +888,7 @@ namespace EUFarmworker.ExtensionManager
         public static void ShowSettings(Action onClose = null)
         {
             var wnd = GetWindow<EUExtensionSettingsWindow>(true, "EU 设置", true);
-            wnd.minSize = new Vector2(500, 550);
+            wnd.minSize = new Vector2(600, 700);
             wnd.maxSize = new Vector2(600, 700);
             wnd.m_OnClose = onClose;
             wnd.Show();

@@ -138,11 +138,43 @@ namespace EUFarmworker.MarkdownDocManager
         
         private void LoadStyleSheet()
         {
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
-                "Assets/EUFarmworker/Extension/EUMarkdownDocManager/ConfigPanel/EUMarkdownDocReader.uss");
-            if (styleSheet != null)
+            // 1. 尝试通过 GUID 查找（最稳健）
+            string[] guids = AssetDatabase.FindAssets("EUMarkdownDocReader t:StyleSheet");
+            if (guids.Length > 0)
             {
-                rootVisualElement.styleSheets.Add(styleSheet);
+                // 可能会有多个同名文件，优先匹配路径中包含 ConfigPanel 的
+                foreach (var guid in guids)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (path.EndsWith("ConfigPanel/EUMarkdownDocReader.uss"))
+                    {
+                        var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                        if (styleSheet != null)
+                        {
+                            rootVisualElement.styleSheets.Add(styleSheet);
+                            return;
+                        }
+                    }
+                }
+                // 如果没有完全匹配的，尝试加载第一个找到的
+                var firstStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath(guids[0]));
+                if (firstStyleSheet != null)
+                {
+                    rootVisualElement.styleSheets.Add(firstStyleSheet);
+                    return;
+                }
+            }
+
+            // 2. 回退到默认路径
+            var defaultStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                "Assets/EUFarmworker/Extension/EUMarkdownDocManager/ConfigPanel/EUMarkdownDocReader.uss");
+            if (defaultStyleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(defaultStyleSheet);
+            }
+            else
+            {
+                Debug.LogError("[EUMarkdownDocReader] 无法找到样式文件 EUMarkdownDocReader.uss，请确保文件存在于项目中。");
             }
         }
         
@@ -304,7 +336,7 @@ namespace EUFarmworker.MarkdownDocManager
             searchResultListView = new ListView();
             searchResultListView.AddToClassList("search-result-list");
             searchResultListView.style.display = DisplayStyle.None;
-            searchResultListView.itemHeight = 44; // 增加高度以显示两行信息
+            searchResultListView.fixedItemHeight = 44; // 增加高度以显示两行信息
             searchResultListView.makeItem = () => 
             {
                 var container = new VisualElement();
@@ -474,6 +506,39 @@ namespace EUFarmworker.MarkdownDocManager
             {
                 // 扫描扩展目录
                 List<string> extensionPaths = new List<string>();
+
+                // 0. 自动定位 EUMarkdownDocManager 自身位置及向上查找 Doc 文件夹
+                var script = MonoScript.FromScriptableObject(this);
+                string scriptPath = AssetDatabase.GetAssetPath(script);
+                if (!string.IsNullOrEmpty(scriptPath))
+                {
+                    // 获取脚本所在的绝对路径目录
+                    // 使用更稳健的方式获取绝对路径：项目根目录 + 资源相对路径
+                    string projectRoot = Path.GetDirectoryName(Application.dataPath);
+                    string scriptAbsPath = Path.Combine(projectRoot, scriptPath);
+                    string currentDir = Path.GetDirectoryName(scriptAbsPath);
+                    
+                    // 向上查找直到找到包含 Doc 文件夹的目录
+                    string searchDir = currentDir;
+                    
+                    // 限制查找深度，防止死循环
+                    int maxDepth = 10;
+                    while (maxDepth > 0 && !string.IsNullOrEmpty(searchDir))
+                    {
+                        string potentialDocPath = Path.Combine(searchDir, "Doc");
+                        if (Directory.Exists(potentialDocPath))
+                        {
+                            extensionPaths.Add(searchDir);
+                            break; 
+                        }
+                        
+                        // 向上移动一级
+                        DirectoryInfo parentInfo = Directory.GetParent(searchDir);
+                        if (parentInfo == null) break;
+                        searchDir = parentInfo.FullName;
+                        maxDepth--;
+                    }
+                }
                 
                 // 从EditorPrefs读取EUExtensionManager配置的路径
                 string extensionRootPath = EditorPrefs.GetString("EUExtensionManager_ExtensionRootPath", "Assets/EUFarmworker/Extension");
@@ -521,9 +586,21 @@ namespace EUFarmworker.MarkdownDocManager
                     return;
                 }
                 
+                HashSet<string> scannedDocPaths = new HashSet<string>();
+
                 foreach (var extPath in extensionPaths)
                 {
                     string docPath = Path.Combine(extPath, "Doc");
+                    
+                    // 标准化路径用于去重
+                    try 
+                    {
+                        string normalizedDocPath = Path.GetFullPath(docPath).Replace("\\", "/").ToLower();
+                        if (scannedDocPaths.Contains(normalizedDocPath)) continue;
+                        scannedDocPaths.Add(normalizedDocPath);
+                    }
+                    catch {}
+
                     if (!Directory.Exists(docPath)) continue;
                     
                     // 尝试读取extension.json获取显示名称

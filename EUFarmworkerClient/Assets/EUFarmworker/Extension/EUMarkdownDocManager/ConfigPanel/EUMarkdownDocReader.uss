@@ -44,11 +44,6 @@
     background-color: #3a3a3a;
 }
 
-.search-container:focus-within {
-    border-color: #0078d4;
-    background-color: #3a3a3a;
-}
-
 .search-nav-container {
     flex-direction: row;
     align-items: center;
