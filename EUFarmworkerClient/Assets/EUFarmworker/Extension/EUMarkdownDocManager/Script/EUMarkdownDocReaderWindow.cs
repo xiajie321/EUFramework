@@ -74,6 +74,17 @@ namespace EUFarmworker.MarkdownDocManager
             Content
         }
 
+        public enum DocReadMode
+        {
+            Default,
+            Universal
+        }
+
+        private DocReadMode currentReadMode = DocReadMode.Default;
+        private string universalPath = "";
+        private const string PREF_READ_MODE = "EUMarkdownDoc_ReadMode";
+        private const string PREF_UNIVERSAL_PATH = "EUMarkdownDoc_UniversalPath";
+
         [MenuItem("EUFarmworker/Markdown文档阅读器")]
         public static void ShowWindow()
         {
@@ -265,6 +276,11 @@ namespace EUFarmworker.MarkdownDocManager
             searchProgressBar.style.marginLeft = 10;
             topBar.Add(searchProgressBar);
             
+            // 设置按钮
+            var settingsButton = new Button(ShowSettings) { text = "设置" };
+            settingsButton.AddToClassList("action-button");
+            topBar.Add(settingsButton);
+
             // 刷新按钮
             var refreshButton = new Button(() => LoadDocuments()) { text = "刷新" };
             refreshButton.AddToClassList("action-button");
@@ -495,8 +511,30 @@ namespace EUFarmworker.MarkdownDocManager
             }
         }
         
+        private void ShowSettings()
+        {
+            EUMarkdownDocSettingsWindow.ShowWindow(() => {
+                LoadSettings();
+                LoadDocuments();
+            });
+        }
+
+        private void LoadSettings()
+        {
+            currentReadMode = (DocReadMode)EditorPrefs.GetInt(PREF_READ_MODE, (int)DocReadMode.Default);
+            universalPath = EditorPrefs.GetString(PREF_UNIVERSAL_PATH, "");
+        }
+
+        public static void SaveSettings(DocReadMode mode, string path)
+        {
+            EditorPrefs.SetInt(PREF_READ_MODE, (int)mode);
+            EditorPrefs.SetString(PREF_UNIVERSAL_PATH, path);
+        }
+
         private void LoadDocuments()
         {
+            LoadSettings();
+
             docNodes.Clear();
             nodeIdMap.Clear();
             fileContentCache.Clear();
@@ -504,141 +542,13 @@ namespace EUFarmworker.MarkdownDocManager
             
             try
             {
-                // 扫描扩展目录
-                List<string> extensionPaths = new List<string>();
-
-                // 0. 自动定位 EUMarkdownDocManager 自身位置及向上查找 Doc 文件夹
-                var script = MonoScript.FromScriptableObject(this);
-                string scriptPath = AssetDatabase.GetAssetPath(script);
-                if (!string.IsNullOrEmpty(scriptPath))
+                if (currentReadMode == DocReadMode.Universal)
                 {
-                    // 获取脚本所在的绝对路径目录
-                    // 使用更稳健的方式获取绝对路径：项目根目录 + 资源相对路径
-                    string projectRoot = Path.GetDirectoryName(Application.dataPath);
-                    string scriptAbsPath = Path.Combine(projectRoot, scriptPath);
-                    string currentDir = Path.GetDirectoryName(scriptAbsPath);
-                    
-                    // 向上查找直到找到包含 Doc 文件夹的目录
-                    string searchDir = currentDir;
-                    
-                    // 限制查找深度，防止死循环
-                    int maxDepth = 10;
-                    while (maxDepth > 0 && !string.IsNullOrEmpty(searchDir))
-                    {
-                        string potentialDocPath = Path.Combine(searchDir, "Doc");
-                        if (Directory.Exists(potentialDocPath))
-                        {
-                            extensionPaths.Add(searchDir);
-                            break; 
-                        }
-                        
-                        // 向上移动一级
-                        DirectoryInfo parentInfo = Directory.GetParent(searchDir);
-                        if (parentInfo == null) break;
-                        searchDir = parentInfo.FullName;
-                        maxDepth--;
-                    }
+                    LoadUniversalDocuments();
                 }
-                
-                // 从EditorPrefs读取EUExtensionManager配置的路径
-                string extensionRootPath = EditorPrefs.GetString("EUExtensionManager_ExtensionRootPath", "Assets/EUFarmworker/Extension");
-                string coreInstallPath = EditorPrefs.GetString("EUExtensionManager_CoreInstallPath", "Assets/EUFarmworker/Core");
-                
-                // 1. 扫描配置的扩展根目录
-                string extensionRoot = extensionRootPath.StartsWith("Assets") 
-                    ? Path.Combine(Application.dataPath, "..", extensionRootPath)
-                    : extensionRootPath;
-                extensionRoot = Path.GetFullPath(extensionRoot);
-                
-                if (Directory.Exists(extensionRoot))
+                else
                 {
-                    extensionPaths.AddRange(Directory.GetDirectories(extensionRoot));
-                }
-                
-                // 2. 扫描 Assets/Editor/EUExtensionManager 目录（扩展管理器自身）
-                string editorExtensionRoot = Path.Combine(Application.dataPath, "Editor/EUExtensionManager");
-                if (Directory.Exists(editorExtensionRoot))
-                {
-                    extensionPaths.Add(editorExtensionRoot);
-                }
-                
-                // 3. 扫描配置的Core目录
-                string coreRoot = coreInstallPath.StartsWith("Assets")
-                    ? Path.Combine(Application.dataPath, "..", coreInstallPath)
-                    : coreInstallPath;
-                coreRoot = Path.GetFullPath(coreRoot);
-                
-                if (Directory.Exists(coreRoot))
-                {
-                    extensionPaths.Add(coreRoot);
-                    // 也扫描Core下的子目录
-                    var coreDirs = Directory.GetDirectories(coreRoot);
-                    if (coreDirs != null && coreDirs.Length > 0)
-                    {
-                        extensionPaths.AddRange(coreDirs);
-                    }
-                }
-                
-                if (extensionPaths.Count == 0)
-                {
-                    RebuildTreeView();
-                    ShowEmptyState("未找到任何扩展目录");
-                    return;
-                }
-                
-                HashSet<string> scannedDocPaths = new HashSet<string>();
-
-                foreach (var extPath in extensionPaths)
-                {
-                    string docPath = Path.Combine(extPath, "Doc");
-                    
-                    // 标准化路径用于去重
-                    try 
-                    {
-                        string normalizedDocPath = Path.GetFullPath(docPath).Replace("\\", "/").ToLower();
-                        if (scannedDocPaths.Contains(normalizedDocPath)) continue;
-                        scannedDocPaths.Add(normalizedDocPath);
-                    }
-                    catch {}
-
-                    if (!Directory.Exists(docPath)) continue;
-                    
-                    // 尝试读取extension.json获取显示名称
-                    string displayName = Path.GetFileName(extPath);
-                    string extensionJsonPath = Path.Combine(extPath, "extension.json");
-                    if (File.Exists(extensionJsonPath))
-                    {
-                        try
-                        {
-                            string jsonContent = File.ReadAllText(extensionJsonPath, System.Text.Encoding.UTF8);
-                            var match = Regex.Match(jsonContent, @"""displayName""\s*:\s*""([^""]+)""");
-                            if (match.Success)
-                            {
-                                displayName = match.Groups[1].Value;
-                            }
-                        }
-                        catch { /* 忽略JSON解析错误 */ }
-                    }
-                    
-                    // 创建扩展节点
-                    var extNode = new DocNode
-                    {
-                        id = currentNodeId++,
-                        name = displayName,
-                        path = docPath,
-                        isDirectory = true,
-                        children = new List<DocNode>()
-                    };
-                    
-                    nodeIdMap[extNode.id] = extNode;
-                    
-                    // 扫描文档
-                    ScanDirectory(docPath, extNode);
-                    
-                    if (extNode.children.Count > 0)
-                    {
-                        docNodes.Add(extNode);
-                    }
+                    LoadDefaultDocuments();
                 }
                 
                 RebuildTreeView();
@@ -649,7 +559,10 @@ namespace EUFarmworker.MarkdownDocManager
                 
                 if (docNodes.Count == 0)
                 {
-                    ShowEmptyState("未找到任何文档");
+                    string msg = currentReadMode == DocReadMode.Universal 
+                        ? "未找到文档，请在设置中配置有效的路径" 
+                        : "未找到任何文档";
+                    ShowEmptyState(msg);
                 }
                 
                 UpdateDocCount();
@@ -658,6 +571,172 @@ namespace EUFarmworker.MarkdownDocManager
             {
                 Debug.LogError($"加载文档失败: {e.Message}\n{e.StackTrace}");
                 ShowEmptyState($"加载文档失败: {e.Message}");
+            }
+        }
+
+        private void LoadUniversalDocuments()
+        {
+            if (string.IsNullOrEmpty(universalPath) || !Directory.Exists(universalPath))
+            {
+                return;
+            }
+
+            var rootName = Path.GetFileName(universalPath);
+            if (string.IsNullOrEmpty(rootName)) rootName = universalPath;
+
+            var rootNode = new DocNode
+            {
+                id = currentNodeId++,
+                name = rootName,
+                path = universalPath,
+                isDirectory = true,
+                children = new List<DocNode>()
+            };
+            nodeIdMap[rootNode.id] = rootNode;
+            
+            ScanDirectory(universalPath, rootNode);
+            
+            if (rootNode.children.Count > 0)
+            {
+                docNodes.Add(rootNode);
+            }
+        }
+
+        private void LoadDefaultDocuments()
+        {
+            // 扫描扩展目录
+            List<string> extensionPaths = new List<string>();
+
+            // 0. 自动定位 EUMarkdownDocManager 自身位置及向上查找 Doc 文件夹
+            var script = MonoScript.FromScriptableObject(this);
+            string scriptPath = AssetDatabase.GetAssetPath(script);
+            if (!string.IsNullOrEmpty(scriptPath))
+            {
+                // 获取脚本所在的绝对路径目录
+                // 使用更稳健的方式获取绝对路径：项目根目录 + 资源相对路径
+                string projectRoot = Path.GetDirectoryName(Application.dataPath);
+                string scriptAbsPath = Path.Combine(projectRoot, scriptPath);
+                string currentDir = Path.GetDirectoryName(scriptAbsPath);
+                
+                // 向上查找直到找到包含 Doc 文件夹的目录
+                string searchDir = currentDir;
+                
+                // 限制查找深度，防止死循环
+                int maxDepth = 10;
+                while (maxDepth > 0 && !string.IsNullOrEmpty(searchDir))
+                {
+                    string potentialDocPath = Path.Combine(searchDir, "Doc");
+                    if (Directory.Exists(potentialDocPath))
+                    {
+                        extensionPaths.Add(searchDir);
+                        break; 
+                    }
+                    
+                    // 向上移动一级
+                    DirectoryInfo parentInfo = Directory.GetParent(searchDir);
+                    if (parentInfo == null) break;
+                    searchDir = parentInfo.FullName;
+                    maxDepth--;
+                }
+            }
+            
+            // 从EditorPrefs读取EUExtensionManager配置的路径
+            string extensionRootPath = EditorPrefs.GetString("EUExtensionManager_ExtensionRootPath", "Assets/EUFarmworker/Extension");
+            string coreInstallPath = EditorPrefs.GetString("EUExtensionManager_CoreInstallPath", "Assets/EUFarmworker/Core");
+            
+            // 1. 扫描配置的扩展根目录
+            string extensionRoot = extensionRootPath.StartsWith("Assets") 
+                ? Path.Combine(Application.dataPath, "..", extensionRootPath)
+                : extensionRootPath;
+            extensionRoot = Path.GetFullPath(extensionRoot);
+            
+            if (Directory.Exists(extensionRoot))
+            {
+                extensionPaths.AddRange(Directory.GetDirectories(extensionRoot));
+            }
+            
+            // 2. 扫描 Assets/Editor/EUExtensionManager 目录（扩展管理器自身）
+            string editorExtensionRoot = Path.Combine(Application.dataPath, "Editor/EUExtensionManager");
+            if (Directory.Exists(editorExtensionRoot))
+            {
+                extensionPaths.Add(editorExtensionRoot);
+            }
+            
+            // 3. 扫描配置的Core目录
+            string coreRoot = coreInstallPath.StartsWith("Assets")
+                ? Path.Combine(Application.dataPath, "..", coreInstallPath)
+                : coreInstallPath;
+            coreRoot = Path.GetFullPath(coreRoot);
+            
+            if (Directory.Exists(coreRoot))
+            {
+                extensionPaths.Add(coreRoot);
+                // 也扫描Core下的子目录
+                var coreDirs = Directory.GetDirectories(coreRoot);
+                if (coreDirs != null && coreDirs.Length > 0)
+                {
+                    extensionPaths.AddRange(coreDirs);
+                }
+            }
+            
+            if (extensionPaths.Count == 0)
+            {
+                return;
+            }
+            
+            HashSet<string> scannedDocPaths = new HashSet<string>();
+
+            foreach (var extPath in extensionPaths)
+            {
+                string docPath = Path.Combine(extPath, "Doc");
+                
+                // 标准化路径用于去重
+                try 
+                {
+                    string normalizedDocPath = Path.GetFullPath(docPath).Replace("\\", "/").ToLower();
+                    if (scannedDocPaths.Contains(normalizedDocPath)) continue;
+                    scannedDocPaths.Add(normalizedDocPath);
+                }
+                catch {}
+
+                if (!Directory.Exists(docPath)) continue;
+                
+                // 尝试读取extension.json获取显示名称
+                string displayName = Path.GetFileName(extPath);
+                string extensionJsonPath = Path.Combine(extPath, "extension.json");
+                if (File.Exists(extensionJsonPath))
+                {
+                    try
+                    {
+                        string jsonContent = File.ReadAllText(extensionJsonPath, System.Text.Encoding.UTF8);
+                        var match = Regex.Match(jsonContent, @"""displayName""\s*:\s*""([^""]+)""");
+                        if (match.Success)
+                        {
+                            displayName = match.Groups[1].Value;
+                        }
+                    }
+                    catch { /* 忽略JSON解析错误 */ }
+                }
+                
+                // 创建扩展节点
+                var extNode = new DocNode
+                {
+                    id = currentNodeId++,
+                    name = displayName,
+                    path = docPath,
+                    isDirectory = true,
+                    children = new List<DocNode>()
+                };
+                
+                nodeIdMap[extNode.id] = extNode;
+                
+                // 扫描文档
+                ScanDirectory(docPath, extNode);
+                
+                if (extNode.children.Count > 0)
+                {
+                    docNodes.Add(extNode);
+                }
             }
         }
         
@@ -1757,6 +1836,141 @@ namespace EUFarmworker.MarkdownDocManager
             public DocNode docNode;
             public string lineContent;
             public int lineNumber;
+        }
+    }
+
+    public class EUMarkdownDocSettingsWindow : EditorWindow
+    {
+        private Action m_OnClose;
+        private EUMarkdownDocReaderWindow.DocReadMode m_ReadMode;
+        private string m_UniversalPath;
+        
+        private PopupField<string> m_ModeField;
+        private TextField m_PathField;
+        private Button m_SelectPathBtn;
+
+        public static void ShowWindow(Action onClose = null)
+        {
+            var wnd = GetWindow<EUMarkdownDocSettingsWindow>(true, "文档阅读器设置", true);
+            wnd.minSize = new Vector2(400, 200);
+            wnd.maxSize = new Vector2(400, 250);
+            wnd.m_OnClose = onClose;
+            wnd.Show();
+        }
+
+        private void OnEnable()
+        {
+            // 加载设置
+            m_ReadMode = (EUMarkdownDocReaderWindow.DocReadMode)EditorPrefs.GetInt("EUMarkdownDoc_ReadMode", 0);
+            m_UniversalPath = EditorPrefs.GetString("EUMarkdownDoc_UniversalPath", "");
+        }
+
+        private void CreateGUI()
+        {
+            var root = rootVisualElement;
+            root.style.paddingTop = 20;
+            root.style.paddingBottom = 20;
+            root.style.paddingLeft = 20;
+            root.style.paddingRight = 20;
+
+            var title = new Label("设置");
+            title.style.fontSize = 18;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.marginBottom = 15;
+            root.Add(title);
+
+            // 模式选择
+            var modeOptions = new List<string> { "默认模式", "通用模式" };
+            int index = (int)m_ReadMode;
+            if (index < 0 || index >= modeOptions.Count) index = 0;
+            
+            m_ModeField = new PopupField<string>("读取模式", modeOptions, index);
+            m_ModeField.RegisterValueChangedCallback(evt => {
+                m_ReadMode = evt.newValue == "通用模式" 
+                    ? EUMarkdownDocReaderWindow.DocReadMode.Universal 
+                    : EUMarkdownDocReaderWindow.DocReadMode.Default;
+                UpdateUIState();
+            });
+            root.Add(m_ModeField);
+
+            // 路径选择容器
+            var pathContainer = new VisualElement();
+            pathContainer.style.marginTop = 10;
+            pathContainer.name = "path-container";
+            
+            var pathRow = new VisualElement();
+            pathRow.style.flexDirection = FlexDirection.Row;
+            
+            m_PathField = new TextField("文档路径");
+            m_PathField.value = m_UniversalPath;
+            m_PathField.style.flexGrow = 1;
+            m_PathField.RegisterValueChangedCallback(evt => m_UniversalPath = evt.newValue);
+            pathRow.Add(m_PathField);
+            
+            m_SelectPathBtn = new Button(OnSelectPath) { text = "..." };
+            m_SelectPathBtn.style.width = 30;
+            pathRow.Add(m_SelectPathBtn);
+            
+            pathContainer.Add(pathRow);
+            
+            var helpBox = new Label("选择包含Markdown文档的文件夹。");
+            helpBox.style.fontSize = 10;
+            helpBox.style.color = new Color(0.6f, 0.6f, 0.6f);
+            helpBox.style.marginTop = 2;
+            helpBox.style.marginLeft = 120; // 对齐输入框
+            pathContainer.Add(helpBox);
+            
+            root.Add(pathContainer);
+
+            // 底部按钮
+            var footer = new VisualElement();
+            footer.style.flexDirection = FlexDirection.Row;
+            footer.style.justifyContent = Justify.FlexEnd;
+            footer.style.marginTop = 20;
+            
+            var saveBtn = new Button(OnSave) { text = "保存并关闭" };
+            saveBtn.style.height = 30;
+            saveBtn.style.paddingLeft = 20;
+            saveBtn.style.paddingRight = 20;
+            footer.Add(saveBtn);
+            
+            root.Add(footer);
+
+            UpdateUIState();
+        }
+
+        private void UpdateUIState()
+        {
+            var pathContainer = rootVisualElement.Q("path-container");
+            if (pathContainer != null)
+            {
+                pathContainer.style.display = m_ReadMode == EUMarkdownDocReaderWindow.DocReadMode.Universal 
+                    ? DisplayStyle.Flex 
+                    : DisplayStyle.None;
+            }
+        }
+
+        private void OnSelectPath()
+        {
+            string path = EditorUtility.OpenFolderPanel("选择文档目录", m_UniversalPath, "");
+            if (!string.IsNullOrEmpty(path))
+            {
+                // 转换为相对路径（如果在项目中）
+                string projectPath = Path.GetFullPath(Application.dataPath).Replace("\\", "/");
+                string fullPath = path.Replace("\\", "/");
+                
+                // 如果在Assets下，可以转为相对路径，但通用模式通常支持任意路径
+                // 这里我们保持完整路径，或者根据需求处理
+                m_UniversalPath = fullPath;
+                m_PathField.value = m_UniversalPath;
+            }
+        }
+
+        private void OnSave()
+        {
+            EUMarkdownDocReaderWindow.SaveSettings(m_ReadMode, m_UniversalPath);
+            m_OnClose?.Invoke();
+            Close();
         }
     }
 }
