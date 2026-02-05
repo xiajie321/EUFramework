@@ -1,108 +1,157 @@
 using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace EUFarmworker.Core.MVC.CoreTool
 {
-    //不使用typeof(T)与字典的原因:
-    //1、typeof(T)在JIT编译时会由编译时确定推迟变为运行时确定。
-    //2、typeof(T)的结果本身是一个Type类型的实例对象。
-    //3、字典属于逻辑查询,会涉及到大量的逻辑操作,而静态泛型会在生成机器码时将静态字段的内存嵌入到指令里可以直接访问。
-    //4、静态泛型中的方法很有可能被内联,这会导致方法体直接嵌入到调用点,避免了传统的方法调用开销。
-    public class TypeEventSystem
+    /// <summary>
+    /// 高性能事件系统 - 运行时发送零GC
+    /// 仅供MVC内部使用，不对外暴露
+    /// 
+    /// 性能设计:
+    /// - 静态泛型缓存：O(1)类型查找，JIT编译时确定内存地址，无字典哈希开销
+    /// - 数组存储：避免委托 += 合并产生的GC分配
+    /// - Send操作：完全零GC，直接索引遍历
+    /// - 快速移除：使用交换删除算法，O(1)复杂度
+    /// - 单播优化：单个监听者时避免循环开销
+    /// </summary>
+    internal static class TypeEventSystem
     {
-        private static int _globalSystemIdCounter = 0;
-        private static readonly Queue<int> _availableSystemIds = new Queue<int>();
-        private readonly int _systemId;
-
-        public TypeEventSystem()
+        #region 事件缓存 - 利用静态泛型的JIT编译优势
+        
+        private static class EventCache<T> where T : struct
         {
-            if (_availableSystemIds.Count > 0)
-            {
-                _systemId = _availableSystemIds.Dequeue();
-            }
-            else
-            {
-                _systemId = _globalSystemIdCounter++;
-            }
+            // 预分配数组，避免动态扩容的频繁GC
+            public static Action<T>[] Handlers = new Action<T>[4];
+            public static int Count;
+            public static bool IsTracked;
         }
+        
+        #endregion
 
-        ~TypeEventSystem()
-        {
-            Clear();
-            _availableSystemIds.Enqueue(_systemId);
+        #region 清理追踪系统
+        
+        private interface IClearable 
+        { 
+            void DoClear(); 
         }
-
-        private interface IRegistration
+        
+        private sealed class Clearable<T> : IClearable where T : struct
         {
-            void UnRegister(int systemId);
-        }
-
-        private class EventCache<T> : IRegistration where T : struct
-        {
-            public static readonly EventCache<T> Instance = new EventCache<T>();
+            // 单例模式，避免重复分配
+            public static readonly Clearable<T> Instance = new();
             
-            // 使用数组存储，通过 systemId 直接索引
-            public Action<T>[] SystemActions = new Action<T>[1];
-
-            public void UnRegister(int systemId)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void DoClear()
             {
-                if (systemId < SystemActions.Length)
+                Array.Clear(EventCache<T>.Handlers, 0, EventCache<T>.Count);
+                EventCache<T>.Count = 0;
+                EventCache<T>.IsTracked = false;
+            }
+        }
+        
+        // 预分配追踪数组
+        private static IClearable[] _clearables = new IClearable[32];
+        private static int _clearableCount;
+        
+        #endregion
+
+        #region 公共API
+
+        /// <summary>
+        /// 注册事件监听器
+        /// 首次注册某类型时会有少量分配用于追踪，后续注册零GC
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Register<T>(Action<T> handler) where T : struct
+        {
+            // 追踪类型以便Clear时清理（仅首次注册时执行）
+            if (!EventCache<T>.IsTracked)
+            {
+                EventCache<T>.IsTracked = true;
+                if (_clearableCount >= _clearables.Length)
                 {
-                    SystemActions[systemId] = null;
+                    Array.Resize(ref _clearables, _clearables.Length * 2);
+                }
+                _clearables[_clearableCount++] = Clearable<T>.Instance;
+            }
+
+            // 确保容量
+            ref var handlers = ref EventCache<T>.Handlers;
+            ref var count = ref EventCache<T>.Count;
+            
+            if (count >= handlers.Length)
+            {
+                // 扩容策略：翻倍
+                Array.Resize(ref handlers, handlers.Length * 2);
+            }
+            
+            handlers[count++] = handler;
+        }
+
+        /// <summary>
+        /// 注销事件监听器
+        /// 使用交换删除算法，O(1)复杂度，零GC
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void UnRegister<T>(Action<T> handler) where T : struct
+        {
+            var handlers = EventCache<T>.Handlers;
+            ref var count = ref EventCache<T>.Count;
+            
+            for (int i = 0; i < count; i++)
+            {
+                // 使用引用比较，避免委托Equals的开销
+                if (ReferenceEquals(handlers[i], handler))
+                {
+                    // 快速移除：用最后一个元素填充当前位置
+                    count--;
+                    if (i < count)
+                    {
+                        handlers[i] = handlers[count];
+                    }
+                    handlers[count] = null; // 帮助GC
+                    return;
                 }
             }
-
-            public void EnsureCapacity(int index)
-            {
-                if (index >= SystemActions.Length)
-                {
-                    int newSize = Math.Max(index + 1, SystemActions.Length * 2);
-                    Array.Resize(ref SystemActions, newSize);
-                }
-            }
         }
 
-        private readonly HashSet<IRegistration> _registeredTypes = new HashSet<IRegistration>();
-
-        public void Register<T>(Action<T> onEvent) where T : struct
+        /// <summary>
+        /// 发送事件 - 完全零GC
+        /// 使用in参数避免结构体复制
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Send<T>(in T evt) where T : struct
         {
-            var cache = EventCache<T>.Instance;
-            cache.EnsureCapacity(_systemId);
+            var handlers = EventCache<T>.Handlers;
+            int count = EventCache<T>.Count;
             
-            if (cache.SystemActions[_systemId] == null)
+            // 单播快速路径
+            if (count == 1)
             {
-                cache.SystemActions[_systemId] = _ => { };
-                _registeredTypes.Add(cache);
+                handlers[0](evt);
+                return;
             }
-            cache.SystemActions[_systemId] += onEvent;
-        }
-
-        public void UnRegister<T>(Action<T> onEvent) where T : struct
-        {
-            var cache = EventCache<T>.Instance;
-            if (_systemId < cache.SystemActions.Length && cache.SystemActions[_systemId] != null)
+            
+            // 多播路径：直接索引遍历，无迭代器分配
+            for (int i = 0; i < count; i++)
             {
-                cache.SystemActions[_systemId] -= onEvent;
+                handlers[i](evt);
             }
         }
 
-        public void Send<T>(T tEvent) where T : struct
+        /// <summary>
+        /// 清理所有已注册的事件
+        /// 用于架构销毁时重置状态
+        /// </summary>
+        public static void Clear()
         {
-            var actions = EventCache<T>.Instance.SystemActions;
-            // 消除哈希计算，通过 ID 直接索引
-            if (_systemId < actions.Length)
+            for (int i = 0; i < _clearableCount; i++)
             {
-                actions[_systemId]?.Invoke(tEvent);
+                _clearables[i].DoClear();
             }
+            _clearableCount = 0;
         }
-
-        public void Clear()
-        {
-            foreach (var registration in _registeredTypes)
-            {
-                registration.UnRegister(_systemId);
-            }
-            _registeredTypes.Clear();
-        }
+        
+        #endregion
     }
 }

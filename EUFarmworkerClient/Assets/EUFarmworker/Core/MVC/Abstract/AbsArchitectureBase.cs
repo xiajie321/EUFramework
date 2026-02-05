@@ -18,7 +18,6 @@ namespace EUFarmworker.Core.MVC.Abstract
         private static List<ISystem> _systems = new();
         private static List<IUtility> _utilities = new();
         private static List<IModel> _models = new();
-        private static TypeEventSystem _typeEventSystem = new TypeEventSystem();
         private static Action _dispose;
 
         /// <summary>
@@ -81,7 +80,7 @@ namespace EUFarmworker.Core.MVC.Abstract
             _systems.Clear();
             _utilities.Clear();
             _hashSet.Clear();
-            _typeEventSystem.Clear();
+            TypeEventSystem.Clear();
             _dispose = null;
             _instance = null;
         }
@@ -166,7 +165,7 @@ namespace EUFarmworker.Core.MVC.Abstract
         /// <param name="onEvent">事件回调</param>
         public void RegisterEvent<T1>(Action<T1> onEvent) where T1 : struct
         {
-            _typeEventSystem.Register(onEvent);
+            TypeEventSystem.Register(onEvent);
         }
 
         /// <summary>
@@ -176,7 +175,7 @@ namespace EUFarmworker.Core.MVC.Abstract
         /// <param name="onEvent">事件回调</param>
         public void UnRegisterEvent<T1>(Action<T1> onEvent) where T1 : struct
         {
-            _typeEventSystem.UnRegister(onEvent);
+            TypeEventSystem.UnRegister(onEvent);
         }
 
         /// <summary>
@@ -250,7 +249,7 @@ namespace EUFarmworker.Core.MVC.Abstract
         /// <param name="tEvent">事件实例</param>
         public void SendEvent<T1>(in T1 tEvent) where T1 : struct
         {
-            _typeEventSystem.Send(tEvent);
+            TypeEventSystem.Send(in tEvent);
         }
     }
 }
