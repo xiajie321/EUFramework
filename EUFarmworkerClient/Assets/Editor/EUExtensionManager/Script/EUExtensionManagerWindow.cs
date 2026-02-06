@@ -1058,17 +1058,27 @@ namespace EUFarmworker.ExtensionManager
                     path = "Assets" + path.Substring(projectPath.Length);
                 }
                 
-                if (isCore)
+                if (path != currentPath)
                 {
-                    EUExtensionLoader.CoreInstallPath = path;
-                    m_CorePathField.value = path;
+                    if (EditorUtility.DisplayDialog("迁移扩展", 
+                        $"检测到路径变更。\n从: {currentPath}\n到: {path}\n\n是否将旧路径下的扩展迁移到新路径？", 
+                        "迁移", "不迁移"))
+                    {
+                        EUExtensionLoader.MigrateExtensions(currentPath, path);
+                    }
+
+                    if (isCore)
+                    {
+                        EUExtensionLoader.CoreInstallPath = path;
+                        m_CorePathField.value = path;
+                    }
+                    else
+                    {
+                        EUExtensionLoader.ExtensionRootPath = path;
+                        m_PathField.value = path;
+                    }
+                    UpdateStatus();
                 }
-                else
-                {
-                    EUExtensionLoader.ExtensionRootPath = path;
-                    m_PathField.value = path;
-                }
-                UpdateStatus();
             }
         }
 

@@ -39,6 +39,81 @@ namespace EUFarmworker.ExtensionManager
             get => EditorPrefs.GetString(PrefsKey_CommunityUrl, DefaultCommunityUrl);
             set => EditorPrefs.SetString(PrefsKey_CommunityUrl, value);
         }
+
+        public static string GetFullPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "";
+            if (path.StartsWith("Assets"))
+                return Path.GetFullPath(Path.Combine(Application.dataPath, "..", path));
+            return path;
+        }
+
+        public static void MigrateExtensions(string oldPath, string newPath)
+        {
+            if (string.IsNullOrEmpty(oldPath) || string.IsNullOrEmpty(newPath) || oldPath == newPath) return;
+
+            string oldFullPath = GetFullPath(oldPath);
+            string newFullPath = GetFullPath(newPath);
+
+            if (!Directory.Exists(oldFullPath)) return;
+            if (!Directory.Exists(newFullPath)) Directory.CreateDirectory(newFullPath);
+
+            string[] directories = Directory.GetDirectories(oldFullPath);
+            bool movedAny = false;
+
+            foreach (string dir in directories)
+            {
+                string jsonPath = Path.Combine(dir, ExtensionMarkerFile);
+                if (File.Exists(jsonPath))
+                {
+                    string dirName = Path.GetFileName(dir);
+                    string destDir = Path.Combine(newFullPath, dirName);
+
+                    if (Directory.Exists(destDir))
+                    {
+                        Debug.LogWarning($"[EUExtensionManager] 目标路径已存在，跳过迁移: {dirName}");
+                        continue;
+                    }
+
+                    try
+                    {
+                        string oldAssetPath = GetRelativePath(dir);
+                        string newAssetPath = GetRelativePath(destDir);
+
+                        // 只有当两个路径都在 Assets 下时才使用 AssetDatabase.MoveAsset
+                        if (oldAssetPath.StartsWith("Assets") && newAssetPath.StartsWith("Assets"))
+                        {
+                            string error = AssetDatabase.MoveAsset(oldAssetPath, newAssetPath);
+                            if (!string.IsNullOrEmpty(error))
+                            {
+                                Debug.LogError($"[EUExtensionManager] AssetDatabase 移动失败: {error}。尝试文件系统移动。");
+                                // Fallback to IO
+                                Directory.Move(dir, destDir);
+                                string meta = dir + ".meta";
+                                if (File.Exists(meta)) File.Move(meta, destDir + ".meta");
+                            }
+                        }
+                        else
+                        {
+                            Directory.Move(dir, destDir);
+                            string meta = dir + ".meta";
+                            if (File.Exists(meta)) File.Move(meta, destDir + ".meta");
+                        }
+                        movedAny = true;
+                        Debug.Log($"[EUExtensionManager] 已迁移: {dirName}");
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"[EUExtensionManager] 迁移失败 {dirName}: {e.Message}");
+                    }
+                }
+            }
+
+            if (movedAny)
+            {
+                AssetDatabase.Refresh();
+            }
+        }
         
         /// <summary>
         /// 获取用于下载原始文件的URL (GitHub Raw)
@@ -118,11 +193,7 @@ namespace EUFarmworker.ExtensionManager
 
         private static void ScanDirectoryForExtensions(string rootPath, List<EUExtensionInfo> extensions)
         {
-            string fullPath;
-            if (rootPath.StartsWith("Assets"))
-                fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", rootPath));
-            else
-                fullPath = rootPath;
+            string fullPath = GetFullPath(rootPath);
             
             if (!Directory.Exists(fullPath)) 
             {
@@ -140,11 +211,7 @@ namespace EUFarmworker.ExtensionManager
         private static void ScanCoreDirectory(List<EUExtensionInfo> extensions)
         {
             string corePath = CoreInstallPath;
-            string fullPath;
-            if (corePath.StartsWith("Assets"))
-                fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", corePath));
-            else
-                fullPath = corePath;
+            string fullPath = GetFullPath(corePath);
 
             if (Directory.Exists(fullPath))
             {
