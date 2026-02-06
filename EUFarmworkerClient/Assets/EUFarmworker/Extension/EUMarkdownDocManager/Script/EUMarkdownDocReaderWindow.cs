@@ -8,7 +8,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UIElements;
+using UnityEngine.Video;
 
 namespace EUFarmworker.MarkdownDocManager
 {
@@ -47,6 +49,7 @@ namespace EUFarmworker.MarkdownDocManager
         private List<HeaderInfo> currentHeaders = new List<HeaderInfo>();
         private Dictionary<string, string> fileContentCache = new Dictionary<string, string>();
         private List<Texture2D> loadedTextures = new List<Texture2D>();
+        private List<VideoPlayer> activeVideoPlayers = new List<VideoPlayer>();
         private bool isSearching = false;
         private SearchMode currentSearchMode = SearchMode.FileName;
         private double lastSearchTime;
@@ -101,15 +104,15 @@ namespace EUFarmworker.MarkdownDocManager
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            CleanupTextures();
+            CleanupResources();
         }
 
         private void OnDestroy()
         {
-            CleanupTextures();
+            CleanupResources();
         }
 
-        private void CleanupTextures()
+        private void CleanupResources()
         {
             foreach (var tex in loadedTextures)
             {
@@ -119,6 +122,20 @@ namespace EUFarmworker.MarkdownDocManager
                 }
             }
             loadedTextures.Clear();
+
+            foreach (var player in activeVideoPlayers)
+            {
+                if (player != null)
+                {
+                    if (player.targetTexture != null)
+                    {
+                        player.targetTexture.Release();
+                        DestroyImmediate(player.targetTexture);
+                    }
+                    DestroyImmediate(player.gameObject);
+                }
+            }
+            activeVideoPlayers.Clear();
         }
 
         private void OnEditorUpdate()
@@ -1280,7 +1297,7 @@ namespace EUFarmworker.MarkdownDocManager
             currentMatchIndex = -1;
             UpdateSearchNavVisibility();
             
-            CleanupTextures(); // 清理旧图片的纹理
+            CleanupResources(); // 清理旧资源
             
             var contentPanel = new VisualElement();
             contentPanel.AddToClassList("markdown-content");
@@ -1309,7 +1326,15 @@ namespace EUFarmworker.MarkdownDocManager
                 {
                     string altText = imgMatch.Groups[1].Value;
                     string imgPath = imgMatch.Groups[2].Value;
-                    CreateImage(imgPath, altText, contentPanel);
+                    
+                    if (IsVideoFile(imgPath) || altText.ToLower().Contains("video"))
+                    {
+                        CreateVideoPlayer(imgPath, altText, contentPanel);
+                    }
+                    else
+                    {
+                        CreateImage(imgPath, altText, contentPanel);
+                    }
                     continue;
                 }
 
@@ -1471,75 +1496,248 @@ namespace EUFarmworker.MarkdownDocManager
         {
             try
             {
-                // 处理相对路径
+                // 处理网络图片
+                if (path.StartsWith("http://") || path.StartsWith("https://"))
+                {
+                    LoadRemoteImage(path, altText, parent);
+                    return;
+                }
+
+                // 处理本地路径
                 string fullPath = path;
                 if (!Path.IsPathRooted(path))
                 {
                     // 假设图片相对于当前文档
                     string docDir = Path.GetDirectoryName(currentDocPath);
                     fullPath = Path.Combine(docDir, path);
+                    // 标准化路径，处理 ../
+                    fullPath = Path.GetFullPath(fullPath);
                 }
 
-                // 尝试加载图片
-                Texture2D texture = null;
-                if (fullPath.StartsWith("http"))
+                if (File.Exists(fullPath))
                 {
-                    // 网络图片暂不支持直接加载显示，或者可以显示一个占位符/链接
-                    var linkLabel = new Label($"[图片: {altText}] ({path})");
-                    linkLabel.AddToClassList("markdown-paragraph"); // 使用普通段落样式
-                    parent.Add(linkLabel);
-                    return;
+                    byte[] fileData = File.ReadAllBytes(fullPath);
+                    var texture = new Texture2D(2, 2);
+                    texture.LoadImage(fileData);
+                    loadedTextures.Add(texture); // 记录以便销毁
+                    
+                    DisplayImage(texture, altText, parent);
                 }
                 else
                 {
-                    // 本地图片
-                    if (File.Exists(fullPath))
-                    {
-                        byte[] fileData = File.ReadAllBytes(fullPath);
-                        texture = new Texture2D(2, 2);
-                        texture.LoadImage(fileData);
-                        loadedTextures.Add(texture); // 记录以便销毁
-                    }
-                }
-
-                if (texture != null)
-                {
-                    var imgContainer = new VisualElement();
-                    imgContainer.AddToClassList("markdown-image-container");
-                    
-                    var img = new Image();
-                    img.image = texture;
-                    img.scaleMode = ScaleMode.ScaleToFit;
-                    img.AddToClassList("markdown-image");
-                    
-                    // 图片点击交互 - 简单的放大/缩小效果
-                    img.RegisterCallback<ClickEvent>(evt => {
-                        if (img.ClassListContains("markdown-image-expanded"))
-                        {
-                            img.RemoveFromClassList("markdown-image-expanded");
-                        }
-                        else
-                        {
-                            img.AddToClassList("markdown-image-expanded");
-                        }
-                    });
-                    
-                    imgContainer.Add(img);
-                    
-                    if (!string.IsNullOrEmpty(altText))
-                    {
-                        var caption = new Label(altText);
-                        caption.AddToClassList("markdown-image-caption");
-                        imgContainer.Add(caption);
-                    }
-                    
-                    parent.Add(imgContainer);
+                    // 图片不存在，显示占位符
+                    var errorLabel = new Label($"[图片丢失: {altText}] ({path})");
+                    errorLabel.style.color = Color.red;
+                    errorLabel.AddToClassList("markdown-paragraph");
+                    parent.Add(errorLabel);
                 }
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"加载图片失败: {path}, {e.Message}");
             }
+        }
+
+        private async void LoadRemoteImage(string url, string altText, VisualElement parent)
+        {
+            // 创建占位符
+            var placeholder = new Label($"[加载图片中: {altText}]...");
+            placeholder.AddToClassList("markdown-paragraph");
+            parent.Add(placeholder);
+
+            try
+            {
+                using (UnityWebRequest uwr = UnityWebRequestTexture.GetTexture(url))
+                {
+                    var operation = uwr.SendWebRequest();
+                    while (!operation.isDone) await Task.Yield();
+
+                    if (uwr.result != UnityWebRequest.Result.Success)
+                    {
+                        placeholder.text = $"[图片加载失败: {altText}] ({url})";
+                        placeholder.style.color = Color.red;
+                    }
+                    else
+                    {
+                        var texture = DownloadHandlerTexture.GetContent(uwr);
+                        if (texture != null)
+                        {
+                            loadedTextures.Add(texture);
+                            // 移除占位符
+                            parent.Remove(placeholder);
+                            DisplayImage(texture, altText, parent);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                placeholder.text = $"[图片错误: {altText}]";
+                Debug.LogError($"下载图片失败: {e.Message}");
+            }
+        }
+
+        private void DisplayImage(Texture2D texture, string altText, VisualElement parent)
+        {
+            var imgContainer = new VisualElement();
+            imgContainer.AddToClassList("markdown-image-container");
+            
+            var img = new Image();
+            img.image = texture;
+            img.scaleMode = ScaleMode.ScaleToFit;
+            img.AddToClassList("markdown-image");
+            
+            // 图片点击交互 - 简单的放大/缩小效果
+            img.RegisterCallback<ClickEvent>(evt => {
+                if (img.ClassListContains("markdown-image-expanded"))
+                {
+                    img.RemoveFromClassList("markdown-image-expanded");
+                }
+                else
+                {
+                    img.AddToClassList("markdown-image-expanded");
+                }
+            });
+            
+            imgContainer.Add(img);
+            
+            if (!string.IsNullOrEmpty(altText))
+            {
+                var caption = new Label(altText);
+                caption.AddToClassList("markdown-image-caption");
+                imgContainer.Add(caption);
+            }
+            
+            parent.Add(imgContainer);
+        }
+
+        private void CreateVideoPlayer(string path, string altText, VisualElement parent)
+        {
+            try
+            {
+                var container = new VisualElement();
+                container.AddToClassList("markdown-video-container");
+                
+                // 视频显示区域
+                var videoScreen = new Image();
+                videoScreen.AddToClassList("markdown-video-screen");
+                container.Add(videoScreen);
+                
+                // 控制栏
+                var controls = new VisualElement();
+                controls.AddToClassList("markdown-video-controls");
+                
+                var playBtn = new Button() { text = "▶" };
+                playBtn.AddToClassList("video-control-btn");
+                controls.Add(playBtn);
+                
+                var stopBtn = new Button() { text = "■" };
+                stopBtn.AddToClassList("video-control-btn");
+                controls.Add(stopBtn);
+                
+                var timeLabel = new Label("00:00 / 00:00");
+                timeLabel.AddToClassList("video-time-label");
+                controls.Add(timeLabel);
+                
+                container.Add(controls);
+                parent.Add(container);
+                
+                // 创建 VideoPlayer GameObject
+                var go = new GameObject($"VideoPlayer_{path}");
+                go.hideFlags = HideFlags.HideAndDontSave;
+                var player = go.AddComponent<VideoPlayer>();
+                activeVideoPlayers.Add(player);
+                
+                // 设置视频源
+                if (path.StartsWith("http://") || path.StartsWith("https://"))
+                {
+                    player.url = path;
+                    player.source = VideoSource.Url;
+                }
+                else
+                {
+                    string fullPath = path;
+                    if (!Path.IsPathRooted(path))
+                    {
+                        string docDir = Path.GetDirectoryName(currentDocPath);
+                        fullPath = Path.Combine(docDir, path);
+                        fullPath = Path.GetFullPath(fullPath);
+                    }
+                    player.url = fullPath;
+                    player.source = VideoSource.Url;
+                }
+                
+                // 设置渲染目标
+                player.playOnAwake = false;
+                player.isLooping = true;
+                player.renderMode = VideoRenderMode.RenderTexture;
+                
+                // 准备完成后创建 RenderTexture
+                player.prepareCompleted += (source) => {
+                    var rt = new RenderTexture((int)source.width, (int)source.height, 0);
+                    source.targetTexture = rt;
+                    videoScreen.image = rt;
+                    
+                    // 调整显示比例
+                    float aspect = (float)source.width / source.height;
+                    // 限制最大高度，宽度自适应
+                    // 但在USS中我们设置了固定高度，这里可以根据宽度调整高度
+                    // 或者保持 scale-to-fit
+                    
+                    // 更新总时长
+                    UpdateTimeLabel(player, timeLabel);
+                };
+                
+                player.Prepare();
+                
+                // 按钮事件
+                playBtn.clicked += () => {
+                    if (player.isPlaying)
+                    {
+                        player.Pause();
+                        playBtn.text = "▶";
+                    }
+                    else
+                    {
+                        player.Play();
+                        playBtn.text = "❚❚";
+                    }
+                };
+                
+                stopBtn.clicked += () => {
+                    player.Stop();
+                    playBtn.text = "▶";
+                    UpdateTimeLabel(player, timeLabel);
+                };
+                
+                // 更新时间显示
+                container.schedule.Execute(() => {
+                    if (player != null && player.isPlaying)
+                    {
+                        UpdateTimeLabel(player, timeLabel);
+                    }
+                }).Every(500); // 每0.5秒更新一次
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"创建视频播放器失败: {e.Message}");
+                var errorLabel = new Label($"[视频加载失败: {altText}]");
+                errorLabel.style.color = Color.red;
+                parent.Add(errorLabel);
+            }
+        }
+
+        private void UpdateTimeLabel(VideoPlayer player, Label label)
+        {
+            if (player == null || label == null) return;
+            
+            string FormatTime(double seconds)
+            {
+                TimeSpan t = TimeSpan.FromSeconds(seconds);
+                return string.Format("{0:D2}:{1:D2}", t.Minutes, t.Seconds);
+            }
+            
+            label.text = $"{FormatTime(player.time)} / {FormatTime(player.length)}";
         }
         
         private VisualElement CreateHeader(string line, VisualElement parent, int lineNumber)
@@ -1713,32 +1911,239 @@ namespace EUFarmworker.MarkdownDocManager
         
         private VisualElement CreateParagraph(string line, int lineNumber)
         {
-            var label = new Label(ProcessInlineMarkdown(line));
-            label.AddToClassList("markdown-paragraph");
-            label.enableRichText = true; // 启用富文本
-            CheckAndRegisterSearchMatch(line, label, lineNumber);
-            return label;
+            var container = new VisualElement();
+            container.AddToClassList("markdown-paragraph-container");
+            
+            ParseAndAddContent(container, line, lineNumber);
+            
+            return container;
         }
         
         private VisualElement CreateListItem(string line, int lineNumber)
         {
+            var container = new VisualElement();
+            container.AddToClassList("markdown-list-item-container");
+            
+            // 列表标记
+            var bullet = new Label("•");
+            bullet.AddToClassList("markdown-list-bullet");
+            container.Add(bullet);
+
             // 移除列表标记（无序列表的 -、*、+ 或有序列表的数字.）
             string text = Regex.Replace(line, @"^\s*([-*+]|\d+\.)\s+", "");
-            var label = new Label("• " + ProcessInlineMarkdown(text));
-            label.AddToClassList("markdown-list-item");
-            label.enableRichText = true; // 启用富文本
-            CheckAndRegisterSearchMatch(text, label, lineNumber);
-            return label;
+            
+            ParseAndAddContent(container, text, lineNumber);
+            
+            return container;
         }
 
         private VisualElement CreateBlockquote(string line, int lineNumber)
         {
+            var container = new VisualElement();
+            container.AddToClassList("markdown-blockquote");
+            
             string text = line.TrimStart().Substring(1).Trim();
+            ParseAndAddContent(container, text, lineNumber);
+            
+            return container;
+        }
+
+        private bool IsVideoFile(string path)
+        {
+            return path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || 
+                   path.EndsWith(".mov", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith(".webm", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith(".ogv", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ParseAndAddContent(VisualElement container, string text, int lineNumber)
+        {
+            // 正则匹配链接 [text](url)
+            // 同时也需要处理其他Markdown标记，但为了简化，我们先处理链接，
+            // 其他标记（粗体、斜体等）在非链接文本中通过 ProcessInlineMarkdown 处理
+            
+            string pattern = @"\[([^\]]+)\]\(([^\)]+)\)";
+            var matches = Regex.Matches(text, pattern);
+            
+            int lastIndex = 0;
+            
+            foreach (Match match in matches)
+            {
+                // 添加链接前的文本
+                if (match.Index > lastIndex)
+                {
+                    string normalText = text.Substring(lastIndex, match.Index - lastIndex);
+                    AddTextSegment(container, normalText, lineNumber);
+                }
+                
+                // 添加链接或视频
+                string linkText = match.Groups[1].Value;
+                string linkUrl = match.Groups[2].Value;
+                
+                // 检查是否是直接视频链接，或者是Bilibili等视频网站链接(提示不支持)
+                if (IsVideoFile(linkUrl))
+                {
+                    // 如果是视频文件链接，直接创建播放器
+                    CreateVideoPlayer(linkUrl, linkText, container);
+                }
+                else
+                {
+                    AddLinkSegment(container, linkText, linkUrl);
+                }
+                
+                lastIndex = match.Index + match.Length;
+            }
+            
+            // 添加剩余文本
+            if (lastIndex < text.Length)
+            {
+                string remainingText = text.Substring(lastIndex);
+                AddTextSegment(container, remainingText, lineNumber);
+            }
+        }
+
+        private void AddTextSegment(VisualElement container, string text, int lineNumber)
+        {
             var label = new Label(ProcessInlineMarkdown(text));
-            label.AddToClassList("markdown-blockquote");
-            label.enableRichText = true; // 启用富文本
+            label.AddToClassList("markdown-paragraph");
+            label.enableRichText = true;
             CheckAndRegisterSearchMatch(text, label, lineNumber);
-            return label;
+            container.Add(label);
+        }
+
+        private void AddLinkSegment(VisualElement container, string text, string url)
+        {
+            var btn = new Button(() => OnLinkClick(url));
+            btn.text = text;
+            btn.AddToClassList("markdown-link");
+            btn.tooltip = url;
+            container.Add(btn);
+        }
+
+        private void OnLinkClick(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+
+            if (url.StartsWith("http://") || url.StartsWith("https://") || url.StartsWith("mailto:"))
+            {
+                Application.OpenURL(url);
+            }
+            else
+            {
+                // 处理文档内跳转或相对路径文档跳转
+                HandleInternalLink(url);
+            }
+        }
+
+        private void HandleInternalLink(string url)
+        {
+            // 1. 锚点跳转 #header
+            if (url.StartsWith("#"))
+            {
+                string anchor = url.Substring(1);
+                if (string.IsNullOrEmpty(anchor)) return;
+
+                // 归一化函数：移除所有非字母数字汉字字符，转小写
+                // 这样可以忽略标点符号、空格、连字符等的差异
+                string Normalize(string s) => Regex.Replace(s, @"[^\w\u4e00-\u9fa5]", "").ToLower();
+                
+                string targetAnchorNormalized = Normalize(anchor);
+                
+                HeaderInfo targetHeader = null;
+                
+                // 策略1：归一化后完全匹配
+                foreach (var header in currentHeaders)
+                {
+                    string headerNormalized = Normalize(header.text);
+                    if (headerNormalized == targetAnchorNormalized)
+                    {
+                        targetHeader = header;
+                        break;
+                    }
+                }
+                
+                // 策略2：如果策略1失败，尝试包含匹配（归一化后）
+                if (targetHeader == null)
+                {
+                    foreach (var header in currentHeaders)
+                    {
+                        string headerNormalized = Normalize(header.text);
+                        // 只要有一方包含另一方，就认为是匹配的
+                        // 这种宽松匹配可以解决大部分锚点生成规则不一致的问题
+                        if (!string.IsNullOrEmpty(headerNormalized) && !string.IsNullOrEmpty(targetAnchorNormalized) &&
+                           (headerNormalized.Contains(targetAnchorNormalized) || targetAnchorNormalized.Contains(headerNormalized)))
+                        {
+                            targetHeader = header;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetHeader != null)
+                {
+                    ScrollToHeader(targetHeader.element);
+                }
+                else
+                {
+                    Debug.LogWarning($"未找到锚点对应的标题: {url} (Normalized: {targetAnchorNormalized})");
+                }
+                return;
+            }
+
+            // 2. 相对路径文件跳转
+            try
+            {
+                string targetPath = url;
+                if (!Path.IsPathRooted(url))
+                {
+                    string currentDir = Path.GetDirectoryName(currentDocPath);
+                    targetPath = Path.Combine(currentDir, url);
+                    targetPath = Path.GetFullPath(targetPath);
+                }
+
+                if (File.Exists(targetPath))
+                {
+                    // 检查是否是支持的文件类型
+                    if (targetPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 尝试在树中找到并选中该节点（可选，或者直接加载）
+                        // 为了保持状态一致性，最好是选中树节点
+                        var node = FindNodeByPath(targetPath);
+                        if (node != null)
+                        {
+                            // 选中树节点会触发加载
+                            // 注意：TreeView的选中API可能比较复杂，这里直接加载文件并尝试同步树状态
+                            LoadMarkdownFile(targetPath);
+                            // TODO: 同步树选中状态
+                        }
+                        else
+                        {
+                            // 如果不在树中（例如在根目录之外），直接加载
+                            LoadMarkdownFile(targetPath);
+                        }
+                    }
+                    else
+                    {
+                        // 其他文件类型，尝试用系统默认程序打开
+                        EditorUtility.OpenWithDefaultApp(targetPath);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"链接文件不存在: {targetPath}");
+                    EditorUtility.DisplayDialog("链接错误", $"文件不存在:\n{targetPath}", "确定");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"处理链接失败: {url}, {e.Message}");
+            }
+        }
+
+        private DocNode FindNodeByPath(string path)
+        {
+            string normalizedPath = path.Replace("\\", "/").ToLower();
+            return allDocNodes.FirstOrDefault(n => n.path.Replace("\\", "/").ToLower() == normalizedPath);
         }
         
         private VisualElement CreateCodeBlock(string code, string language)
@@ -1804,8 +2209,9 @@ namespace EUFarmworker.MarkdownDocManager
             text = Regex.Replace(text, @"\*([^*]+)\*", "<i>$1</i>");
             text = Regex.Replace(text, @"_([^_]+)_", "<i>$1</i>");
             
-            // 链接 [text](url) -> <color=#...>text</color> (Unity Label链接支持有限，主要做颜色区分)
-            text = Regex.Replace(text, @"\[([^\]]+)\]\([^\)]+\)", "<color=#4EC9B0>$1</color>");
+            // 注意：链接现在由 ParseAndAddContent 单独处理，这里不再处理链接正则
+            // 但为了防止漏网之鱼（例如嵌套在其他标记中的），保留一个简单的颜色处理
+            // text = Regex.Replace(text, @"\[([^\]]+)\]\([^\)]+\)", "<color=#4EC9B0>$1</color>");
             
             return text;
         }

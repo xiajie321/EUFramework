@@ -449,19 +449,34 @@
 .markdown-h5 { font-size: 14px; }
 .markdown-h6 { font-size: 13px; color: #888; }
 
+/* 容器化段落，支持混排 */
+.markdown-paragraph-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
 .markdown-paragraph {
     font-size: 14px;
     color: #cccccc;
-    margin-bottom: 12px;
+    margin: 0;
+    padding: 0;
     white-space: normal;
 }
 
-.markdown-list-item {
-    font-size: 14px;
-    color: #cccccc;
+.markdown-list-item-container {
+    flex-direction: row;
+    flex-wrap: wrap;
     margin-bottom: 6px;
     margin-left: 20px;
-    white-space: normal;
+    align-items: flex-start;
+}
+
+.markdown-list-bullet {
+    font-size: 14px;
+    color: #cccccc;
+    margin-right: 6px;
 }
 
 .markdown-blockquote {
@@ -470,10 +485,32 @@
     background-color: #252526;
     padding: 12px 16px;
     margin: 12px 0;
-    font-size: 14px;
-    color: #a0a0a0;
-    white-space: normal;
     border-radius: 0 4px 4px 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+/* 链接样式 */
+.markdown-link {
+    font-size: 14px;
+    background-color: transparent;
+    border-width: 0;
+    color: #4EC9B0;
+    margin: 0;
+    padding: 0;
+    cursor: link;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(78, 201, 176, 0.3); 
+    align-self: flex-end; /* 对齐底部 */
+}
+
+.markdown-link:hover {
+    color: #9cdcfe;
+    border-bottom-color: #9cdcfe;
+}
+
+.markdown-link:active {
+    color: #ffffff;
 }
 
 /* Code Blocks */
@@ -580,6 +617,66 @@
     color: #888;
     margin-top: 6px;
     -unity-font-style: italic;
+}
+
+/* Video Player */
+.markdown-video-container {
+    margin: 16px 0;
+    background-color: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    border-width: 1px;
+    border-color: #333;
+}
+
+.markdown-video-screen {
+    width: 100%;
+    height: 400px; /* 默认高度，会被内容撑开或调整 */
+    background-color: #000;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.markdown-video-controls {
+    flex-direction: row;
+    width: 100%;
+    height: 36px;
+    background-color: #252526;
+    align-items: center;
+    padding: 0 8px;
+    border-top-width: 1px;
+    border-top-color: #333;
+}
+
+.video-control-btn {
+    width: 30px;
+    height: 24px;
+    background-color: transparent;
+    border-width: 1px;
+    border-color: #444;
+    border-radius: 3px;
+    color: #fff;
+    margin-right: 8px;
+    -unity-text-align: middle-center;
+    font-size: 12px;
+}
+
+.video-control-btn:hover {
+    background-color: #444;
+}
+
+.video-control-btn:active {
+    background-color: #0078d4;
+    border-color: #0078d4;
+}
+
+.video-time-label {
+    color: #ccc;
+    font-size: 11px;
+    margin-left: auto; /* 推到右边 */
+    margin-right: 8px;
 }
 
 .markdown-separator {
