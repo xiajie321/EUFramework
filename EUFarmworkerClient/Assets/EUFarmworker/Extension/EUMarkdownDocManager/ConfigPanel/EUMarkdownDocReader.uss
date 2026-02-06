@@ -206,7 +206,6 @@
     padding: 8px 16px;
     border-bottom-width: 1px;
     border-bottom-color: #2d2d2d;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
@@ -448,12 +447,11 @@
 .markdown-h3 { font-size: 18px; }
 .markdown-h4 { font-size: 16px; }
 .markdown-h5 { font-size: 14px; }
-.markdown-h6 { font-size: 13px; color: #888; text-transform: uppercase; }
+.markdown-h6 { font-size: 13px; color: #888; }
 
 .markdown-paragraph {
     font-size: 14px;
     color: #cccccc;
-    line-height: 22px;
     margin-bottom: 12px;
     white-space: normal;
 }
@@ -461,7 +459,6 @@
 .markdown-list-item {
     font-size: 14px;
     color: #cccccc;
-    line-height: 22px;
     margin-bottom: 6px;
     margin-left: 20px;
     white-space: normal;
@@ -533,7 +530,6 @@
     color: #d4d4d4;
     padding: 12px;
     white-space: normal;
-    -unity-font-family: "Consolas", "Courier New", monospace;
 }
 
 .markdown-spacer {
@@ -559,7 +555,7 @@
 .markdown-image {
     max-width: 100%;
     max-height: 500px;
-    cursor: zoom-in;
+    cursor: link;
     transition-property: scale, max-height;
     transition-duration: 0.3s;
     transition-timing-function: ease-out-back;
@@ -572,7 +568,7 @@
 .markdown-image-expanded {
     max-height: none;
     scale: 1.0;
-    cursor: zoom-out;
+    cursor: link;
     margin: 20px 0;
     border-width: 2px;
     border-color: #0078d4;
@@ -583,7 +579,7 @@
     font-size: 11px;
     color: #888;
     margin-top: 6px;
-    font-style: italic;
+    -unity-font-style: italic;
 }
 
 .markdown-separator {
@@ -679,7 +675,6 @@
     font-size: 11px;
     -unity-font-style: bold;
     color: #858585;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
