@@ -1,0 +1,72 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement class="root">
+        <!-- 顶部工具栏 -->
+        <ui:VisualElement class="toolbar">
+            <ui:Button class="icon-button toggle-sidebar-button" tooltip="切换侧边栏" />
+            <ui:Label text="EU 备忘录" class="app-title" />
+            <ui:VisualElement class="toolbar-actions">
+                <ui:Button class="icon-button add-button" tooltip="新建 (Ctrl+N)" />
+                <ui:Button class="icon-button save-button" tooltip="保存 (Ctrl+S)" />
+                <ui:Button class="icon-button center-button" tooltip="归位" />
+            </ui:VisualElement>
+            <ui:VisualElement class="spacer" />
+            <uie:ToolbarSearchField class="search-field" />
+        </ui:VisualElement>
+
+        <!-- 主内容区域 -->
+        <ui:VisualElement class="content-area">
+            <!-- 左侧抽屉 -->
+            <ui:VisualElement class="sidebar-panel">
+                <ui:VisualElement class="sidebar-header">
+                    <ui:Label text="待办事项" class="sidebar-title" />
+                </ui:VisualElement>
+                <ui:ScrollView class="sidebar-list" />
+            </ui:VisualElement>
+
+            <!-- 画布区域 -->
+            <ui:VisualElement class="canvas-container">
+                <ui:VisualElement class="grid-background" />
+                <ui:VisualElement class="connections-layer" />
+                <ui:VisualElement class="nodes-layer" />
+                <!-- 状态栏放在画布内底部 -->
+                <ui:VisualElement class="status-bar">
+                    <ui:Label class="status-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- 右侧属性面板 -->
+            <ui:VisualElement class="inspector-panel">
+                <ui:VisualElement class="inspector-header">
+                    <ui:Label text="属性" class="inspector-title" />
+                    <ui:Button class="icon-button close-inspector-button" />
+                </ui:VisualElement>
+                
+                <ui:ScrollView class="inspector-content">
+                    <ui:TextField label="标题" class="inspector-title-field" />
+                    <ui:TextField label="内容" multiline="true" class="inspector-content-field" />
+                    
+                    <ui:VisualElement class="inspector-section">
+                        <ui:Label text="颜色标记" class="section-title" />
+                        <ui:VisualElement class="color-selector">
+                            <ui:Button class="color-btn color-0" name="color-0" tooltip="默认" />
+                            <ui:Button class="color-btn color-1" name="color-1" tooltip="重要" />
+                            <ui:Button class="color-btn color-2" name="color-2" tooltip="工作" />
+                            <ui:Button class="color-btn color-3" name="color-3" tooltip="个人" />
+                            <ui:Button class="color-btn color-4" name="color-4" tooltip="灵感" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="inspector-section">
+                        <ui:Toggle label="已完成" class="inspector-completed-toggle" />
+                        <ui:Toggle label="置顶" class="inspector-pinned-toggle" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="inspector-actions">
+                        <ui:Button text="删除节点" class="delete-node-button" />
+                        <ui:Button text="下一步 →" class="inspector-next-btn" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
