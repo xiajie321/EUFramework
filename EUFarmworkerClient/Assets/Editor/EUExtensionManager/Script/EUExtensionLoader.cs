@@ -152,10 +152,26 @@ namespace EUFarmworker.ExtensionManager
             // 扫描核心目录（核心本身作为一个特殊的扩展）
             ScanCoreDirectory(extensions);
 
+            // 扫描 Packages 目录
+            ScanPackagesDirectory(extensions);
+
             // 扫描 EUExtensionManager 自身（无论它在哪里）
             ScanSelf(extensions);
             
             return extensions;
+        }
+
+        private static void ScanPackagesDirectory(List<EUExtensionInfo> extensions)
+        {
+            string packagesPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Packages"));
+            if (Directory.Exists(packagesPath))
+            {
+                string[] directories = Directory.GetDirectories(packagesPath);
+                foreach (string dir in directories)
+                {
+                    TryLoadExtensionInfo(dir, extensions);
+                }
+            }
         }
 
         private static void ScanSelf(List<EUExtensionInfo> extensions)
@@ -174,21 +190,7 @@ namespace EUFarmworker.ExtensionManager
             
             string fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", managerDir));
 
-            EUExtensionInfo info = LoadExtensionInfo(fullPath);
-            if (info != null)
-            {
-                // 避免重复添加
-                bool exists = extensions.Any(e => 
-                    e.name == info.name || 
-                    string.Equals(Path.GetFullPath(e.folderPath).TrimEnd('/', '\\'), 
-                                  Path.GetFullPath(info.folderPath).TrimEnd('/', '\\'), 
-                                  StringComparison.OrdinalIgnoreCase));
-
-                if (!exists)
-                {
-                    extensions.Add(info);
-                }
-            }
+            TryLoadExtensionInfo(fullPath, extensions);
         }
 
         private static void ScanDirectoryForExtensions(string rootPath, List<EUExtensionInfo> extensions)
@@ -262,6 +264,24 @@ namespace EUFarmworker.ExtensionManager
                 {
                     info.category = "Core";
                 }
+
+                // 检查是否已存在同名扩展
+                var existing = extensions.FirstOrDefault(e => e.name == info.name);
+                if (existing != null)
+                {
+                    // 如果路径不同，说明有重复安装
+                    if (!string.Equals(Path.GetFullPath(existing.folderPath).TrimEnd('/', '\\'), 
+                                       Path.GetFullPath(info.folderPath).TrimEnd('/', '\\'), 
+                                       StringComparison.OrdinalIgnoreCase))
+                    {
+                        Debug.LogWarning($"[EUExtensionManager] 检测到重复扩展: {info.name}\n" +
+                                         $"位置 1: {existing.folderPath}\n" +
+                                         $"位置 2: {info.folderPath}\n" +
+                                         $"将保留第一个加载的版本。");
+                    }
+                    return;
+                }
+
                 extensions.Add(info);
             }
         }
@@ -556,29 +576,61 @@ namespace EUFarmworker.ExtensionManager
             foreach (var dep in info.dependencies)
             {
                 // 检查本地是否已安装
-                bool installed = localExtensions.Any(e => e.name == dep.name);
+                var installedExt = localExtensions.FirstOrDefault(e => e.name == dep.name);
+                bool installed = installedExt != null;
+                
                 // 也可以检查具体路径是否存在
                 if (!installed && !string.IsNullOrEmpty(dep.installPath))
                 {
                      // 简单检查路径
                      string path = dep.installPath;
-                     if (path.StartsWith("Assets")) 
-                        path = Path.Combine(Application.dataPath, "..", path);
+                     if (path.StartsWith("Assets") || path.StartsWith("Packages")) 
+                        path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", path));
+                     
                      if (Directory.Exists(path) && File.Exists(Path.Combine(path, ExtensionMarkerFile)))
+                     {
                         installed = true;
+                        // 尝试加载版本信息
+                        var extInfo = LoadExtensionInfo(path);
+                        if (extInfo != null) installedExt = extInfo;
+                     }
                 }
 
                 if (!installed)
                 {
                     missingDeps.Add(dep);
                 }
+                else if (installedExt != null)
+                {
+                    // 检查版本
+                    if (!string.IsNullOrEmpty(dep.version) && CompareVersion(installedExt.version, dep.version) < 0)
+                    {
+                        Debug.LogWarning($"[EUExtensionManager] 依赖 {dep.name} 已安装版本 ({installedExt.version}) 低于需求版本 ({dep.version})。");
+                        missingDeps.Add(dep);
+                    }
+                    // 检查来源冲突 (如果依赖定义了 gitUrl，且本地安装的扩展也有 sourceUrl)
+                    else if (!string.IsNullOrEmpty(dep.gitUrl) && !string.IsNullOrEmpty(installedExt.sourceUrl))
+                    {
+                        // 简单比较 URL 是否包含关键部分，避免 http/https 或 .git 后缀差异
+                        string depUrlNorm = NormalizeUrl(dep.gitUrl);
+                        string localUrlNorm = NormalizeUrl(installedExt.sourceUrl);
+                        
+                        if (!string.IsNullOrEmpty(depUrlNorm) && !string.IsNullOrEmpty(localUrlNorm) && !depUrlNorm.Contains(localUrlNorm) && !localUrlNorm.Contains(depUrlNorm))
+                        {
+                            Debug.LogWarning($"[EUExtensionManager] 依赖 {dep.name} 来源冲突!\n" +
+                                             $"需求来源: {dep.gitUrl}\n" +
+                                             $"本地来源: {installedExt.sourceUrl}\n" +
+                                             $"可能存在同名但内容不同的扩展。");
+                        }
+                    }
+                }
             }
 
             if (missingDeps.Count > 0)
             {
-                string depNames = string.Join(", ", missingDeps.Select(d => d.name));
-                if (EditorUtility.DisplayDialog("安装依赖", 
-                    $"扩展 {info.displayName} 需要安装以下依赖:\n{depNames}\n是否立即安装?", "安装", "稍后"))
+                string depNames = string.Join(", ", missingDeps.Select(d => $"{d.name} (v{d.version ?? "any"})"));
+                if (EditorUtility.DisplayDialog("安装/更新依赖", 
+                    $"扩展 {info.displayName} 需要安装或更新以下依赖:\n{depNames}\n是否立即处理?", "确定", "稍后"))
                 {
                     InstallDependenciesRecursive(missingDeps, 0, onComplete);
                 }
@@ -590,6 +642,29 @@ namespace EUFarmworker.ExtensionManager
             else
             {
                 onComplete?.Invoke(true);
+            }
+        }
+
+        private static string NormalizeUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return "";
+            return url.Replace("https://", "").Replace("http://", "").Replace(".git", "").TrimEnd('/');
+        }
+
+        private static int CompareVersion(string v1, string v2)
+        {
+            if (string.IsNullOrEmpty(v1)) return -1;
+            if (string.IsNullOrEmpty(v2)) return 1;
+            
+            try 
+            {
+                Version ver1 = new Version(v1);
+                Version ver2 = new Version(v2);
+                return ver1.CompareTo(ver2);
+            }
+            catch
+            {
+                return string.Compare(v1, v2, StringComparison.Ordinal);
             }
         }
 
@@ -671,7 +746,7 @@ namespace EUFarmworker.ExtensionManager
                 if (!Directory.Exists(extensionSourceDir)) throw new Exception($"在仓库中未找到扩展目录: {dirName}");
 
                 // 使用通用安装逻辑
-                InstallExtensionFromSource(extensionSourceDir, dirName, null);
+                InstallExtensionFromSource(extensionSourceDir, dirName, null, info.downloadUrl);
                 
             }, onComplete);
         }
@@ -687,20 +762,21 @@ namespace EUFarmworker.ExtensionManager
                 string repoRoot = extractedDirs[0];
                 
                 // 使用通用安装逻辑
-                InstallExtensionFromSource(repoRoot, dep.name, dep.installPath);
+                InstallExtensionFromSource(repoRoot, dep.name, dep.installPath, dep.gitUrl);
                 
             }, onComplete);
         }
 
-        private static void InstallExtensionFromSource(string sourceDir, string targetDirName, string explicitInstallPath)
+        private static void InstallExtensionFromSource(string sourceDir, string targetDirName, string explicitInstallPath, string sourceUrl = null)
         {
             string targetBase;
+            string finalTargetDir;
 
             // 1. 如果显式指定了安装路径，优先使用
             if (!string.IsNullOrEmpty(explicitInstallPath))
             {
                 string installPath = explicitInstallPath.Replace("\\", "/");
-                if (installPath.StartsWith("Assets"))
+                if (installPath.StartsWith("Assets") || installPath.StartsWith("Packages"))
                 {
                     targetBase = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
                 }
@@ -708,43 +784,73 @@ namespace EUFarmworker.ExtensionManager
                 {
                     targetBase = Application.dataPath;
                 }
-                string fullTarget = Path.Combine(targetBase, installPath);
-                InstallDirectory(sourceDir, fullTarget);
-                return;
+                finalTargetDir = Path.Combine(targetBase, installPath);
+            }
+            else
+            {
+                // 2. 否则，检查 extension.json 确定 category
+                string jsonPath = Path.Combine(sourceDir, ExtensionMarkerFile);
+                string category = "";
+                if (File.Exists(jsonPath))
+                {
+                    try
+                    {
+                        string jsonContent = File.ReadAllText(jsonPath);
+                        EUExtensionInfo info = JsonUtility.FromJson<EUExtensionInfo>(jsonContent);
+                        if (info != null) category = info.category;
+                    }
+                    catch { /* Ignore error, default path will be used */ }
+                }
+
+                // 3. 根据 Category 决定根路径
+                string rootPath;
+                if (category == "框架")
+                {
+                    rootPath = CoreInstallPath;
+                }
+                else
+                {
+                    rootPath = ExtensionRootPath;
+                }
+
+                if (rootPath.StartsWith("Assets"))
+                    targetBase = Path.GetFullPath(Path.Combine(Application.dataPath, "..", rootPath));
+                else
+                    targetBase = rootPath;
+
+                finalTargetDir = Path.Combine(targetBase, targetDirName);
             }
 
-            // 2. 否则，检查 extension.json 确定 category
-            string jsonPath = Path.Combine(sourceDir, ExtensionMarkerFile);
-            string category = "";
+            InstallDirectory(sourceDir, finalTargetDir);
+
+            // 4. 更新 sourceUrl
+            if (!string.IsNullOrEmpty(sourceUrl))
+            {
+                UpdateExtensionSourceUrl(finalTargetDir, sourceUrl);
+            }
+        }
+
+        private static void UpdateExtensionSourceUrl(string dir, string url)
+        {
+            string jsonPath = Path.Combine(dir, ExtensionMarkerFile);
             if (File.Exists(jsonPath))
             {
                 try
                 {
                     string jsonContent = File.ReadAllText(jsonPath);
                     EUExtensionInfo info = JsonUtility.FromJson<EUExtensionInfo>(jsonContent);
-                    if (info != null) category = info.category;
+                    if (info != null)
+                    {
+                        info.sourceUrl = url;
+                        string newJson = JsonUtility.ToJson(info, true);
+                        File.WriteAllText(jsonPath, newJson);
+                    }
                 }
-                catch { /* Ignore error, default path will be used */ }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[EUExtensionManager] 更新 sourceUrl 失败: {e.Message}");
+                }
             }
-
-            // 3. 根据 Category 决定根路径
-            string rootPath;
-            if (category == "框架")
-            {
-                rootPath = CoreInstallPath;
-            }
-            else
-            {
-                rootPath = ExtensionRootPath;
-            }
-
-            if (rootPath.StartsWith("Assets"))
-                targetBase = Path.GetFullPath(Path.Combine(Application.dataPath, "..", rootPath));
-            else
-                targetBase = rootPath;
-
-            string targetDir = Path.Combine(targetBase, targetDirName);
-            InstallDirectory(sourceDir, targetDir);
         }
 
         private static void InstallDirectory(string sourceDir, string targetDir)

@@ -80,9 +80,8 @@
 
 默认：`https://gitee.com/xiajie234/EUFramworkerCommunity`
 
-支持 GitHub 和 Gitee 仓库地址：
+支持 GitHub 仓库地址：
 
-- **Gitee**（推荐国内用户）: `https://gitee.com/user/repo`
 - **GitHub**: `https://github.com/user/repo`
 
 ### 插件安装路径
@@ -113,7 +112,8 @@
     {
       "name": "com.eu.core",
       "gitUrl": "https://github.com/user/repo",
-      "installPath": "Assets/EUFarmworker/Core"
+      "installPath": "Assets/EUFarmworker/Core",
+      "version": "1.0.0"
     }
   ]
 }
@@ -121,15 +121,15 @@
 
 ### 字段说明
 
-| 字段           | 必需  | 说明                                      |
-| ------------ | --- | --------------------------------------- |
-| name         | 是   | 唯一标识符，建议使用反向域名格式                        |
-| displayName  | 是   | 显示在列表中的名称                               |
-| version      | 是   | 版本号，格式：主版本.次版本.修订版本                      |
-| description  | 是   | 简短描述                                    |
-| author       | 否   | 作者名称                                    |
-| category     | 否   | 分类。若设为"框架"，默认安装到核心路径；否则安装到插件路径          |
-| dependencies | 否   | 依赖列表，包含 name, gitUrl (GitHub 地址), installPath (安装路径) |
+| 字段           | 必需  | 说明                                         |
+| ------------ | --- | ------------------------------------------ |
+| name         | 是   | 唯一标识符，建议使用反向域名格式                           |
+| displayName  | 是   | 显示在列表中的名称                                  |
+| version      | 是   | 版本号，格式：主版本.次版本.修订版本                        |
+| description  | 是   | 简短描述                                       |
+| author       | 否   | 作者名称                                       |
+| category     | 否   | 分类。若设为"框架"，默认安装到核心路径；否则安装到插件路径             |
+| dependencies | 否   | 依赖列表，包含 name, gitUrl, installPath, version |
 
 ### 依赖项配置详解
 
@@ -137,9 +137,12 @@
 
 - **name**: 依赖项的包名（必需）。
 - **gitUrl**: 依赖项所在的 GitHub 仓库地址（可选，用于自动下载）。
+- **version**: 依赖项的最低版本要求（可选）。
+  - 如果本地已安装的版本低于此版本，管理器会提示更新。
 - **installPath**: 依赖项的安装路径（可选）。
-    - 如果指定了路径，将安装到该路径。
-    - 如果留空，管理器会下载并读取依赖包的 `extension.json`。若依赖包的 `category` 为"框架"，则安装到核心路径；否则安装到插件路径。
+  - 支持 `Assets/...` 和 `Packages/...` 路径。
+  - 如果指定了路径，将安装到该路径。
+  - 如果留空，管理器会下载并读取依赖包的 `extension.json`。若依赖包的 `category` 为"框架"，则安装到核心路径；否则安装到插件路径。
 
 ### 推荐目录结构
 
@@ -163,6 +166,15 @@ YourExtension/
 4. 提交 Pull Request
 
 ## 更新日志
+
+### v1.2.3
+
+- **增强依赖管理**：
+  - 支持 `Packages` 目录安装路径。
+  - 新增依赖版本检查功能 (`version` 字段)。
+  - 新增依赖来源冲突检查功能 (`sourceUrl` 字段)。
+- **重复检测**：自动检测并警告同名扩展的重复安装。
+- **来源追踪**：自动记录扩展的安装来源 URL。
 
 ### v1.2.2
 

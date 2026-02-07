@@ -9,6 +9,7 @@ namespace EUFarmworker.ExtensionManager
         public string name;
         public string gitUrl;
         public string installPath;
+        public string version; // 最低版本要求
     }
 
     [Serializable]
@@ -21,6 +22,7 @@ namespace EUFarmworker.ExtensionManager
         public string author;
         public string category;
         public string downloadUrl; // 远程跳转地址
+        public string sourceUrl; // 安装来源 URL (用于冲突检查)
         public EUDependency[] dependencies; // 依赖项
         
         // 非序列化字段
