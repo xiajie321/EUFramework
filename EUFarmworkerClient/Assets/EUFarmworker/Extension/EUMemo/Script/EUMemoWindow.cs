@@ -79,7 +79,7 @@ namespace EU.Memo
         // Time tracking for smooth animations
         private double lastFrameTime;
 
-        [MenuItem("EUFarmworker/Extension/EU 备忘录")]
+        [MenuItem("EUFarmworker/拓展/EU 备忘录")]
         public static void ShowWindow()
         {
             EUMemoWindow wnd = GetWindow<EUMemoWindow>();

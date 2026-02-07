@@ -88,7 +88,7 @@ namespace EUFarmworker.MarkdownDocManager
         private const string PREF_READ_MODE = "EUMarkdownDoc_ReadMode";
         private const string PREF_UNIVERSAL_PATH = "EUMarkdownDoc_UniversalPath";
 
-        [MenuItem("EUFarmworker/Markdown文档阅读器")]
+        [MenuItem("EUFarmworker/拓展/Markdown文档阅读器")]
         public static void ShowWindow()
         {
             var window = GetWindow<EUMarkdownDocReaderWindow>();
