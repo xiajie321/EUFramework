@@ -770,7 +770,7 @@ namespace EUFarmworker.ExtensionManager
         private static void InstallExtensionFromSource(string sourceDir, string targetDirName, string explicitInstallPath, string sourceUrl = null)
         {
             string targetBase;
-            string finalTargetDir;
+            string finalTargetDir = null;
 
             // 1. 如果显式指定了安装路径，优先使用
             if (!string.IsNullOrEmpty(explicitInstallPath))
@@ -788,37 +788,54 @@ namespace EUFarmworker.ExtensionManager
             }
             else
             {
-                // 2. 否则，检查 extension.json 确定 category
+                // 2. 检查 extension.json 获取信息
                 string jsonPath = Path.Combine(sourceDir, ExtensionMarkerFile);
                 string category = "";
+                string extensionName = targetDirName;
+
                 if (File.Exists(jsonPath))
                 {
                     try
                     {
                         string jsonContent = File.ReadAllText(jsonPath);
                         EUExtensionInfo info = JsonUtility.FromJson<EUExtensionInfo>(jsonContent);
-                        if (info != null) category = info.category;
+                        if (info != null) 
+                        {
+                            category = info.category;
+                            if (!string.IsNullOrEmpty(info.name)) extensionName = info.name;
+                        }
                     }
                     catch { /* Ignore error, default path will be used */ }
                 }
 
-                // 3. 根据 Category 决定根路径
-                string rootPath;
-                if (category == "框架")
+                // 检查是否已安装，如果已安装则覆盖原路径
+                var localExtensions = GetAllLocalExtensions();
+                var installedExt = localExtensions.FirstOrDefault(e => e.name == extensionName);
+                
+                if (installedExt != null && !string.IsNullOrEmpty(installedExt.folderPath) && Directory.Exists(installedExt.folderPath))
                 {
-                    rootPath = CoreInstallPath;
+                    finalTargetDir = installedExt.folderPath;
                 }
                 else
                 {
-                    rootPath = ExtensionRootPath;
+                    // 3. 根据 Category 决定根路径
+                    string rootPath;
+                    if (category == "框架")
+                    {
+                        rootPath = CoreInstallPath;
+                    }
+                    else
+                    {
+                        rootPath = ExtensionRootPath;
+                    }
+
+                    if (rootPath.StartsWith("Assets"))
+                        targetBase = Path.GetFullPath(Path.Combine(Application.dataPath, "..", rootPath));
+                    else
+                        targetBase = rootPath;
+
+                    finalTargetDir = Path.Combine(targetBase, targetDirName);
                 }
-
-                if (rootPath.StartsWith("Assets"))
-                    targetBase = Path.GetFullPath(Path.Combine(Application.dataPath, "..", rootPath));
-                else
-                    targetBase = rootPath;
-
-                finalTargetDir = Path.Combine(targetBase, targetDirName);
             }
 
             InstallDirectory(sourceDir, finalTargetDir);
