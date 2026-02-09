@@ -1,0 +1,8 @@
+{
+  "name": "com.eu.log",
+  "displayName": "EU 日志工具",
+  "version": "1.0.0",
+  "description": "提供基于 Conditional 特性的高性能日志工具，解决 Debug.Log 字符串拼接开销问题。",
+  "author": "没有名字的丑兔子",
+  "category": "工具"
+}
