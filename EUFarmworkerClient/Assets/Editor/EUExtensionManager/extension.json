@@ -1,7 +1,7 @@
 {
   "name": "com.eu.extension-manager",
   "displayName": "EU 拓展管理器",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "用于管理 EUFarmworker 拓展插件的工具，提供统一的界面来查看、安装、更新和管理所有拓展插件。支持社区仓库浏览、一键安装、版本更新检测等功能。",
   "author": "没有名字的丑兔子",
   "category": "核心工具"
