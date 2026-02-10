@@ -7,7 +7,7 @@ namespace EUFarmworker.Extension.ExtensionManager
     public class EUDependency
     {
         public string name;
-        public string gitUrl;
+        public string gitUrl; // 可选，如果为空则尝试从社区仓库查找
         public string installPath;
         public string version; // 最低版本要求
     }
