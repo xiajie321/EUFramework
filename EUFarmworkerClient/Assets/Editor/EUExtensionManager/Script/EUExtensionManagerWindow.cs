@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace EUFarmworker.ExtensionManager
+namespace EUFarmworker.Extension.ExtensionManager
 {
 
     public class EUExtensionManagerWindow : EditorWindow

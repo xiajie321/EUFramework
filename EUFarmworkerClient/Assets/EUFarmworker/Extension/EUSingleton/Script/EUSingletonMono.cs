@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace EUFarmworker
+namespace EUFarmworker.Extension.Singleton
 {
     public abstract class EUSingletonMono<T> : MonoBehaviour where T : EUSingletonMono<T>
     {

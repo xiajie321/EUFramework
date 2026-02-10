@@ -1,6 +1,6 @@
 using System;
 
-namespace EUFarmworker
+namespace EUFarmworker.Extension.Singleton
 {
     public abstract class EUSingleton<T> where T : EUSingleton<T>
     {

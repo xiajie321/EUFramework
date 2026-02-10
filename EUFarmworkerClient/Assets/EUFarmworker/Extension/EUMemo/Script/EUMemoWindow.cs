@@ -7,7 +7,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace EU.Memo
+namespace EUFarmworker.Extension.Memo
 {
     public class EUMemoWindow : EditorWindow
     {

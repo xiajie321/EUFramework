@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Networking;
 
-namespace EUFarmworker.ExtensionManager
+namespace EUFarmworker.Extension.ExtensionManager
 {
     public static class EUExtensionLoader
     {

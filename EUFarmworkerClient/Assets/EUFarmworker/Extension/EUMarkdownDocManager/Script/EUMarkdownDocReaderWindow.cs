@@ -12,7 +12,7 @@ using UnityEngine.Networking;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 
-namespace EUFarmworker.MarkdownDocManager
+namespace EUFarmworker.Extension.MarkdownDocManager
 {
     public class EUMarkdownDocReaderWindow : EditorWindow
     {
