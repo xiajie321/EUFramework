@@ -11,7 +11,7 @@ namespace EUFarmworker.Extension.EUObjectPool.Editor
 {
     public class EUObjectPoolGenerator
     {
-        [MenuItem("EUFarmworker/EU对象池/生成注册信息")]
+        [MenuItem("EUFarmworker/生成/EU对象池注册信息")]
         public static void Generate()
         {
             // Find all classes with EUObjectPoolAttribute
