@@ -9,7 +9,7 @@ namespace EUFarmworker.Extension.EULog
     /// 使用 [Conditional("ENABLE_LOG")] 属性控制日志编译
     /// 当未定义 ENABLE_LOG 宏时，所有对此类的调用（包括参数计算和字符串拼接）都会在编译阶段被移除
     /// </summary>
-    public static class EULog
+    public static class EUDebug
     {
         [Conditional("UNITY_EDITOR"),Conditional("DEVELOPMENT_BUILD")]
         public static void Log(object message)
