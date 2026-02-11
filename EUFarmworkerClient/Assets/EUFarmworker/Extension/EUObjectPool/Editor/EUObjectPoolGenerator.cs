@@ -26,6 +26,7 @@ namespace EUFarmworker.Extension.EUObjectPool.Editor
             HashSet<string> namespaces = new HashSet<string>();
             foreach (var type in types)
             {
+                if (type.IsAbstract || type.IsGenericType) continue;
                 if (!string.IsNullOrEmpty(type.Namespace) && type.Namespace != "EUFarmworker.Extension.EUObjectPool")
                 {
                     namespaces.Add(type.Namespace);
@@ -45,6 +46,8 @@ namespace EUFarmworker.Extension.EUObjectPool.Editor
             
             foreach (var type in types)
             {
+                if (type.IsAbstract || type.IsGenericType) continue;
+
                 // Ensure the type has a parameterless constructor
                 if (type.GetConstructor(Type.EmptyTypes) == null)
                 {
