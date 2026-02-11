@@ -1,26 +1,51 @@
-    
+
+using Cysharp.Threading.Tasks;
+using YooAsset;
+
 namespace EUFarmworker.Extension.EURes
 {
     internal class FsmRequestPackageVersion : IStateNode
     {
+        private StateMachine _machine;
+
         public void OnCreate(StateMachine machine)
         {
-            throw new System.NotImplementedException();
+            _machine = machine;
         }
+
 
         public void OnEnter()
         {
             throw new System.NotImplementedException();
         }
 
+        private async UniTask UpdatePackageVersionAsync()
+        {
+            var packageName = (string)_machine.GetBlackboardValue("PackageName");
+            var package = YooAssets.GetPackage(packageName);
+            var operation = package.RequestPackageVersionAsync();
+            await operation;
+            if (operation.Status != EOperationStatus.Succeed)
+            {
+                (_machine.Owner as ResKitPatchOperation)?.OnPackageVersionRequestFailed?.Invoke();
+            }
+            else
+            {
+                // 版本请求成功，清零重试计数器
+                (_machine.Owner as ResKitPatchOperation)?.ResetVersionRetryCount();
+                _machine.SetBlackboardValue("PackageVersion", operation.PackageVersion);
+                _machine.ChangeState<FsmUpdatePackageManifest>();
+            }
+        }
         public void OnExit()
         {
-            throw new System.NotImplementedException();
+
         }
 
         public void OnUpdate()
         {
-            throw new System.NotImplementedException();
+
         }
+
     }
 }

@@ -83,6 +83,8 @@ namespace EUFarmworker.Extension.EURes
             }
             else
             {
+                // 初始化成功，清零重试计数器
+                owner?.ResetInitRetryCount();
                 _machine.ChangeState<FsmRequestPackageVersion>();
             }
         }
@@ -155,12 +157,12 @@ namespace EUFarmworker.Extension.EURes
         }
         public void OnExit()
         {
-            throw new System.NotImplementedException();
+            
         }
 
         public void OnUpdate()
         {
-            throw new System.NotImplementedException();
+        
         }
     }
 }
