@@ -7,7 +7,7 @@ namespace EUFarmworker.Extension.EUObjectPool
     /// Mono的C#对象池(仅允许使用Mono对象作为泛型参数)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    //TODO 这里需要有一个特性标记用于自动在EUObjectPoolManager注册。
+    /// <remarks>Use [EUObjectPool] attribute to automatically register in EUObjectPoolManager.</remarks>
     public abstract class EUAbsGameObjectPoolBase<T>:IObjectPool<T> where T : MonoBehaviour
     {
         private Stack<T> _pool;
