@@ -81,6 +81,13 @@ public class EUFSM<TKey> where TKey : struct, Enum
             Debug.LogError($"[EUFSM] Add: 状态 {key} 不允许为空！");
             return;
         }
+        if (_keyList.Count == 0)
+        {
+            _keyList[index] = true;
+            _stateList[index] = state;
+            StartState(key);
+            return;
+        }
         _keyList[index] = true;
         _stateList[index] = state;
     }
