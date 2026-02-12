@@ -1,7 +1,7 @@
-﻿using EUFarmworker.Extension.EUCollision2D.Core;
+﻿using EUFarmworker.Extension.EUCollision2DKit.Core;
 using UnityEngine;
 
-namespace EUFramwork.Extension.EUCollision2D.Core
+namespace EUFramwork.Extension.EUCollision2DKit.Core
 {
     /// <summary>
     /// 碰撞系统的运行时驱动器。

@@ -1,9 +1,9 @@
-﻿using EUFarmworker.Extension.EUCollision2D.Core;
-using EUFramwork.Extension.EUCollision2D.Core;
+﻿using EUFarmworker.Extension.EUCollision2DKit.Core;
+using EUFramwork.Extension.EUCollision2DKit.Core;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace EUFramwork.Extension.EUCollision2D.Collision
+namespace EUFramwork.Extension.EUCollision2DKit.Collision
 {
     /// <summary>
     /// 2D 矩形碰撞体组件 (AABB)。

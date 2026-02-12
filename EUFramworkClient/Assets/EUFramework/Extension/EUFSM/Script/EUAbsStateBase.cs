@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EUFramwork.Extension.FSM
+namespace EUFramwork.Extension.EUFSMKit
 {
     /// <summary>
     /// 状态基类

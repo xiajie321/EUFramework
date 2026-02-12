@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace EUFramework.Extension.EUObjectPool
+namespace EUFramework.Extension.EUObjectPoolKit
 {
     /// <summary>
     /// 非Mono的C#对象池(不允许使用Mono对象作为泛型参数)

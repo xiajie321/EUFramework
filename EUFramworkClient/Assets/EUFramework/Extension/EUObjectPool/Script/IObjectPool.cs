@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace EUFramework.Extension.EUObjectPool
+namespace EUFramework.Extension.EUObjectPoolKit
 {
     public interface IObjectPool<T> where T : class
     {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace EUFramework.Extension.Memo
+namespace EUFramework.Extension.MemoKit.Editor
 {
     [Serializable]
     public class MemoLayer

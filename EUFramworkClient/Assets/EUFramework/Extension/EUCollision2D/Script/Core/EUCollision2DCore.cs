@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using EUFramwork.Extension.EUCollision2D.Collision;
-using EUFramwork.Extension.EUCollision2D.CollisionAlgorithm;
-using EUFramwork.Extension.EUCollision2D.Core;
-using EUFramwork.Extension.EUCollision2D.Script.CollisionAlgorithm;
+using EUFramwork.Extension.EUCollision2DKit.Collision;
+using EUFramwork.Extension.EUCollision2DKit.CollisionAlgorithm;
+using EUFramwork.Extension.EUCollision2DKit.Core;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
@@ -11,7 +10,7 @@ using UnityEngine;
 using UnityEngine.Jobs;
 using Object = UnityEngine.Object;
 
-namespace EUFarmworker.Extension.EUCollision2D.Core
+namespace EUFarmworker.Extension.EUCollision2DKit.Core
 {
     #region 数据结构定义
 

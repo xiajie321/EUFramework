@@ -7,7 +7,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace EUFramework.Extension.Memo
+namespace EUFramework.Extension.MemoKit.Editor
 {
     public class EUMemoWindow : EditorWindow
     {

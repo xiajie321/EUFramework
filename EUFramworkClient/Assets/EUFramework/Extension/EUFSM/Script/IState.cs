@@ -1,4 +1,4 @@
-﻿namespace EUFramwork.Extension.FSM
+﻿namespace EUFramwork.Extension.EUFSMKit
 {
     /// <summary>
     /// 状态接口

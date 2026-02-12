@@ -1,9 +1,9 @@
 ﻿using System;
-using EUFarmworker.Extension.EUCollision2D.Core;
-using EUFramwork.Extension.EUCollision2D.Core;
+using EUFarmworker.Extension.EUCollision2DKit.Core;
+using EUFramwork.Extension.EUCollision2DKit.Core;
 using UnityEngine;
 
-namespace EUFramwork.Extension.EUCollision2D.Collision
+namespace EUFramwork.Extension.EUCollision2DKit.Collision
 {
     /// <summary>
     /// 所有碰撞体组件的抽象基类。

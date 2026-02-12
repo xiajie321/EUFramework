@@ -1,8 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace EUFramework.Extension.EUObjectPool
+namespace EUFramework.Extension.EUObjectPoolKit
 {
     public static class EUObjectPoolManager
     {

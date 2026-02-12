@@ -1,6 +1,6 @@
 using System;
 
-namespace EUFramework.Extension.Singleton
+namespace EUFramework.Extension.SingletonKit
 {
     public abstract class EUSingleton<T> where T : EUSingleton<T>
     {

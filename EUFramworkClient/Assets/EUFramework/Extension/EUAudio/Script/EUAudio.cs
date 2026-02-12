@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace EUFramwork.Extension.Audio
+namespace EUFramwork.Extension.EUAudioKit
 {
     public static class EUAudio
     {

@@ -1,7 +1,7 @@
 using Unity.Burst;
 using Unity.Mathematics;
 
-namespace EUFramwork.Extension.EUCollision2D.Core
+namespace EUFramwork.Extension.EUCollision2DKit.Core
 {
     
     /// <summary>

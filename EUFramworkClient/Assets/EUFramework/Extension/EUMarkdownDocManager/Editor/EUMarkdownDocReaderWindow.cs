@@ -12,7 +12,7 @@ using UnityEngine.Networking;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 
-namespace EUFramework.Extension.MarkdownDocManager
+namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
 {
     public class EUMarkdownDocReaderWindow : EditorWindow
     {

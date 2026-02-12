@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace EUFramework.Extension.Singleton
+namespace EUFramework.Extension.SingletonKit
 {
     public abstract class EUSingletonMono<T> : MonoBehaviour where T : EUSingletonMono<T>
     {

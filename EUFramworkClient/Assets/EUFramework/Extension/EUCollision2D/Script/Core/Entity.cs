@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using Unity.Mathematics;
 
-namespace EUFramwork.Extension.EUCollision2D.Core
+namespace EUFramwork.Extension.EUCollision2DKit.Core
 {
     /// <summary>
     /// 碰撞实体的核心数据结构，用于 JobSystem 中的高效计算。

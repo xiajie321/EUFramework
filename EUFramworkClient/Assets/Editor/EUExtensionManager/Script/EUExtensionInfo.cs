@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using System;
 
-namespace EUFramework.Extension.ExtensionManager
+namespace EUFramework.Extension.ExtensionManagerKit.Editor
 {
     [Serializable]
     public class EUDependency

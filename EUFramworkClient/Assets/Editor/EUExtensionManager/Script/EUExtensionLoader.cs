@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Networking;
 
-namespace EUFramework.Extension.ExtensionManager
+namespace EUFramework.Extension.ExtensionManagerKit.Editor
 {
     public static class EUExtensionLoader
     {
