@@ -1,6 +1,6 @@
 # EU 拓展管理器
 
-统一管理 EUFarmworker 框架所有拓展插件的工具。
+统一管理 EUFramework 框架所有拓展插件的工具。
 
 ## 功能特性
 
@@ -50,7 +50,7 @@
 ## 使用方法
 
 ### 打开管理器
-菜单栏：**EUFarmworker -> 拓展管理器**
+菜单栏：**EUFramework -> 拓展管理器**
 
 ### 界面说明
 
@@ -81,12 +81,12 @@
 支持 GitHub 仓库地址，用于获取拓展列表。管理器通过 GitHub API 读取仓库内容。
 
 ### 插件安装路径
-默认：`Assets/EUFarmworker/Extension`
+默认：`Assets/EUFramework/Extension`
 
 普通拓展插件的默认安装位置。修改此路径时，管理器会询问是否迁移现有拓展。
 
 ### 核心安装路径
-默认：`Assets/EUFarmworker/Core`
+默认：`Assets/EUFramework/Core`
 
 核心框架组件的默认安装位置。
 
@@ -109,7 +109,7 @@
     {
       "name": "com.eu.core",
       "gitUrl": "https://github.com/user/repo",
-      "installPath": "Assets/EUFarmworker/Core",
+      "installPath": "Assets/EUFramework/Core",
       "version": "1.0.0"
     }
   ]
@@ -170,7 +170,7 @@ YourExtension/
 A: 首次加载需要请求 GitHub API，受网络环境影响。后续加载会使用本地缓存 (5分钟有效)，速度会很快。
 
 **Q: 如何手动安装拓展？**
-A: 将拓展文件夹复制到项目的 `Assets/EUFarmworker/Extension` (或你设置的路径) 下，点击管理器刷新按钮即可。
+A: 将拓展文件夹复制到项目的 `Assets/EUFramework/Extension` (或你设置的路径) 下，点击管理器刷新按钮即可。
 
 **Q: 依赖安装失败怎么办？**
 A: 检查网络连接，或手动下载依赖包并放置到指定目录。管理器会自动识别已手动安装的依赖。

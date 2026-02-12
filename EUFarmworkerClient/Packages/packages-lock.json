@@ -1,13 +1,5 @@
 {
   "dependencies": {
-    "com.boxqkrtm.ide.cursor": {
-      "version": "file:com.boxqkrtm.ide.cursor@53e1baac3c",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.test-framework": "1.1.9"
-      }
-    },
     "com.code-philosophy.hybridclr": {
       "version": "file:com.code-philosophy.hybridclr",
       "depth": 0,

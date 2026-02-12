@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Networking;
 
-namespace EUFarmworker.Extension.ExtensionManager
+namespace EUFramework.Extension.ExtensionManager
 {
     public static class EUExtensionLoader
     {
@@ -24,9 +24,9 @@ namespace EUFarmworker.Extension.ExtensionManager
         private const string PrefsKey_CommunityUrl = "EUExtensionManager_CommunityUrl";
         private const string PrefsKey_ExtensionRootPath = "EUExtensionManager_ExtensionRootPath";
         private const string PrefsKey_CoreInstallPath = "EUExtensionManager_CoreInstallPath";
-        private const string DefaultCommunityUrl = "https://github.com/xiajie321/EUFramworkerCommunity";
-        private const string DefaultExtensionRootPath = "Assets/EUFarmworker/Extension";
-        private const string DefaultCoreInstallPath = "Assets/EUFarmworker/Core";
+        private const string DefaultCommunityUrl = "https://github.com/xiajie321/EUFramworkCommunity";
+        private const string DefaultExtensionRootPath = "Assets/EUFramework/Extension";
+        private const string DefaultCoreInstallPath = "Assets/EUFramework/Core";
 
         public static string ExtensionRootPath
         {

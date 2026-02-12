@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace EUFarmworker.Extension.ExtensionManager
+namespace EUFramework.Extension.ExtensionManager
 {
 
     public class EUExtensionManagerWindow : EditorWindow
@@ -43,7 +43,7 @@ namespace EUFarmworker.Extension.ExtensionManager
         private Button m_RefreshBtn;
         private Label m_StatusLabel;
 
-        [MenuItem("EUFarmworker/拓展管理器")]
+        [MenuItem("EUFramework/拓展管理器")]
         public static void ShowWindow()
         {
             EUExtensionManagerWindow wnd = GetWindow<EUExtensionManagerWindow>();
@@ -872,7 +872,7 @@ namespace EUFarmworker.Extension.ExtensionManager
             }
 
             // 2. 回退到默认路径
-            string defaultPath = "Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
+            string defaultPath = "Assets/EUFramework/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
             return AssetDatabase.LoadAssetAtPath<StyleSheet>(defaultPath);
         }
     }
@@ -1119,7 +1119,7 @@ namespace EUFarmworker.Extension.ExtensionManager
             }
 
             // 2. 回退到默认路径
-            string defaultPath = "Assets/EUFarmworker/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
+            string defaultPath = "Assets/EUFramework/Extension/EUExtensionManager/ConfigPanel/EUExtensionManager.uss";
             return AssetDatabase.LoadAssetAtPath<StyleSheet>(defaultPath);
         }
     }
