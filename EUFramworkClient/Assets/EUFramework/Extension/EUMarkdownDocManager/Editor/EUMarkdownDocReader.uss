@@ -1,3 +1,83 @@
+/* Table */
+.markdown-table {
+    margin: 16px 0;
+    border-width: 1px;
+    border-color: #333;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    background-color: #202020;
+    align-self: flex-start;
+}
+
+.markdown-table-row {
+    flex-direction: row;
+}
+
+.markdown-table-cell {
+    padding: 8px 12px;
+    border-right-width: 1px;
+    border-right-color: #333;
+    border-bottom-width: 1px;
+    border-bottom-color: #333;
+    min-width: 60px;
+    justify-content: center;
+}
+
+.markdown-table-header-cell {
+    background-color: #2d2d2d;
+}
+
+.markdown-table-cell-label {
+    font-size: 13px;
+    color: #cccccc;
+    white-space: normal;
+}
+
+.markdown-table-header-label {
+    -unity-font-style: bold;
+    color: #e0e0e0;
+}
+
+/* Task List */
+.markdown-task-item {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 6px;
+    margin-left: 20px;
+}
+
+.markdown-task-checkbox {
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    margin-top: 3px;
+    border-width: 1px;
+    border-color: #666;
+    border-radius: 3px;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+}
+
+.markdown-task-checkbox-checked {
+    background-color: #0078d4;
+    border-color: #0078d4;
+}
+
+.markdown-task-check-mark {
+    font-size: 10px;
+    color: #fff;
+    -unity-font-style: bold;
+    margin-top: -1px; 
+    margin-left: 1px;
+}
+
+/* Strikethrough */
+.markdown-strikethrough {
+    text-decoration: line-through;
+    color: #888;
+}
+
 /* Global Variables & Reset */
 .root-container {
     flex-direction: column;
@@ -453,8 +533,9 @@
 .markdown-paragraph-container {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     align-items: center;
+    line-height: 1.5;
 }
 
 .markdown-paragraph {

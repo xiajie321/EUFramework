@@ -84,6 +84,43 @@ namespace EUFramework.Extension.MarkdownDocManager
         private string renderCodeBlockLanguage = "";
         private bool renderInList = false;
 
+        // 段落合并缓冲
+        private string pendingParagraphContent = "";
+        private int pendingParagraphStartLine = -1;
+
+        // 表格渲染状态
+        private bool renderInTable = false;
+        private VisualElement currentTable;
+        private List<TextAnchor> tableAlignments;
+        
+        // 预读缓冲，用于检测表格头
+        private string potentialTableHeader = null;
+        private int potentialTableHeaderLineIndex = -1;
+
+        private void FlushParagraph(VisualElement contentPanel)
+        {
+            if (!string.IsNullOrEmpty(pendingParagraphContent))
+            {
+                // 创建段落时，使用 buffered content
+                var paragraph = CreateParagraph(pendingParagraphContent, pendingParagraphStartLine);
+                contentPanel.Add(paragraph);
+                
+                // 重置 buffer
+                pendingParagraphContent = "";
+                pendingParagraphStartLine = -1;
+            }
+        }
+        
+        private void FlushPotentialTableHeader(VisualElement contentPanel)
+        {
+            if (potentialTableHeader != null)
+            {
+                ProcessParagraphLine(potentialTableHeader, potentialTableHeaderLineIndex, contentPanel);
+                potentialTableHeader = null;
+                potentialTableHeaderLineIndex = -1;
+            }
+        }
+
         public enum SearchMode
         {
             FileName,
@@ -1341,6 +1378,13 @@ namespace EUFramework.Extension.MarkdownDocManager
             renderCodeBlockContent = "";
             renderCodeBlockLanguage = "";
             renderInList = false;
+            pendingParagraphContent = "";
+            pendingParagraphStartLine = -1;
+            renderInTable = false;
+            currentTable = null;
+            tableAlignments = null;
+            potentialTableHeader = null;
+            potentialTableHeaderLineIndex = -1;
             
             // 开始异步渲染
             isRendering = true;
@@ -1371,6 +1415,13 @@ namespace EUFramework.Extension.MarkdownDocManager
 
         private void FinishRendering()
         {
+            // 确保最后的段落被输出
+            if (pendingContentPanel != null)
+            {
+                FlushParagraph(pendingContentPanel);
+                FlushPotentialTableHeader(pendingContentPanel);
+            }
+
             isRendering = false;
             
             // 使用 USS 过渡动画
@@ -1384,6 +1435,124 @@ namespace EUFramework.Extension.MarkdownDocManager
 
         private void ProcessLine(string line, int index, VisualElement contentPanel)
         {
+            // 代码块状态切换检测
+            bool isCodeBlockFence = line.TrimStart().StartsWith("```");
+            
+            // 如果是代码块标记，或者是代码块内部内容
+            if (isCodeBlockFence || renderInCodeBlock)
+            {
+                // 如果是开始新的代码块，先输出之前的段落
+                if (isCodeBlockFence && !renderInCodeBlock)
+                {
+                    FlushParagraph(contentPanel);
+                    FlushPotentialTableHeader(contentPanel);
+                }
+                
+                // 代码块处理逻辑
+                if (isCodeBlockFence)
+                {
+                    if (!renderInCodeBlock)
+                    {
+                        renderInCodeBlock = true;
+                        renderCodeBlockLanguage = line.TrimStart().Substring(3).Trim();
+                        renderCodeBlockContent = "";
+                    }
+                    else
+                    {
+                        renderInCodeBlock = false;
+                        var codeBlock = CreateCodeBlock(renderCodeBlockContent, renderCodeBlockLanguage);
+                        contentPanel.Add(codeBlock);
+                        renderCodeBlockContent = "";
+                        renderCodeBlockLanguage = "";
+                    }
+                    return;
+                }
+                
+                if (renderInCodeBlock)
+                {
+                    renderCodeBlockContent += line + "\n";
+                    return;
+                }
+            }
+
+            // 表格处理
+            if (renderInTable)
+            {
+                if (line.Trim().StartsWith("|"))
+                {
+                    AddTableRow(currentTable, line, false, index);
+                    return;
+                }
+                else
+                {
+                    renderInTable = false;
+                    currentTable = null;
+                    tableAlignments = null;
+                }
+            }
+            
+            // 检测表格头
+            if (potentialTableHeader != null)
+            {
+                // 检查当前行是否是分隔行 |---|---|
+                if (IsTableSeparatorLine(line))
+                {
+                    // 是表格！
+                    FlushParagraph(contentPanel); // 清空之前的段落
+                    
+                    renderInTable = true;
+                    currentTable = new VisualElement();
+                    currentTable.AddToClassList("markdown-table");
+                    contentPanel.Add(currentTable);
+                    
+                    // 解析对齐方式
+                    tableAlignments = ParseTableAlignments(line);
+                    
+                    // 添加表头
+                    AddTableRow(currentTable, potentialTableHeader, true, potentialTableHeaderLineIndex);
+                    
+                    potentialTableHeader = null;
+                    potentialTableHeaderLineIndex = -1;
+                    return;
+                }
+                else
+                {
+                    // 不是表格，先把缓存的表头行输出了
+                    FlushPotentialTableHeader(contentPanel);
+                }
+            }
+            
+            // 尝试缓存当前行作为潜在表头
+            if (line.Trim().StartsWith("|") && line.Contains("|"))
+            {
+                FlushParagraph(contentPanel); // 遇到可能的表格，先结束上一段
+                potentialTableHeader = line;
+                potentialTableHeaderLineIndex = index;
+                return;
+            }
+
+            // 预先检测其他块级元素，如果存在，先输出之前的段落
+            bool isBlockElement = false;
+            
+            // 图片 (简单匹配)
+            if (Regex.Match(line, @"!\[(.*?)\]\((.*?)\)").Success) isBlockElement = true;
+            // 分割线
+            else if (Regex.IsMatch(line, @"^(\*{3,}|-{3,}|_{3,})$")) isBlockElement = true;
+            // 引用
+            else if (line.TrimStart().StartsWith(">")) isBlockElement = true;
+            // 标题
+            else if (line.StartsWith("#")) isBlockElement = true;
+            // 列表
+            else if (Regex.IsMatch(line, @"^\s*[-*+]\s+") || Regex.IsMatch(line, @"^\s*\d+\.\s+")) isBlockElement = true;
+            // 空行
+            else if (string.IsNullOrWhiteSpace(line)) isBlockElement = true;
+
+            if (isBlockElement)
+            {
+                FlushParagraph(contentPanel);
+                FlushPotentialTableHeader(contentPanel);
+            }
+
             // 图片处理 - 简单匹配 ![](url) 格式
             var imgMatch = Regex.Match(line, @"!\[(.*?)\]\((.*?)\)");
             if (imgMatch.Success)
@@ -1410,32 +1579,6 @@ namespace EUFramework.Extension.MarkdownDocManager
                 contentPanel.Add(separator);
                 return;
             }
-
-            // 代码块处理
-            if (line.TrimStart().StartsWith("```"))
-            {
-                if (!renderInCodeBlock)
-                {
-                    renderInCodeBlock = true;
-                    renderCodeBlockLanguage = line.TrimStart().Substring(3).Trim();
-                    renderCodeBlockContent = "";
-                }
-                else
-                {
-                    renderInCodeBlock = false;
-                    var codeBlock = CreateCodeBlock(renderCodeBlockContent, renderCodeBlockLanguage);
-                    contentPanel.Add(codeBlock);
-                    renderCodeBlockContent = "";
-                    renderCodeBlockLanguage = "";
-                }
-                return;
-            }
-            
-            if (renderInCodeBlock)
-            {
-                renderCodeBlockContent += line + "\n";
-                return;
-            }
             
             // 引用块处理
             if (line.TrimStart().StartsWith(">"))
@@ -1452,6 +1595,17 @@ namespace EUFramework.Extension.MarkdownDocManager
                 renderInList = false;
                 var header = CreateHeader(line, contentPanel, index);
                 contentPanel.Add(header);
+                return;
+            }
+            
+            // 任务列表
+            var taskMatch = Regex.Match(line, @"^\s*-\s+\[([ xX])\]\s+(.*)");
+            if (taskMatch.Success)
+            {
+                renderInList = false; // 任务列表视为特殊列表
+                bool isChecked = taskMatch.Groups[1].Value.ToLower() == "x";
+                string text = taskMatch.Groups[2].Value;
+                contentPanel.Add(CreateTaskItem(text, isChecked, index));
                 return;
             }
             
@@ -1480,9 +1634,127 @@ namespace EUFramework.Extension.MarkdownDocManager
                 return;
             }
             
-            // 普通段落
-            var paragraph = CreateParagraph(line, index);
-            contentPanel.Add(paragraph);
+            // 普通段落 - 累积到 buffer
+            ProcessParagraphLine(line, index, contentPanel);
+        }
+
+        private void ProcessParagraphLine(string line, int index, VisualElement contentPanel)
+        {
+            string trimmedLine = line.Trim();
+            if (string.IsNullOrEmpty(trimmedLine)) return; 
+
+            if (string.IsNullOrEmpty(pendingParagraphContent))
+            {
+                pendingParagraphContent = trimmedLine;
+                pendingParagraphStartLine = index;
+            }
+            else
+            {
+                // 简单的合并策略：加空格
+                // 优化：检测中英文边界
+                char lastChar = pendingParagraphContent[pendingParagraphContent.Length - 1];
+                char firstChar = trimmedLine.Length > 0 ? trimmedLine[0] : ' ';
+                bool lastIsChinese = lastChar >= 0x4e00 && lastChar <= 0x9fa5;
+                bool firstIsChinese = firstChar >= 0x4e00 && firstChar <= 0x9fa5;
+                
+                if (lastIsChinese && firstIsChinese)
+                {
+                    pendingParagraphContent += trimmedLine;
+                }
+                else
+                {
+                    pendingParagraphContent += " " + trimmedLine;
+                }
+            }
+        }
+
+        private bool IsTableSeparatorLine(string line)
+        {
+            string trimmed = line.Trim();
+            if (!trimmed.Contains("|")) return false;
+            string content = trimmed.Replace("|", "").Replace(" ", "");
+            return Regex.IsMatch(content, @"^[-:]+$");
+        }
+
+        private List<TextAnchor> ParseTableAlignments(string line)
+        {
+            var alignments = new List<TextAnchor>();
+            var parts = line.Split('|');
+            // 跳过首尾空字符串
+            int start = line.Trim().StartsWith("|") ? 1 : 0;
+            int end = line.Trim().EndsWith("|") ? parts.Length - 1 : parts.Length;
+
+            for (int i = start; i < end; i++)
+            {
+                string trimmed = parts[i].Trim();
+                if (string.IsNullOrEmpty(trimmed) && parts.Length > 1) continue;
+                
+                bool left = trimmed.StartsWith(":");
+                bool right = trimmed.EndsWith(":");
+                
+                if (left && right) alignments.Add(TextAnchor.MiddleCenter);
+                else if (right) alignments.Add(TextAnchor.MiddleRight);
+                else alignments.Add(TextAnchor.MiddleLeft);
+            }
+            return alignments;
+        }
+
+        private void AddTableRow(VisualElement table, string line, bool isHeader, int index)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("markdown-table-row");
+            
+            var cells = line.Split('|');
+            int start = line.Trim().StartsWith("|") ? 1 : 0;
+            int end = line.Trim().EndsWith("|") ? cells.Length - 1 : cells.Length;
+            
+            int colIndex = 0;
+            for (int i = start; i < end; i++)
+            {
+                var cell = new VisualElement();
+                cell.AddToClassList("markdown-table-cell");
+                if (isHeader) cell.AddToClassList("markdown-table-header-cell");
+                
+                var content = cells[i].Trim();
+                var label = new Label(ProcessInlineMarkdown(content));
+                label.AddToClassList("markdown-table-cell-label");
+                if (isHeader) label.AddToClassList("markdown-table-header-label");
+                label.enableRichText = true;
+                
+                if (tableAlignments != null && colIndex < tableAlignments.Count)
+                {
+                    label.style.unityTextAlign = tableAlignments[colIndex];
+                }
+                
+                CheckAndRegisterSearchMatch(content, label, index);
+                
+                cell.Add(label);
+                row.Add(cell);
+                colIndex++;
+            }
+            
+            table.Add(row);
+        }
+
+        private VisualElement CreateTaskItem(string text, bool isChecked, int lineNumber)
+        {
+            var container = new VisualElement();
+            container.AddToClassList("markdown-task-item");
+            
+            var checkbox = new VisualElement();
+            checkbox.AddToClassList("markdown-task-checkbox");
+            if (isChecked)
+            {
+                checkbox.AddToClassList("markdown-task-checkbox-checked");
+                var mark = new Label("✓");
+                mark.AddToClassList("markdown-task-check-mark");
+                checkbox.Add(mark);
+            }
+            container.Add(checkbox);
+            
+            ParseAndAddContent(container, text, lineNumber);
+            
+            return container;
         }
 
         private void OnContentLayoutUpdated(GeometryChangedEvent evt)
@@ -2011,37 +2283,39 @@ namespace EUFramework.Extension.MarkdownDocManager
 
         private void ParseAndAddContent(VisualElement container, string text, int lineNumber)
         {
-            // 正则匹配链接 [text](url)
-            // 同时也需要处理其他Markdown标记，但为了简化，我们先处理链接，
-            // 其他标记（粗体、斜体等）在非链接文本中通过 ProcessInlineMarkdown 处理
-            
-            string pattern = @"\[([^\]]+)\]\(([^\)]+)\)";
+            // 正则匹配链接 [text](url) 和 删除线 ~~text~~
+            string pattern = @"(\[([^\]]+)\]\(([^\)]+)\))|(~~([^~]+)~~)";
             var matches = Regex.Matches(text, pattern);
             
             int lastIndex = 0;
             
             foreach (Match match in matches)
             {
-                // 添加链接前的文本
+                // 添加匹配项前的文本
                 if (match.Index > lastIndex)
                 {
                     string normalText = text.Substring(lastIndex, match.Index - lastIndex);
                     AddTextSegment(container, normalText, lineNumber);
                 }
                 
-                // 添加链接或视频
-                string linkText = match.Groups[1].Value;
-                string linkUrl = match.Groups[2].Value;
-                
-                // 检查是否是直接视频链接，或者是Bilibili等视频网站链接(提示不支持)
-                if (IsVideoFile(linkUrl))
+                if (match.Groups[1].Success) // Link
                 {
-                    // 如果是视频文件链接，直接创建播放器
-                    CreateVideoPlayer(linkUrl, linkText, container);
+                    string linkText = match.Groups[2].Value;
+                    string linkUrl = match.Groups[3].Value;
+                    
+                    if (IsVideoFile(linkUrl))
+                    {
+                        CreateVideoPlayer(linkUrl, linkText, container);
+                    }
+                    else
+                    {
+                        AddLinkSegment(container, linkText, linkUrl);
+                    }
                 }
-                else
+                else if (match.Groups[4].Success) // Strikethrough
                 {
-                    AddLinkSegment(container, linkText, linkUrl);
+                    string strikeText = match.Groups[5].Value;
+                    AddStrikethroughSegment(container, strikeText, lineNumber);
                 }
                 
                 lastIndex = match.Index + match.Length;
@@ -2053,6 +2327,16 @@ namespace EUFramework.Extension.MarkdownDocManager
                 string remainingText = text.Substring(lastIndex);
                 AddTextSegment(container, remainingText, lineNumber);
             }
+        }
+
+        private void AddStrikethroughSegment(VisualElement container, string text, int lineNumber)
+        {
+            var label = new Label(ProcessInlineMarkdown(text));
+            label.AddToClassList("markdown-paragraph");
+            label.AddToClassList("markdown-strikethrough");
+            label.enableRichText = true;
+            CheckAndRegisterSearchMatch(text, label, lineNumber);
+            container.Add(label);
         }
 
         private void AddTextSegment(VisualElement container, string text, int lineNumber)
