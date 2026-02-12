@@ -74,7 +74,6 @@ namespace EUFramework.Extension.Memo
         private bool isDirty = false;
         private double lastEditTime = 0;
         private const double AUTO_SAVE_DELAY = 1.0f;
-        private bool isInitialized = false;
         
         // Time tracking for smooth animations
         private double lastFrameTime;
@@ -282,7 +281,6 @@ namespace EUFramework.Extension.Memo
 
         public void CreateGUI()
         {
-            isInitialized = false;
             LoadData();
 
             // 动态加载 UXML
@@ -308,7 +306,6 @@ namespace EUFramework.Extension.Memo
             rootVisualElement.schedule.Execute(() => {
                 RefreshCanvas();
                 RefreshSidebar();
-                isInitialized = true;
             });
         }
 
