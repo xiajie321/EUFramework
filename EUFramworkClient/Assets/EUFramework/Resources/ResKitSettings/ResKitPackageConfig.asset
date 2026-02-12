@@ -12,16 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 584d5d7c5c3a9ab4583fa862786b9821, type: 3}
   m_Name: ResKitPackageConfig
   m_EditorClassIdentifier: 
-  packages:
-  - packageName: DefaultPackage
-    playMode: 0
-    isDefault: 1
-    description: 
-  - packageName: TestPackage
-    playMode: 0
-    isDefault: 0
-    description: "\u6D4B\u8BD5\u5305"
-  - packageName: TestPackage
-    playMode: 0
-    isDefault: 0
-    description: "\u6D4B\u8BD5\u5305"
+  packages: []

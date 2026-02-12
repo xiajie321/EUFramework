@@ -32,7 +32,16 @@ namespace EUFramework.Extension.EURes.Editor
         {
             var window = GetWindow<ResKitEditorWindow>();
             window.titleContent = new GUIContent("ResKit 配置工具");
-            window.minSize = new Vector2(800, 600);
+            
+            // 设置窗口大小（扩大100px）
+            Vector2 windowSize = new Vector2(900, 700);
+            window.minSize = windowSize;
+            
+            // 居中显示窗口
+            var mainWindowPos = EditorGUIUtility.GetMainWindowPosition();
+            var centerX = mainWindowPos.x + (mainWindowPos.width - windowSize.x) * 0.5f;
+            var centerY = mainWindowPos.y + (mainWindowPos.height - windowSize.y) * 0.5f;
+            window.position = new Rect(centerX, centerY, windowSize.x, windowSize.y);
         }
 
         private void CreateGUI()
@@ -95,6 +104,28 @@ namespace EUFramework.Extension.EURes.Editor
             _packageConfig = AssetDatabase.LoadAssetAtPath<ResKitPackageConfig>(packageConfigPath);
         }
 
+        /// <summary>
+        /// 创建内容区域标题
+        /// </summary>
+        private VisualElement CreateContentHeader(string title, string subtitle)
+        {
+            var header = new VisualElement();
+            header.AddToClassList("content-header");
+            
+            var titleLabel = new Label(title);
+            titleLabel.AddToClassList("content-title");
+            header.Add(titleLabel);
+            
+            if (!string.IsNullOrEmpty(subtitle))
+            {
+                var subtitleLabel = new Label(subtitle);
+                subtitleLabel.AddToClassList("content-subtitle");
+                header.Add(subtitleLabel);
+            }
+            
+            return header;
+        }
+        
         private void ShowFileStatusPanel()
         {
             var contentArea = rootVisualElement.Q<VisualElement>("content-area");
@@ -106,6 +137,10 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.alignItems = Align.FlexStart;
             contentArea.style.justifyContent = Justify.FlexStart;
             
+            // 添加标题
+            var header = CreateContentHeader("配置文件管理", "管理 ResKit 所需的各项配置文件");
+            contentArea.Add(header);
+            
             // 创建 IMGUIContainer 来显示文件状态和配置编辑
             var imguiContainer = new IMGUIContainer(() =>
             {
@@ -114,7 +149,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             // 设置 IMGUIContainer 占满整个区域且从左上角开始
             imguiContainer.style.width = Length.Percent(100);
-            imguiContainer.style.height = Length.Percent(100);
+            imguiContainer.style.flexGrow = 1;
             
             contentArea.Add(imguiContainer);
         }
@@ -135,10 +170,7 @@ namespace EUFramework.Extension.EURes.Editor
         private void DrawFileStatusPanel()
         {
             GUILayout.BeginVertical();
-            GUILayout.Space(10);
-            
-            GUILayout.Label("配置文件状态", EditorStyles.boldLabel);
-            GUILayout.Space(10);
+            GUILayout.Space(5);
             
             // 检查 AssetBundleCollectorSetting
             string collectorPath = Path.Combine(SETTINGS_PATH, "AssetBundleCollectorSetting.asset");
@@ -345,18 +377,40 @@ namespace EUFramework.Extension.EURes.Editor
         
         private void DrawPackageConfigPanel()
         {
-            GUILayout.Label("Package 配置管理", EditorStyles.boldLabel);
+            GUILayout.Label("Package 运行配置（仅配置模式，不可添加/删除）", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
-            // 同步和验证按钮
+            EditorGUILayout.HelpBox(
+                "📋 配置说明：\n" +
+                "• 本界面仅用于配置 Package 的运行参数\n" +
+                "• Package 列表完全由 AssetBundleCollector 管理\n" +
+                "• 不支持手动添加、删除或重命名 Package\n" +
+                "• 可配置项：运行模式（PlayMode）、默认包设置", 
+                MessageType.Info);
+            
+            GUILayout.Space(10);
+            
+            // 数据管理按钮
+            GUILayout.Label("数据管理", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("从 AssetBundleCollector 同步", GUILayout.Height(25)))
+            if (GUILayout.Button("🔄 从 AssetBundleCollector 同步", GUILayout.Height(35)))
             {
                 SyncPackagesFromCollector();
             }
-            if (GUILayout.Button("验证与 Collector 的匹配", GUILayout.Height(25)))
+            if (GUILayout.Button("✓ 验证数据一致性", GUILayout.Height(35)))
             {
                 ValidatePackagesWithCollector();
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(5);
+            
+            // 清理工具
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("🧹 清理重复数据", GUILayout.Width(150), GUILayout.Height(25)))
+            {
+                CleanDuplicatePackages();
             }
             GUILayout.EndHorizontal();
             
@@ -385,27 +439,16 @@ namespace EUFramework.Extension.EURes.Editor
                 
                 GUILayout.BeginVertical("box");
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Package {i + 1}", EditorStyles.boldLabel, GUILayout.Width(80));
-                
-                // 删除按钮
-                if (GUILayout.Button("删除", GUILayout.Width(50)))
-                {
-                    if (EditorUtility.DisplayDialog("确认删除", $"确定要删除 Package '{pkg.packageName}' 吗？", "确定", "取消"))
-                    {
-                        _packageConfig.RemovePackage(pkg.packageName);
-                        EditorUtility.SetDirty(_packageConfig);
-                        AssetDatabase.SaveAssets();
-                        GUILayout.EndHorizontal();
-                        GUILayout.EndVertical();
-                        break;
-                    }
-                }
+                GUILayout.Label($"Package {i + 1}", EditorStyles.boldLabel, GUILayout.Width(100));
+                GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
                 
-                // Package 名称
-                pkg.packageName = EditorGUILayout.TextField("Package 名称", pkg.packageName);
+                // Package 名称（只读显示）
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.TextField("Package 名称", pkg.packageName);
+                EditorGUI.EndDisabledGroup();
                 
-                // 运行模式
+                // 运行模式（可编辑）
                 pkg.playMode = (EPlayMode)EditorGUILayout.EnumPopup("运行模式", pkg.playMode);
                 
                 // 是否为默认包（单选）
@@ -426,8 +469,10 @@ namespace EUFramework.Extension.EURes.Editor
                     pkg.isDefault = newIsDefault;
                 }
                 
-                // 包描述
-                pkg.description = EditorGUILayout.TextField("包描述", pkg.description);
+                // 包描述（只读显示，从 Collector 同步）
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.TextField("包描述", pkg.description);
+                EditorGUI.EndDisabledGroup();
                 
                 GUILayout.EndVertical();
                 GUILayout.Space(5);
@@ -455,11 +500,41 @@ namespace EUFramework.Extension.EURes.Editor
             }
             
             EditorGUILayout.HelpBox(
-                "Package 配置说明：\n" +
-                "• 需与 AssetBundleCollectorSetting 中的包名一致\n" +
-                "• 可配置多个 Package 及其加载方式\n" +
-                "• 只能有一个默认 Package", 
+                "💡 配置说明：\n" +
+                "• Package 名称和描述：由 AssetBundleCollector 管理（只读）\n" +
+                "• 运行模式：可配置（EditorSimulate/Offline/Host/WebPlay 等）\n" +
+                "• 默认包：只能设置一个默认 Package\n" +
+                "• 数据来源：所有 Package 必须从 AssetBundleCollector 同步", 
                 MessageType.Info);
+        }
+        
+        private void CleanDuplicatePackages()
+        {
+            if (_packageConfig == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                return;
+            }
+            
+            int beforeCount = _packageConfig.GetAllPackages().Count;
+            _packageConfig.RemoveDuplicatePackages();
+            int afterCount = _packageConfig.GetAllPackages().Count;
+            
+            EditorUtility.SetDirty(_packageConfig);
+            AssetDatabase.SaveAssets();
+            
+            if (beforeCount > afterCount)
+            {
+                EditorUtility.DisplayDialog("清理完成", 
+                    $"已清理重复的 Package\n\n" +
+                    $"清理前: {beforeCount} 个\n" +
+                    $"清理后: {afterCount} 个\n" +
+                    $"移除: {beforeCount - afterCount} 个重复项", "确定");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("清理完成", "没有发现重复的 Package", "确定");
+            }
         }
         
         private void SyncPackagesFromCollector()
@@ -483,15 +558,19 @@ namespace EUFramework.Extension.EURes.Editor
                 return;
             }
             
+            // 同步前先清理重复的包
+            _packageConfig.RemoveDuplicatePackages();
+            
             bool confirm = EditorUtility.DisplayDialog("同步确认", 
                 $"将从 AssetBundleCollectorSetting 同步 {collectorPackages.Count} 个 Package。\n\n" +
                 "已存在的 Package 会保留其配置（PlayMode、IsDefault）。\n" +
                 "新 Package 将使用默认配置。\n" +
-                "不存在的 Package 将被移除。\n\n" +
+                "不存在于 Collector 的 Package 将被移除。\n\n" +
                 "是否继续？", "确定", "取消");
             
             if (!confirm) return;
             
+            // 执行同步
             int addedCount = 0;
             int updatedCount = 0;
             int removedCount = 0;
@@ -715,6 +794,10 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.alignItems = Align.FlexStart;
             contentArea.style.justifyContent = Justify.FlexStart;
             
+            // 添加标题
+            var header = CreateContentHeader("ResFacade 生成工具", "生成资源管理相关的代码和 UI 预制体");
+            contentArea.Add(header);
+            
             // 创建 IMGUIContainer 来显示 ResFacade 功能
             var imguiContainer = new IMGUIContainer(() =>
             {
@@ -723,7 +806,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             // 设置 IMGUIContainer 占满整个区域且从左上角开始
             imguiContainer.style.width = Length.Percent(100);
-            imguiContainer.style.height = Length.Percent(100);
+            imguiContainer.style.flexGrow = 1;
             
             contentArea.Add(imguiContainer);
         }
@@ -731,10 +814,7 @@ namespace EUFramework.Extension.EURes.Editor
         private void DrawResFacadePanel()
         {
             GUILayout.BeginVertical();
-            GUILayout.Space(10);
-            
-            GUILayout.Label("ResFacade 生成工具", EditorStyles.boldLabel);
-            GUILayout.Space(20);
+            GUILayout.Space(5);
             
             // UI Prefab 生成区域
             GUILayout.Label("UI Prefab 和脚本", EditorStyles.boldLabel);
@@ -771,37 +851,30 @@ namespace EUFramework.Extension.EURes.Editor
             }
             GUILayout.EndHorizontal();
             
-            EditorGUILayout.HelpBox("生成用户操作弹窗的脚本和预制体\n脚本：可自定义 UI 交互逻辑\nPrefab：位于 Resources/ResKitUI/ 目录", MessageType.Info);
+            EditorGUILayout.HelpBox("⚠️ 业务脚本：用户可自定义 UI 交互逻辑，请勿覆盖！\nPrefab：位于 Resources/ResKitUI/ 目录", MessageType.Warning);
             
             if (prefabExists && scriptExists)
             {
+                // 业务脚本和 Prefab 都存在，只提供定位功能
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("定位到脚本", GUILayout.Height(35)))
+                if (GUILayout.Button("📍 定位到脚本", GUILayout.Height(40)))
                 {
                     var script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
                     EditorGUIUtility.PingObject(script);
                     Selection.activeObject = script;
                 }
-                if (GUILayout.Button("定位到 Prefab", GUILayout.Height(35)))
+                if (GUILayout.Button("📍 定位到 Prefab", GUILayout.Height(40)))
                 {
                     var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
                     EditorGUIUtility.PingObject(prefab);
                     Selection.activeObject = prefab;
                 }
                 GUILayout.EndHorizontal();
-                
-                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
-                {
-                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？\n\n警告：脚本的自定义代码将被覆盖！", "确定", "取消"))
-                    {
-                        OnCreatePrefabClicked();
-                    }
-                }
             }
             else if (scriptExists && !prefabExists)
             {
                 EditorGUILayout.HelpBox("脚本已存在，但 Prefab 未生成", MessageType.Warning);
-                if (GUILayout.Button("生成 Prefab", GUILayout.Height(40)))
+                if (GUILayout.Button("生成 Prefab（保留现有脚本）", GUILayout.Height(40)))
                 {
                     OnCreatePrefabClicked();
                 }
@@ -824,15 +897,21 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.Space(20);
             
-            // ResKit.Generated 代码生成区域
-            GUILayout.Label("ResKit.Generated（自动生成）", EditorStyles.boldLabel);
+            // ResKit 分部类生成区域（同时生成）
+            GUILayout.Label("ResKit 分部类（Partial Class）", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
             string codeGeneratedPath = "Assets/EUFramework/Extension/EURes/Script/Generated/ResKit.Generated.cs";
+            string codeUserPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
             bool codeGeneratedExists = File.Exists(codeGeneratedPath);
+            bool codeUserExists = File.Exists(codeUserPath);
+            bool bothExist = codeGeneratedExists && codeUserExists;
+            
+            // 显示两个文件的状态
+            GUILayout.BeginVertical("box");
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKit.Generated.cs:", GUILayout.Width(250));
+            GUILayout.Label("ResKit.Generated.cs:", GUILayout.Width(200));
             if (codeGeneratedExists)
             {
                 GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
@@ -843,81 +922,95 @@ namespace EUFramework.Extension.EURes.Editor
             }
             GUILayout.EndHorizontal();
             
-            EditorGUILayout.HelpBox("自动生成的 ResKit 基础工具类（partial class）", MessageType.Info);
-            
-            if (codeGeneratedExists)
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKit.cs:", GUILayout.Width(200));
+            if (codeUserExists)
             {
+                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.EndVertical();
+            
+            EditorGUILayout.HelpBox(
+                "📋 分部类说明：\n" +
+                "• ResKit.Generated.cs - 自动生成的基础工具类（可重新生成）\n" +
+                "• ResKit.cs - 用户编辑的业务逻辑类（请勿覆盖）\n" +
+                "• 两个文件作为 partial class 相互引用，必须同时存在", 
+                MessageType.Info);
+            
+            if (bothExist)
+            {
+                // 两个文件都存在
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("定位到文件", GUILayout.Height(35)))
+                if (GUILayout.Button("📍 定位到 Generated", GUILayout.Height(35)))
                 {
                     var script = AssetDatabase.LoadAssetAtPath<TextAsset>(codeGeneratedPath);
                     EditorGUIUtility.PingObject(script);
                     Selection.activeObject = script;
                 }
-                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
-                {
-                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？", "确定", "取消"))
-                    {
-                        OnGenerateResKitClicked();
-                    }
-                }
-                GUILayout.EndHorizontal();
-            }
-            else
-            {
-                if (GUILayout.Button("生成 ResKit.Generated", GUILayout.Height(40)))
-                {
-                    OnGenerateResKitClicked();
-                }
-            }
-            
-            GUILayout.Space(20);
-            
-            // ResKit.cs 用户代码生成区域
-            GUILayout.Label("ResKit（用户编辑）", EditorStyles.boldLabel);
-            GUILayout.Space(5);
-            
-            string codeUserPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
-            bool codeUserExists = File.Exists(codeUserPath);
-            
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKit.cs:", GUILayout.Width(250));
-            if (codeUserExists)
-            {
-                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
-            }
-            else
-            {
-                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
-            }
-            GUILayout.EndHorizontal();
-            
-            EditorGUILayout.HelpBox("用户可编辑的 ResKit 类，包含初始化、热更新、UI 交互等逻辑", MessageType.Info);
-            
-            if (codeUserExists)
-            {
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("定位到文件", GUILayout.Height(35)))
+                if (GUILayout.Button("📍 定位到用户脚本", GUILayout.Height(35)))
                 {
                     var script = AssetDatabase.LoadAssetAtPath<TextAsset>(codeUserPath);
                     EditorGUIUtility.PingObject(script);
                     Selection.activeObject = script;
                 }
-                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
+                GUILayout.EndHorizontal();
+                
+                if (GUILayout.Button("🔄 重新生成 Generated 部分", GUILayout.Height(35)))
                 {
-                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？\n\n警告：这将覆盖您的自定义代码！", "确定", "取消"))
+                    if (EditorUtility.DisplayDialog("确认", 
+                        "是否重新生成 ResKit.Generated.cs？\n\n" +
+                        "ResKit.cs（用户脚本）不会被修改", 
+                        "确定", "取消"))
                     {
-                        OnGenerateUserResKitClicked();
+                        OnGenerateResKitGeneratedOnly();
                     }
                 }
-                GUILayout.EndHorizontal();
             }
-            else
+            else if (codeUserExists && !codeGeneratedExists)
             {
-                if (GUILayout.Button("生成 ResKit 用户代码", GUILayout.Height(40)))
+                // 只有用户脚本存在
+                EditorGUILayout.HelpBox("⚠️ 缺少 Generated 部分，可能导致编译错误！", MessageType.Warning);
+                if (GUILayout.Button("生成 ResKit.Generated.cs", GUILayout.Height(40)))
+                {
+                    OnGenerateResKitGeneratedOnly();
+                }
+            }
+            else if (!codeUserExists && codeGeneratedExists)
+            {
+                // 只有 Generated 存在
+                EditorGUILayout.HelpBox("⚠️ 缺少用户脚本部分，可能导致编译错误！", MessageType.Warning);
+                if (GUILayout.Button("生成 ResKit.cs", GUILayout.Height(40)))
                 {
                     OnGenerateUserResKitClicked();
                 }
+            }
+            else
+            {
+                // 都不存在
+                EditorGUILayout.HelpBox("⚠️ ResKit 分部类尚未生成", MessageType.Warning);
+                if (GUILayout.Button("🎯 生成 ResKit 分部类（同时生成两个文件）", GUILayout.Height(40)))
+                {
+                    OnGenerateBothResKitFiles();
+                }
+            }
+            
+            GUILayout.Space(20);
+            
+            // 程序集引用管理区域
+            GUILayout.Label("程序集引用管理", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            EditorGUILayout.HelpBox("刷新 YooAsset 和 UniTask 的程序集引用，解决引用丢失问题", MessageType.Info);
+            
+            if (GUILayout.Button("🔄 刷新程序集引用", GUILayout.Height(40)))
+            {
+                RefreshAssemblyReferences();
             }
             
             GUILayout.EndVertical();
@@ -1040,7 +1133,35 @@ namespace EUFramework.Extension.EURes.Editor
             }
         }
 
-        private void OnGenerateResKitClicked()
+        /// <summary>
+        /// 同时生成 ResKit 的两个分部类文件
+        /// </summary>
+        private void OnGenerateBothResKitFiles()
+        {
+            bool generatedSuccess = OnGenerateResKitGeneratedOnly();
+            if (!generatedSuccess)
+            {
+                return;
+            }
+            
+            bool userSuccess = OnGenerateResKitUserOnly();
+            if (!userSuccess)
+            {
+                return;
+            }
+            
+            EditorUtility.DisplayDialog("生成完成", 
+                "ResKit 分部类已生成完成！\n\n" +
+                "✓ ResKit.Generated.cs（自动生成）\n" +
+                "✓ ResKit.cs（用户编辑）\n\n" +
+                "两个文件作为 partial class 相互引用，已同时创建", 
+                "确定");
+        }
+        
+        /// <summary>
+        /// 只生成 ResKit.Generated.cs（自动生成部分）
+        /// </summary>
+        private bool OnGenerateResKitGeneratedOnly()
         {
             string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/DefaultResKit.Generated.sbn";
             string outputPath = "Assets/EUFramework/Extension/EURes/Script/Generated/ResKit.Generated.cs";
@@ -1048,7 +1169,7 @@ namespace EUFramework.Extension.EURes.Editor
             if (!File.Exists(templatePath))
             {
                 EditorUtility.DisplayDialog("错误", $"模板文件不存在！\n\n路径: {templatePath}", "确定");
-                return;
+                return false;
             }
 
             // 读取模板
@@ -1072,13 +1193,19 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 选中生成的文件
             var script = AssetDatabase.LoadAssetAtPath<TextAsset>(outputPath);
-            EditorGUIUtility.PingObject(script);
-            Selection.activeObject = script;
+            if (script != null)
+            {
+                EditorGUIUtility.PingObject(script);
+                Selection.activeObject = script;
+            }
             
-            EditorUtility.DisplayDialog("成功", $"ResKit 代码生成完成！\n\n路径: {outputPath}", "确定");
+            return true;
         }
         
-        private void OnGenerateUserResKitClicked()
+        /// <summary>
+        /// 只生成 ResKit.cs（用户编辑部分）
+        /// </summary>
+        private bool OnGenerateResKitUserOnly()
         {
             string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/DefaultResKit.cs.sbn";
             string outputPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
@@ -1086,7 +1213,7 @@ namespace EUFramework.Extension.EURes.Editor
             if (!File.Exists(templatePath))
             {
                 EditorUtility.DisplayDialog("错误", $"模板文件不存在！\n\n路径: {templatePath}", "确定");
-                return;
+                return false;
             }
 
             // 读取模板
@@ -1110,10 +1237,21 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 选中生成的文件
             var script = AssetDatabase.LoadAssetAtPath<TextAsset>(outputPath);
-            EditorGUIUtility.PingObject(script);
-            Selection.activeObject = script;
+            if (script != null)
+            {
+                EditorGUIUtility.PingObject(script);
+                Selection.activeObject = script;
+            }
             
-            EditorUtility.DisplayDialog("成功", $"ResKit 用户代码生成完成！\n\n路径: {outputPath}\n\n包含功能:\n- 资源包初始化\n- 热更新流程\n- UI 交互逻辑", "确定");
+            return true;
+        }
+        
+        /// <summary>
+        /// 生成用户脚本（兼容性方法，调用新方法）
+        /// </summary>
+        private void OnGenerateUserResKitClicked()
+        {
+            OnGenerateResKitUserOnly();
         }
 
         #endregion
@@ -1246,8 +1384,8 @@ namespace EUFramework.Extension.EURes.Editor
 
             var config = ScriptableObject.CreateInstance<ResKitPackageConfig>();
             
-            // 添加默认 Package
-            config.AddPackage("DefaultPackage", EPlayMode.EditorSimulateMode, true);
+            // 注意：创建时不添加默认 Package，应该从 AssetBundleCollector 同步
+            // 如果需要默认配置，请在创建后使用"从 AssetBundleCollector 同步"功能
             
             AssetDatabase.CreateAsset(config, path);
             AssetDatabase.SaveAssets();
@@ -1357,6 +1495,57 @@ namespace EUFramework.Extension.EURes.Editor
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.white;
             textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+        
+        /// <summary>
+        /// 刷新程序集引用（YooAsset 和 UniTask）
+        /// </summary>
+        private void RefreshAssemblyReferences()
+        {
+            try
+            {
+                Debug.Log("[ResKit] 开始刷新程序集引用...");
+                
+                // 1. 刷新 AssetDatabase
+                AssetDatabase.Refresh();
+                
+                // 2. 强制重新导入关键的 asmdef 文件
+                string[] asmdefPaths = new[]
+                {
+                    "Assets/EUFramework/Extension/EURes/EURes.asmdef",
+                    "Assets/EUFramework/Extension/EURes/Editor/EURes.Editor.asmdef"
+                };
+                
+                foreach (var path in asmdefPaths)
+                {
+                    if (File.Exists(path))
+                    {
+                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                        Debug.Log($"[ResKit] 重新导入: {path}");
+                    }
+                }
+                
+                // 3. 请求脚本重新编译
+                UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+                
+                EditorUtility.DisplayDialog("刷新完成", 
+                    "程序集引用已刷新！\n\n" +
+                    "操作内容：\n" +
+                    "1. 刷新 AssetDatabase\n" +
+                    "2. 重新导入 .asmdef 文件\n" +
+                    "3. 请求脚本重新编译\n\n" +
+                    "如果仍有问题，请尝试：\n" +
+                    "• 关闭并重新打开 Unity\n" +
+                    "• 删除 Library 文件夹后重新打开项目", 
+                    "确定");
+                
+                Debug.Log("[ResKit] ✓ 程序集引用刷新完成");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResKit] 刷新程序集引用失败: {e.Message}");
+                EditorUtility.DisplayDialog("刷新失败", $"刷新程序集引用时出错：\n{e.Message}", "确定");
+            }
         }
 
         #endregion

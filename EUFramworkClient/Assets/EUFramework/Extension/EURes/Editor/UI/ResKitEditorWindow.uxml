@@ -1,17 +1,36 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement name="root" style="flex-direction: row; flex-grow: 1;">
+    <ui:VisualElement name="root" class="root">
         
-        <!-- 左侧栏 -->
+        <!-- 左侧侧边栏 -->
         <ui:VisualElement name="sidebar" class="sidebar">
             <ui:Label text="ResKit 工具" class="sidebar-title" />
             
-            <ui:Button name="btn-config-files" text="配置文件" class="sidebar-button" />
-            <ui:Button name="btn-res-facade" text="ResFacade" class="sidebar-button" />
+            <!-- 配置文件按钮 -->
+            <ui:VisualElement name="btn-config-files-container" class="sidebar-button-container">
+                <ui:Button name="btn-config-files" class="sidebar-button">
+                    <ui:Label text="C" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="配置文件" class="sidebar-button-title" />
+                        <ui:Label text="Package 和服务器配置" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <!-- ResFacade 按钮 -->
+            <ui:VisualElement name="btn-res-facade-container" class="sidebar-button-container">
+                <ui:Button name="btn-res-facade" class="sidebar-button">
+                    <ui:Label text="R" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="ResFacade" class="sidebar-button-title" />
+                        <ui:Label text="代码生成和工具" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
         </ui:VisualElement>
         
-        <!-- 右侧内容区 -->
+        <!-- 右侧内容区域 -->
         <ui:VisualElement name="content-area" class="content-area">
-            <ui:Label name="content-label" text="请选择左侧功能开始使用..." class="content-label" />
+            <ui:Label name="content-label" text="👈 请选择左侧功能开始使用" class="content-label" />
         </ui:VisualElement>
         
     </ui:VisualElement>

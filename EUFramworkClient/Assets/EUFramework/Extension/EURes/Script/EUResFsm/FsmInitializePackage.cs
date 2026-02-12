@@ -14,8 +14,9 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
-
+            InitializeAsync().Forget();
         }
+        
         private async UniTask InitializeAsync()
         {
             var playMode = (EPlayMode)_machine.GetBlackboardValue("PlayMode");
@@ -95,7 +96,7 @@ namespace EUFramework.Extension.EURes
         private string GetHostServerURL()
         {
             // 加载服务器配置
-            var config = Resources.Load<ResServerConfig>("Config/ResServerConfig");
+            var config = Resources.Load<ResServerConfig>("ResKitSettings/ResServerConfig");
             if (config == null)
             {
                 Debug.LogError("[FsmInitializePackage] 未找到 ResServerConfig 配置文件，请先创建配置！");

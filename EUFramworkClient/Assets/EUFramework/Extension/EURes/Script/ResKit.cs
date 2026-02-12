@@ -3,13 +3,13 @@ using UnityEngine;
 using YooAsset;
 using Cysharp.Threading.Tasks;
 
-namespace {{ namespace }}
+namespace EUFramework.Extension.EURes
 {
     /// <summary>
     /// ResKit 资源管理入口类
     /// 用户可编辑版本 - 包含初始化逻辑
     /// </summary>
-    public partial class {{ class_name }}
+    public partial class ResKit
     {
         #region 私有字段
         

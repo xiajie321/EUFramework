@@ -68,9 +68,12 @@ namespace EUFramework.Extension.EURes
             return packages.Find(p => p.packageName == packageName);
         }
         
+#if UNITY_EDITOR
         /// <summary>
-        /// 添加 Package
+        /// 添加 Package（仅供内部同步使用）
+        /// 警告：请使用 SyncFromCollectorSettings 方法来管理 Package
         /// </summary>
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         public void AddPackage(string packageName, EPlayMode playMode = EPlayMode.EditorSimulateMode, bool isDefault = false)
         {
             if (packages.Exists(p => p.packageName == packageName))
@@ -88,12 +91,16 @@ namespace EUFramework.Extension.EURes
         }
         
         /// <summary>
-        /// 移除 Package
+        /// 移除 Package（仅供内部同步使用）
+        /// 警告：请使用 SyncFromCollectorSettings 方法来管理 Package
         /// </summary>
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         public void RemovePackage(string packageName)
         {
             packages.RemoveAll(p => p.packageName == packageName);
         }
+        
+#endif
         
         /// <summary>
         /// 设置默认 Package
@@ -148,9 +155,40 @@ namespace EUFramework.Extension.EURes
         }
         
 #if UNITY_EDITOR
+        /// <summary>
+        /// 移除重复的 Package
+        /// </summary>
+        public void RemoveDuplicatePackages()
+        {
+            var uniquePackages = new List<PackageInfo>();
+            var nameSet = new HashSet<string>();
+            
+            foreach (var pkg in packages)
+            {
+                if (!string.IsNullOrEmpty(pkg.packageName) && nameSet.Add(pkg.packageName))
+                {
+                    uniquePackages.Add(pkg);
+                }
+                else if (!string.IsNullOrEmpty(pkg.packageName))
+                {
+                    Debug.LogWarning($"[ResKitPackageConfig] 移除重复的 Package: {pkg.packageName}");
+                }
+            }
+            
+            if (packages.Count != uniquePackages.Count)
+            {
+                packages.Clear();
+                packages.AddRange(uniquePackages);
+                Debug.Log($"[ResKitPackageConfig] 已清理重复的 Package，当前共 {packages.Count} 个");
+            }
+        }
+        
         private void OnValidate()
         {
-            // 确保只有一个默认 Package
+            // 1. 移除重复的 Package
+            RemoveDuplicatePackages();
+            
+            // 2. 确保只有一个默认 Package
             int defaultCount = 0;
             PackageInfo lastDefault = null;
             
