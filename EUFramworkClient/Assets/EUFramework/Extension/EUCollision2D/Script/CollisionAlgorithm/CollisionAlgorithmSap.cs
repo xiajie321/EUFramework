@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using EUFarmworker.Extension.EUCollision2D.Script.Collision;
-using EUFarmworker.Extension.EUCollision2D.Script.Core;
+using EUFramwork.Extension.EUCollision2D.Collision;
+using EUFramwork.Extension.EUCollision2D.Core;
 using Unity.Collections;
 using UnityEngine.Jobs;
 
-namespace EUFarmworker.Extension.EUCollision2D.Script.CollisionAlgorithm
+namespace EUFramwork.Extension.EUCollision2D.CollisionAlgorithm
 {
     /// <summary>
     /// 扫掠裁剪算法 (Sweep and Prune) 碰撞算法实现。

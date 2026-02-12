@@ -1,8 +1,9 @@
-﻿using EUFarmworker.Extension.EUCollision2D.Script.Core;
+﻿using EUFarmworker.Extension.EUCollision2D.Core;
+using EUFramwork.Extension.EUCollision2D.Core;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace EUFarmworker.Extension.EUCollision2D.Script.Collision
+namespace EUFramwork.Extension.EUCollision2D.Collision
 {
     /// <summary>
     /// 2D 点碰撞体组件。

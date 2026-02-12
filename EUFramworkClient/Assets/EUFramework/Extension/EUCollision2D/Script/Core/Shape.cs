@@ -1,7 +1,7 @@
 using Unity.Burst;
 using Unity.Mathematics;
 
-namespace EUFarmworker.Extension.EUCollision2D.Script.Core
+namespace EUFramwork.Extension.EUCollision2D.Core
 {
     
     /// <summary>
