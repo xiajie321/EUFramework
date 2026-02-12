@@ -38,40 +38,6 @@
 
 ---
 
-# PureCore分支
-
-该框架的PureCore分支仅包含常用库,无任何额外的编辑器工具或者框架,省去游戏开发新建项目时引入常用库时的各种导包操作,仅需下载该分支作为模板即可。
-
-注: 该模板创建版本为Unity 2022.3.62f2c1版本 渲染管线为urp(仅安装了2d相关库,如需3d开发请自行安装)
-
-## 已经完成的工作
-
-- 引入Luban并附带一个Tools\Luban\Data\GamConfig\Luban配置工具.exe便于配置鲁班路径跟解析方式。
-
-- 引入PrimeTween动画库。
-
-- 引入Zlinq查询库。
-
-- 引入NuGetForUnity集成在Unity内的NuGet管理库。
-
-- 引入UniTask。
-
-- 引入YooAsset资源管理方案。
-
-- 引入HybridCLR。
-
-- 引入Scriban。
-
-## 正在进行的工作
-
-暂无
-
-## 计划
-
-暂无
-
----
-
 ## 引用
 
 - [LuBan][focus-creative-games/luban： luban是一个强大、易用、优雅、稳定的游戏配置解决方案。鲁班是一款功能强大、易用、优雅稳定的游戏配置方案。](https://github.com/focus-creative-games/luban)
