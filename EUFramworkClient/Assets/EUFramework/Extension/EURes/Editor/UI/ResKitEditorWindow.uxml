@@ -5,9 +5,8 @@
         <ui:VisualElement name="sidebar" class="sidebar">
             <ui:Label text="ResKit 工具" class="sidebar-title" />
             
-            <ui:Button name="btn-create-settings" text="创建配置文件" class="sidebar-button" />
-            <ui:Button name="btn-create-prefab" text="生成 UI Prefab" class="sidebar-button" />
-            <ui:Button name="btn-generate-reskit" text="生成 ResKit 代码" class="sidebar-button" />
+            <ui:Button name="btn-config-files" text="配置文件" class="sidebar-button" />
+            <ui:Button name="btn-res-facade" text="ResFacade" class="sidebar-button" />
         </ui:VisualElement>
         
         <!-- 右侧内容区 -->

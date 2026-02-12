@@ -11,7 +11,7 @@ namespace EUFramework.Extension.EURes
     /// <summary>
     /// 资源管理工具类 - 自动生成
     /// </summary>
-    public static partial class {{ class_name }}
+    public static partial class ResKit
     {
         private static readonly Dictionary<string, ResourcePackage> _packages = new Dictionary<string, ResourcePackage>();
         private static ResourcePackage _defaultPackage;
@@ -27,7 +27,7 @@ namespace EUFramework.Extension.EURes
         {
             if (_packages.ContainsKey(packageName))
             {
-                Debug.LogWarning($"[{{ class_name }}] Package '{packageName}' already initialized!");
+                Debug.LogWarning($"[ResKit] Package '{packageName}' already initialized!");
                 return true;
             }
 
@@ -51,7 +51,7 @@ namespace EUFramework.Extension.EURes
             }
             else
             {
-                Debug.LogError($"[{{ class_name }}] Package '{packageName}' initialization failed! Error: {patchOperation.Error}");
+                Debug.LogError($"[ResKit] Package '{packageName}' initialization failed! Error: {patchOperation.Error}");
                 return false;
             }
         }
@@ -67,7 +67,7 @@ namespace EUFramework.Extension.EURes
             {
                 if (_defaultPackage == null)
                 {
-                    Debug.LogError($"[{{ class_name }}] Default package is not initialized!");
+                    Debug.LogError($"[ResKit] Default package is not initialized!");
                 }
                 return _defaultPackage;
             }
@@ -77,7 +77,7 @@ namespace EUFramework.Extension.EURes
                 return package;
             }
 
-            Debug.LogError($"[{{ class_name }}] Package '{packageName}' not found! Please call InitPackageResAsync first.");
+            Debug.LogError($"[ResKit] Package '{packageName}' not found! Please call InitPackageResAsync first.");
             return null;
         }
 
@@ -93,7 +93,7 @@ namespace EUFramework.Extension.EURes
             }
             else
             {
-                Debug.LogError($"[{{ class_name }}] Package '{packageName}' not found!");
+                Debug.LogError($"[ResKit] Package '{packageName}' not found!");
             }
         }
 

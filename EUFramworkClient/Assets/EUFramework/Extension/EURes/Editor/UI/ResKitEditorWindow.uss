@@ -38,6 +38,17 @@
     background-color: rgb(50, 50, 50);
 }
 
+/* 选中状态 */
+.sidebar-button-selected {
+    background-color: rgb(100, 150, 200);
+    border-width: 2px;
+    border-color: rgb(120, 180, 240);
+}
+
+.sidebar-button-selected:hover {
+    background-color: rgb(110, 160, 210);
+}
+
 /* 右侧内容区 */
 .content-area {
     flex-grow: 1;

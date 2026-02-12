@@ -3,13 +3,31 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using YooAsset.Editor;
+using YooAsset;
+using EUFramework.Extension.EURes;
 
 namespace EUFramework.Extension.EURes.Editor
 {
     public class ResKitEditorWindow : EditorWindow
     {
-        [MenuItem("EUFramework/ResKit 配置工具", priority = 100)]
+        private ResServerConfig _resServerConfig;
+        private AssetBundleCollectorSetting _collectorSetting;
+        private ScriptableObject _yooAssetSettings; // YooAssetSettings 是 internal，用 ScriptableObject 引用
+        private ResKitPackageConfig _packageConfig;
+        private const string SETTINGS_PATH = "Assets/EUFramework/Resources/ResKitSettings";
+        
+        // 记录哪个配置面板被展开
+        private bool _showResServerConfig = false;
+        private bool _showYooAssetSettings = false;
+        private bool _showPackageConfig = false;
+        
+        // 当前选中的按钮
+        private Button _selectedButton;
+        
+        [MenuItem("EUFramework/拓展/ResKit 配置工具", priority = 100)]
         public static void ShowWindow()
         {
             var window = GetWindow<ResKitEditorWindow>();
@@ -44,52 +62,889 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 绑定按钮事件
             BindButtons();
+            
+            // 初始加载配置并显示状态
+            LoadConfigs();
+            
+            // 默认选中"配置文件"
+            var btnConfigFiles = rootVisualElement.Q<Button>("btn-config-files");
+            if (btnConfigFiles != null)
+            {
+                SetSelectedButton(btnConfigFiles);
+            }
+            
+            ShowFileStatusPanel();
+        }
+
+        private void LoadConfigs()
+        {
+            // 加载 ResServerConfig
+            string resServerPath = Path.Combine(SETTINGS_PATH, "ResServerConfig.asset");
+            _resServerConfig = AssetDatabase.LoadAssetAtPath<ResServerConfig>(resServerPath);
+            
+            // 加载 AssetBundleCollectorSetting
+            string collectorPath = Path.Combine(SETTINGS_PATH, "AssetBundleCollectorSetting.asset");
+            _collectorSetting = AssetDatabase.LoadAssetAtPath<AssetBundleCollectorSetting>(collectorPath);
+            
+            // 加载 YooAssetSettings
+            string yooSettingsPath = Path.Combine(SETTINGS_PATH, "YooAssetSettings.asset");
+            _yooAssetSettings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(yooSettingsPath);
+            
+            // 加载 ResKitPackageConfig
+            string packageConfigPath = Path.Combine(SETTINGS_PATH, "ResKitPackageConfig.asset");
+            _packageConfig = AssetDatabase.LoadAssetAtPath<ResKitPackageConfig>(packageConfigPath);
+        }
+
+        private void ShowFileStatusPanel()
+        {
+            var contentArea = rootVisualElement.Q<VisualElement>("content-area");
+            if (contentArea == null) return;
+            
+            contentArea.Clear();
+            
+            // 设置 contentArea 从左上角开始对齐
+            contentArea.style.alignItems = Align.FlexStart;
+            contentArea.style.justifyContent = Justify.FlexStart;
+            
+            // 创建 IMGUIContainer 来显示文件状态和配置编辑
+            var imguiContainer = new IMGUIContainer(() =>
+            {
+                DrawFileStatusAndConfig();
+            });
+            
+            // 设置 IMGUIContainer 占满整个区域且从左上角开始
+            imguiContainer.style.width = Length.Percent(100);
+            imguiContainer.style.height = Length.Percent(100);
+            
+            contentArea.Add(imguiContainer);
+        }
+        
+        private void DrawFileStatusAndConfig()
+        {
+            // 绘制文件状态
+            DrawFileStatusPanel();
+            
+            // 如果有展开的配置，在下方绘制
+            if (_showResServerConfig || _showYooAssetSettings || _showPackageConfig)
+            {
+                GUILayout.Space(20);
+                DrawConfigEditPanel();
+            }
+        }
+
+        private void DrawFileStatusPanel()
+        {
+            GUILayout.BeginVertical();
+            GUILayout.Space(10);
+            
+            GUILayout.Label("配置文件状态", EditorStyles.boldLabel);
+            GUILayout.Space(10);
+            
+            // 检查 AssetBundleCollectorSetting
+            string collectorPath = Path.Combine(SETTINGS_PATH, "AssetBundleCollectorSetting.asset");
+            bool collectorExists = File.Exists(collectorPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("AssetBundleCollectorSetting:", GUILayout.Width(250));
+            if (collectorExists)
+            {
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("配置资源收集", GUILayout.Width(150)))
+                {
+                    OpenAssetBundleCollectorWindow();
+                }
+            }
+            else
+            {
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
+                {
+                    CreateAssetBundleCollectorSetting(SETTINGS_PATH);
+                    LoadConfigs();
+                    ShowFileStatusPanel();
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(5);
+            
+            // 检查 ResServerConfig
+            string resServerPath = Path.Combine(SETTINGS_PATH, "ResServerConfig.asset");
+            bool resServerExists = File.Exists(resServerPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResServerConfig:", GUILayout.Width(250));
+            if (resServerExists)
+            {
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+                string buttonText = _showResServerConfig ? "收起配置" : "配置服务器信息";
+                if (GUILayout.Button(buttonText, GUILayout.Width(150)))
+                {
+                    _showResServerConfig = !_showResServerConfig;
+                    _showYooAssetSettings = false;
+                    _showPackageConfig = false;
+                }
+            }
+            else
+            {
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
+                {
+                    CreateResServerConfig(SETTINGS_PATH);
+                    LoadConfigs();
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(5);
+            
+            // 检查 YooAssetSettings
+            string yooSettingsPath = Path.Combine(SETTINGS_PATH, "YooAssetSettings.asset");
+            bool yooSettingsExists = File.Exists(yooSettingsPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("YooAssetSettings:", GUILayout.Width(250));
+            if (yooSettingsExists)
+            {
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+                string buttonText = _showYooAssetSettings ? "收起配置" : "配置 YooAsset 设置";
+                if (GUILayout.Button(buttonText, GUILayout.Width(150)))
+                {
+                    _showYooAssetSettings = !_showYooAssetSettings;
+                    _showResServerConfig = false;
+                    _showPackageConfig = false;
+                }
+            }
+            else
+            {
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
+                {
+                    CreateYooAssetSettings(SETTINGS_PATH);
+                    LoadConfigs();
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(5);
+            
+            // 检查 ResKitPackageConfig
+            string packageConfigPath = Path.Combine(SETTINGS_PATH, "ResKitPackageConfig.asset");
+            bool packageConfigExists = File.Exists(packageConfigPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKitPackageConfig:", GUILayout.Width(250));
+            if (packageConfigExists)
+            {
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+                string buttonText = _showPackageConfig ? "收起配置" : "配置 Package 信息";
+                if (GUILayout.Button(buttonText, GUILayout.Width(150)))
+                {
+                    _showPackageConfig = !_showPackageConfig;
+                    _showResServerConfig = false;
+                    _showYooAssetSettings = false;
+                }
+            }
+            else
+            {
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
+                {
+                    CreateResKitPackageConfig(SETTINGS_PATH);
+                    LoadConfigs();
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.EndVertical();
+        }
+
+        private void DrawConfigEditPanel()
+        {
+            GUILayout.BeginVertical("box");
+            
+            // ResServerConfig 配置编辑
+            if (_showResServerConfig && _resServerConfig != null)
+            {
+                DrawResServerConfigPanel();
+            }
+            
+            // YooAssetSettings 配置编辑
+            if (_showYooAssetSettings && _yooAssetSettings != null)
+            {
+                DrawYooAssetSettingsPanel();
+            }
+            
+            // PackageConfig 配置编辑
+            if (_showPackageConfig && _packageConfig != null)
+            {
+                DrawPackageConfigPanel();
+            }
+            
+            GUILayout.EndVertical();
+        }
+        
+        private void DrawResServerConfigPanel()
+        {
+            GUILayout.Label("资源服务器配置", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            EditorGUI.BeginChangeCheck();
+            
+            _resServerConfig.protocol = (ServerProtocol)EditorGUILayout.EnumPopup("协议类型", _resServerConfig.protocol);
+            
+            if (_resServerConfig.protocol == ServerProtocol.Custom)
+            {
+                _resServerConfig.customUrl = EditorGUILayout.TextField("自定义URL", _resServerConfig.customUrl);
+            }
+            else
+            {
+                _resServerConfig.hostServer = EditorGUILayout.TextField("服务器地址", _resServerConfig.hostServer);
+                _resServerConfig.port = EditorGUILayout.IntSlider("端口号", _resServerConfig.port, 1, 65535);
+            }
+            
+            _resServerConfig.appVersion = EditorGUILayout.TextField("应用版本", _resServerConfig.appVersion);
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorUtility.SetDirty(_resServerConfig);
+                AssetDatabase.SaveAssets();
+            }
+            
+            GUILayout.Space(10);
+            EditorGUILayout.HelpBox($"完整服务器地址: {_resServerConfig.GetServerUrl()}", MessageType.Info);
+        }
+        
+        private void DrawYooAssetSettingsPanel()
+        {
+            GUILayout.Label("YooAsset 设置", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            EditorGUI.BeginChangeCheck();
+            
+            var so = new SerializedObject(_yooAssetSettings);
+            var folderNameProp = so.FindProperty("DefaultYooFolderName");
+            var manifestPrefixProp = so.FindProperty("PackageManifestPrefix");
+            
+            if (folderNameProp != null)
+                EditorGUILayout.PropertyField(folderNameProp, new GUIContent("YooAsset 文件夹名称"));
+            
+            if (manifestPrefixProp != null)
+                EditorGUILayout.PropertyField(manifestPrefixProp, new GUIContent("资源清单前缀"));
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                so.ApplyModifiedProperties();
+                EditorUtility.SetDirty(_yooAssetSettings);
+                AssetDatabase.SaveAssets();
+            }
+            
+            GUILayout.Space(10);
+            EditorGUILayout.HelpBox("YooAsset 文件夹名称用于缓存和资源目录，清单前缀用于多包配置", MessageType.Info);
+        }
+        
+        private void DrawPackageConfigPanel()
+        {
+            GUILayout.Label("Package 配置管理", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            // 同步和验证按钮
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("从 AssetBundleCollector 同步", GUILayout.Height(25)))
+            {
+                SyncPackagesFromCollector();
+            }
+            if (GUILayout.Button("验证与 Collector 的匹配", GUILayout.Height(25)))
+            {
+                ValidatePackagesWithCollector();
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(10);
+            
+            // 检查是否有 Collector 和包
+            if (_collectorSetting == null || _collectorSetting.Packages == null || _collectorSetting.Packages.Count == 0)
+            {
+                EditorGUILayout.HelpBox("暂未配置包信息，请先在 AssetBundleCollector 中配置 Package", MessageType.Warning);
+                return;
+            }
+            
+            var packages = _packageConfig.GetAllPackages();
+            if (packages == null || packages.Count == 0)
+            {
+                EditorGUILayout.HelpBox("暂未配置包信息，请点击上方\"从 AssetBundleCollector 同步\"按钮同步 Package", MessageType.Warning);
+                return;
+            }
+            
+            // 自定义绘制 Package 列表
+            EditorGUI.BeginChangeCheck();
+            
+            for (int i = 0; i < packages.Count; i++)
+            {
+                var pkg = packages[i];
+                
+                GUILayout.BeginVertical("box");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Package {i + 1}", EditorStyles.boldLabel, GUILayout.Width(80));
+                
+                // 删除按钮
+                if (GUILayout.Button("删除", GUILayout.Width(50)))
+                {
+                    if (EditorUtility.DisplayDialog("确认删除", $"确定要删除 Package '{pkg.packageName}' 吗？", "确定", "取消"))
+                    {
+                        _packageConfig.RemovePackage(pkg.packageName);
+                        EditorUtility.SetDirty(_packageConfig);
+                        AssetDatabase.SaveAssets();
+                        GUILayout.EndHorizontal();
+                        GUILayout.EndVertical();
+                        break;
+                    }
+                }
+                GUILayout.EndHorizontal();
+                
+                // Package 名称
+                pkg.packageName = EditorGUILayout.TextField("Package 名称", pkg.packageName);
+                
+                // 运行模式
+                pkg.playMode = (EPlayMode)EditorGUILayout.EnumPopup("运行模式", pkg.playMode);
+                
+                // 是否为默认包（单选）
+                bool newIsDefault = EditorGUILayout.Toggle("是否为默认包", pkg.isDefault);
+                if (newIsDefault != pkg.isDefault)
+                {
+                    if (newIsDefault)
+                    {
+                        // 取消其他所有包的默认状态
+                        foreach (var otherPkg in packages)
+                        {
+                            if (otherPkg != pkg)
+                            {
+                                otherPkg.isDefault = false;
+                            }
+                        }
+                    }
+                    pkg.isDefault = newIsDefault;
+                }
+                
+                // 包描述
+                pkg.description = EditorGUILayout.TextField("包描述", pkg.description);
+                
+                GUILayout.EndVertical();
+                GUILayout.Space(5);
+            }
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorUtility.SetDirty(_packageConfig);
+                AssetDatabase.SaveAssets();
+            }
+            
+            GUILayout.Space(10);
+            
+            // 验证按钮
+            if (GUILayout.Button("验证配置"))
+            {
+                if (_packageConfig.Validate(out string errorMessage))
+                {
+                    EditorUtility.DisplayDialog("验证成功", "Package 配置有效", "确定");
+                }
+                else
+                {
+                    EditorUtility.DisplayDialog("验证失败", errorMessage, "确定");
+                }
+            }
+            
+            EditorGUILayout.HelpBox(
+                "Package 配置说明：\n" +
+                "• 需与 AssetBundleCollectorSetting 中的包名一致\n" +
+                "• 可配置多个 Package 及其加载方式\n" +
+                "• 只能有一个默认 Package", 
+                MessageType.Info);
+        }
+        
+        private void SyncPackagesFromCollector()
+        {
+            if (_collectorSetting == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 AssetBundleCollectorSetting，请先创建", "确定");
+                return;
+            }
+            
+            if (_packageConfig == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                return;
+            }
+            
+            var collectorPackages = _collectorSetting.Packages;
+            if (collectorPackages == null || collectorPackages.Count == 0)
+            {
+                EditorUtility.DisplayDialog("提示", "AssetBundleCollectorSetting 中没有配置任何 Package", "确定");
+                return;
+            }
+            
+            bool confirm = EditorUtility.DisplayDialog("同步确认", 
+                $"将从 AssetBundleCollectorSetting 同步 {collectorPackages.Count} 个 Package。\n\n" +
+                "已存在的 Package 会保留其配置（PlayMode、IsDefault）。\n" +
+                "新 Package 将使用默认配置。\n" +
+                "不存在的 Package 将被移除。\n\n" +
+                "是否继续？", "确定", "取消");
+            
+            if (!confirm) return;
+            
+            int addedCount = 0;
+            int updatedCount = 0;
+            int removedCount = 0;
+            
+            // 创建 Collector 中的包名集合
+            var collectorPackageNames = new HashSet<string>(
+                collectorPackages.Select(p => p.PackageName)
+            );
+            
+            // 移除不存在的包
+            var configPackages = _packageConfig.GetAllPackages();
+            var packagesToRemove = new List<string>();
+            
+            foreach (var pkg in configPackages)
+            {
+                if (!collectorPackageNames.Contains(pkg.packageName))
+                {
+                    packagesToRemove.Add(pkg.packageName);
+                }
+            }
+            
+            foreach (var packageName in packagesToRemove)
+            {
+                _packageConfig.RemovePackage(packageName);
+                removedCount++;
+            }
+            
+            // 添加或更新包
+            bool hasDefaultPackage = configPackages.Any(p => p.isDefault && collectorPackageNames.Contains(p.packageName));
+            
+            foreach (var collectorPkg in collectorPackages)
+            {
+                var existingPkg = _packageConfig.GetPackage(collectorPkg.PackageName);
+                if (existingPkg != null)
+                {
+                    // 更新描述
+                    existingPkg.description = collectorPkg.PackageDesc;
+                    updatedCount++;
+                }
+                else
+                {
+                    // 添加新 Package，如果还没有默认包，第一个设为默认
+                    _packageConfig.AddPackage(
+                        collectorPkg.PackageName, 
+                        EPlayMode.EditorSimulateMode, 
+                        !hasDefaultPackage && addedCount == 0
+                    );
+                    
+                    // 更新描述
+                    var newPkg = _packageConfig.GetPackage(collectorPkg.PackageName);
+                    if (newPkg != null)
+                    {
+                        newPkg.description = collectorPkg.PackageDesc;
+                        if (!hasDefaultPackage && addedCount == 0)
+                        {
+                            hasDefaultPackage = true;
+                        }
+                    }
+                    
+                    addedCount++;
+                }
+            }
+            
+            EditorUtility.SetDirty(_packageConfig);
+            AssetDatabase.SaveAssets();
+            
+            string message = "同步完成！\n\n";
+            if (addedCount > 0) message += $"新增: {addedCount} 个\n";
+            if (updatedCount > 0) message += $"更新: {updatedCount} 个\n";
+            if (removedCount > 0) message += $"移除: {removedCount} 个\n";
+            
+            EditorUtility.DisplayDialog("同步完成", message, "确定");
+        }
+        
+        private void ValidatePackagesWithCollector()
+        {
+            if (_collectorSetting == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 AssetBundleCollectorSetting，请先创建", "确定");
+                return;
+            }
+            
+            if (_packageConfig == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                return;
+            }
+            
+            var configPackages = _packageConfig.GetAllPackages();
+            var collectorPackages = _collectorSetting.Packages;
+            
+            var collectorPackageNames = new HashSet<string>(
+                collectorPackages.Select(p => p.PackageName)
+            );
+            
+            var matchedPackages = new List<string>();
+            var unmatchedPackages = new List<string>();
+            
+            foreach (var pkg in configPackages)
+            {
+                if (collectorPackageNames.Contains(pkg.packageName))
+                {
+                    matchedPackages.Add(pkg.packageName);
+                }
+                else
+                {
+                    unmatchedPackages.Add(pkg.packageName);
+                }
+            }
+            
+            var missingInConfig = new List<string>();
+            foreach (var collectorPkg in collectorPackages)
+            {
+                bool existsInConfig = configPackages.Any(p => p.packageName == collectorPkg.PackageName);
+                if (!existsInConfig)
+                {
+                    missingInConfig.Add(collectorPkg.PackageName);
+                }
+            }
+            
+            string message = "验证结果：\n\n";
+            
+            if (matchedPackages.Count() > 0)
+            {
+                message += $"✓ 匹配成功 ({matchedPackages.Count()} 个):\n";
+                foreach (var name in matchedPackages)
+                {
+                    message += $"  • {name}\n";
+                }
+                message += "\n";
+            }
+            
+            if (unmatchedPackages.Count() > 0)
+            {
+                message += $"✗ 未在 Collector 中找到 ({unmatchedPackages.Count()} 个):\n";
+                foreach (var name in unmatchedPackages)
+                {
+                    message += $"  • {name}\n";
+                }
+                message += "\n";
+            }
+            
+            if (missingInConfig.Count() > 0)
+            {
+                message += $"⚠ Collector 中存在但未配置 ({missingInConfig.Count()} 个):\n";
+                foreach (var name in missingInConfig)
+                {
+                    message += $"  • {name}\n";
+                }
+                message += "\n建议点击\"从 AssetBundleCollector 同步\"按钮同步。\n";
+            }
+            
+            if (unmatchedPackages.Count() == 0 && missingInConfig.Count() == 0)
+            {
+                message += "✓ 所有 Package 完全匹配！";
+            }
+            
+            EditorUtility.DisplayDialog("验证结果", message, "确定");
+        }
+
+        private void OpenAssetBundleCollectorWindow()
+        {
+            // 打开 YooAsset 的 AssetBundle Collector 窗口
+            var windowType = System.Type.GetType("YooAsset.Editor.AssetBundleCollectorWindow,YooAsset.Editor");
+            if (windowType != null)
+            {
+                var window = EditorWindow.GetWindow(windowType, false, "AssetBundle Collector", true);
+                window.Show();
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 YooAsset 的 AssetBundleCollectorWindow 窗口类型", "确定");
+            }
         }
 
         private void BindButtons()
         {
-            var btn1 = rootVisualElement.Q<Button>("btn-create-settings");
-            var btn2 = rootVisualElement.Q<Button>("btn-create-prefab");
-            var btn3 = rootVisualElement.Q<Button>("btn-generate-reskit");
+            var btnConfigFiles = rootVisualElement.Q<Button>("btn-config-files");
+            var btnResFacade = rootVisualElement.Q<Button>("btn-res-facade");
 
-            if (btn1 != null)
-                btn1.clicked += OnCreateSettingsClicked;
-            
-            if (btn2 != null)
-                btn2.clicked += OnCreatePrefabClicked;
-            
-            if (btn3 != null)
-                btn3.clicked += OnGenerateResKitClicked;
-        }
-
-        #region 按钮事件处理
-
-        private void OnCreateSettingsClicked()
-        {
-            string settingsPath = "Assets/EUFramework/Resources/ResKitSettings";
-            
-            if (!Directory.Exists(settingsPath))
+            if (btnConfigFiles != null)
             {
-                Directory.CreateDirectory(settingsPath);
-                AssetDatabase.Refresh();
+                btnConfigFiles.clicked += () =>
+                {
+                    SetSelectedButton(btnConfigFiles);
+                    ShowFileStatusPanel();
+                };
             }
-
-            // 1. 创建 AssetBundleCollectorSetting
-            CreateAssetBundleCollectorSetting(settingsPath);
-
-            // 2. 创建 YooAssetSettings
-            CreateYooAssetSettings(settingsPath);
-
-            // 3. 创建 ResServerConfig
-            CreateResServerConfig(settingsPath);
-
-            UpdateContentArea($"✓ 配置文件创建完成！\n\n路径: {settingsPath}\n\n已创建:\n- AssetBundleCollectorSetting.asset\n- YooAssetSettings.asset\n- ResServerConfig.asset");
-            AssetDatabase.Refresh();
+            
+            if (btnResFacade != null)
+            {
+                btnResFacade.clicked += () =>
+                {
+                    SetSelectedButton(btnResFacade);
+                    ShowResFacadePanel();
+                };
+            }
         }
+        
+        private void SetSelectedButton(Button button)
+        {
+            // 移除之前选中按钮的样式
+            if (_selectedButton != null)
+            {
+                _selectedButton.RemoveFromClassList("sidebar-button-selected");
+            }
+            
+            // 添加选中样式到新按钮
+            button.AddToClassList("sidebar-button-selected");
+            _selectedButton = button;
+        }
+
+        private void ShowResFacadePanel()
+        {
+            var contentArea = rootVisualElement.Q<VisualElement>("content-area");
+            if (contentArea == null) return;
+            
+            contentArea.Clear();
+            
+            // 设置 contentArea 从左上角开始对齐
+            contentArea.style.alignItems = Align.FlexStart;
+            contentArea.style.justifyContent = Justify.FlexStart;
+            
+            // 创建 IMGUIContainer 来显示 ResFacade 功能
+            var imguiContainer = new IMGUIContainer(() =>
+            {
+                DrawResFacadePanel();
+            });
+            
+            // 设置 IMGUIContainer 占满整个区域且从左上角开始
+            imguiContainer.style.width = Length.Percent(100);
+            imguiContainer.style.height = Length.Percent(100);
+            
+            contentArea.Add(imguiContainer);
+        }
+        
+        private void DrawResFacadePanel()
+        {
+            GUILayout.BeginVertical();
+            GUILayout.Space(10);
+            
+            GUILayout.Label("ResFacade 生成工具", EditorStyles.boldLabel);
+            GUILayout.Space(20);
+            
+            // UI Prefab 生成区域
+            GUILayout.Label("UI Prefab 和脚本", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            string prefabPath = "Assets/EUFramework/Resources/ResKitUI/ResKitUserOpePopUp.prefab";
+            string scriptPath = "Assets/EUFramework/Extension/EURes/Script/ResKitUserOpePopUp.cs";
+            bool prefabExists = File.Exists(prefabPath);
+            bool scriptExists = File.Exists(scriptPath);
+            
+            // 显示脚本状态
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKitUserOpePopUp.cs:", GUILayout.Width(250));
+            if (scriptExists)
+            {
+                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
+            }
+            GUILayout.EndHorizontal();
+            
+            // 显示 prefab 状态
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKitUserOpePopUp.prefab:", GUILayout.Width(250));
+            if (prefabExists)
+            {
+                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
+            }
+            GUILayout.EndHorizontal();
+            
+            EditorGUILayout.HelpBox("生成用户操作弹窗的脚本和预制体\n脚本：可自定义 UI 交互逻辑\nPrefab：位于 Resources/ResKitUI/ 目录", MessageType.Info);
+            
+            if (prefabExists && scriptExists)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("定位到脚本", GUILayout.Height(35)))
+                {
+                    var script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
+                    EditorGUIUtility.PingObject(script);
+                    Selection.activeObject = script;
+                }
+                if (GUILayout.Button("定位到 Prefab", GUILayout.Height(35)))
+                {
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                    EditorGUIUtility.PingObject(prefab);
+                    Selection.activeObject = prefab;
+                }
+                GUILayout.EndHorizontal();
+                
+                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
+                {
+                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？\n\n警告：脚本的自定义代码将被覆盖！", "确定", "取消"))
+                    {
+                        OnCreatePrefabClicked();
+                    }
+                }
+            }
+            else if (scriptExists && !prefabExists)
+            {
+                EditorGUILayout.HelpBox("脚本已存在，但 Prefab 未生成", MessageType.Warning);
+                if (GUILayout.Button("生成 Prefab", GUILayout.Height(40)))
+                {
+                    OnCreatePrefabClicked();
+                }
+            }
+            else if (!scriptExists && prefabExists)
+            {
+                EditorGUILayout.HelpBox("Prefab 已存在，但脚本未生成", MessageType.Warning);
+                if (GUILayout.Button("生成脚本并重新创建 Prefab", GUILayout.Height(40)))
+                {
+                    OnCreatePrefabClicked();
+                }
+            }
+            else
+            {
+                if (GUILayout.Button("生成 UI Prefab 和脚本", GUILayout.Height(40)))
+                {
+                    OnCreatePrefabClicked();
+                }
+            }
+            
+            GUILayout.Space(20);
+            
+            // ResKit.Generated 代码生成区域
+            GUILayout.Label("ResKit.Generated（自动生成）", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            string codeGeneratedPath = "Assets/EUFramework/Extension/EURes/Script/Generated/ResKit.Generated.cs";
+            bool codeGeneratedExists = File.Exists(codeGeneratedPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKit.Generated.cs:", GUILayout.Width(250));
+            if (codeGeneratedExists)
+            {
+                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
+            }
+            GUILayout.EndHorizontal();
+            
+            EditorGUILayout.HelpBox("自动生成的 ResKit 基础工具类（partial class）", MessageType.Info);
+            
+            if (codeGeneratedExists)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("定位到文件", GUILayout.Height(35)))
+                {
+                    var script = AssetDatabase.LoadAssetAtPath<TextAsset>(codeGeneratedPath);
+                    EditorGUIUtility.PingObject(script);
+                    Selection.activeObject = script;
+                }
+                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
+                {
+                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？", "确定", "取消"))
+                    {
+                        OnGenerateResKitClicked();
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                if (GUILayout.Button("生成 ResKit.Generated", GUILayout.Height(40)))
+                {
+                    OnGenerateResKitClicked();
+                }
+            }
+            
+            GUILayout.Space(20);
+            
+            // ResKit.cs 用户代码生成区域
+            GUILayout.Label("ResKit（用户编辑）", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            string codeUserPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
+            bool codeUserExists = File.Exists(codeUserPath);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("ResKit.cs:", GUILayout.Width(250));
+            if (codeUserExists)
+            {
+                GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUILayout.Label("✗ 未生成", EditorStyles.boldLabel);
+            }
+            GUILayout.EndHorizontal();
+            
+            EditorGUILayout.HelpBox("用户可编辑的 ResKit 类，包含初始化、热更新、UI 交互等逻辑", MessageType.Info);
+            
+            if (codeUserExists)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("定位到文件", GUILayout.Height(35)))
+                {
+                    var script = AssetDatabase.LoadAssetAtPath<TextAsset>(codeUserPath);
+                    EditorGUIUtility.PingObject(script);
+                    Selection.activeObject = script;
+                }
+                if (GUILayout.Button("重新生成", GUILayout.Height(35)))
+                {
+                    if (EditorUtility.DisplayDialog("确认", "文件已存在，是否覆盖重新生成？\n\n警告：这将覆盖您的自定义代码！", "确定", "取消"))
+                    {
+                        OnGenerateUserResKitClicked();
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                if (GUILayout.Button("生成 ResKit 用户代码", GUILayout.Height(40)))
+                {
+                    OnGenerateUserResKitClicked();
+                }
+            }
+            
+            GUILayout.EndVertical();
+        }
+
+        #region 生成操作
 
         private void OnCreatePrefabClicked()
         {
-            string prefabPath = "Assets/EUFramework/Extension/EURes/Prefabs";
+            // 1. 先生成 ResKitUserOpePopUp.cs 脚本
+            string scriptPath = "Assets/EUFramework/Extension/EURes/Script/ResKitUserOpePopUp.cs";
+            bool scriptGenerated = GenerateResKitUserOpePopUpScript(scriptPath);
+            
+            if (!scriptGenerated)
+            {
+                EditorUtility.DisplayDialog("错误", "ResKitUserOpePopUp.cs 脚本生成失败，无法继续", "确定");
+                return;
+            }
+            
+            // 刷新资源数据库以编译新脚本
+            AssetDatabase.Refresh();
+            
+            // 等待编译完成
+            System.Threading.Thread.Sleep(500);
+            
+            // 2. 创建 Prefab
+            string prefabPath = "Assets/EUFramework/Resources/ResKitUI";
             
             if (!Directory.Exists(prefabPath))
             {
@@ -99,37 +954,90 @@ namespace EUFramework.Extension.EURes.Editor
 
             string fullPath = Path.Combine(prefabPath, "ResKitUserOpePopUp.prefab");
 
-            // 检查是否已存在
-            if (File.Exists(fullPath))
-            {
-                bool overwrite = EditorUtility.DisplayDialog(
-                    "文件已存在",
-                    $"预制体已存在:\n{fullPath}\n\n是否覆盖?",
-                    "覆盖",
-                    "取消"
-                );
-
-                if (!overwrite)
-                {
-                    UpdateContentArea("操作已取消");
-                    return;
-                }
-            }
-
             // 创建默认的弹窗预制体
             GameObject popup = CreateDefaultPopupPrefab();
             
             // 保存为预制体
-            PrefabUtility.SaveAsPrefabAsset(popup, fullPath);
+            GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(popup, fullPath);
             DestroyImmediate(popup);
 
-            UpdateContentArea($"✓ UI Prefab 创建完成！\n\n路径: {fullPath}\n\n包含组件:\n- Canvas (ScreenSpaceOverlay)\n- Panel 背景面板\n- Title 标题文本\n- Content 内容文本\n- BtnConfirm 确认按钮\n- BtnCancel 取消按钮");
+            // 添加 ResKitUserOpePopUp 组件到 prefab
+            AddResKitUserOpePopUpComponent(prefabAsset);
+
+            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             
             // 选中创建的预制体
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(fullPath);
-            EditorGUIUtility.PingObject(prefab);
-            Selection.activeObject = prefab;
+            EditorGUIUtility.PingObject(prefabAsset);
+            Selection.activeObject = prefabAsset;
+            
+            EditorUtility.DisplayDialog("成功", 
+                $"UI Prefab 和脚本创建完成！\n\n" +
+                $"Prefab 路径: {fullPath}\n" +
+                $"脚本路径: {scriptPath}\n\n" +
+                $"已自动添加并绑定 ResKitUserOpePopUp 组件", 
+                "确定");
+        }
+        
+        private bool GenerateResKitUserOpePopUpScript(string outputPath)
+        {
+            string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/ResKitUserOpePopUp.cs.sbn";
+
+            if (!File.Exists(templatePath))
+            {
+                Debug.LogError($"[ResKit] 模板文件不存在: {templatePath}");
+                return false;
+            }
+
+            // 读取模板
+            string template = File.ReadAllText(templatePath);
+
+            // 替换变量
+            string generated = template
+                .Replace("{{ namespace }}", "EUFramework.Extension.EURes")
+                .Replace("{{ class_name }}", "ResKitUserOpePopUp");
+
+            // 确保输出目录存在
+            string outputDir = Path.GetDirectoryName(outputPath);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // 保存生成的代码
+            File.WriteAllText(outputPath, generated);
+            Debug.Log($"[ResKit] ResKitUserOpePopUp.cs 生成成功: {outputPath}");
+            
+            return true;
+        }
+        
+        private void AddResKitUserOpePopUpComponent(GameObject prefabAsset)
+        {
+            // 使用反射添加组件，避免直接引用运行时类型
+            var assemblyName = "EURes";
+            var typeName = "EUFramework.Extension.EURes.ResKitUserOpePopUp";
+            
+            var assembly = System.AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == assemblyName);
+            
+            if (assembly != null)
+            {
+                var componentType = assembly.GetType(typeName);
+                if (componentType != null)
+                {
+                    var component = prefabAsset.AddComponent(componentType);
+                    EditorUtility.SetDirty(prefabAsset);
+                    Debug.Log($"[ResKit] 已添加 {typeName} 组件到 Prefab");
+                }
+                else
+                {
+                    Debug.LogWarning($"[ResKit] 未找到类型 {typeName}，请确保 ResKitUserOpePopUp.cs 已编译");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[ResKit] 未找到程序集 {assemblyName}");
+            }
         }
 
         private void OnGenerateResKitClicked()
@@ -139,7 +1047,7 @@ namespace EUFramework.Extension.EURes.Editor
 
             if (!File.Exists(templatePath))
             {
-                UpdateContentArea($"✗ 错误：模板文件不存在！\n\n路径: {templatePath}");
+                EditorUtility.DisplayDialog("错误", $"模板文件不存在！\n\n路径: {templatePath}", "确定");
                 return;
             }
 
@@ -162,12 +1070,50 @@ namespace EUFramework.Extension.EURes.Editor
             File.WriteAllText(outputPath, generated);
             AssetDatabase.Refresh();
 
-            UpdateContentArea($"✓ ResKit 代码生成完成！\n\n路径: {outputPath}\n\n生成的方法:\n- InitPackageResAsync()\n- GetPackage()\n- SetDefaultPackage()\n- IsInitialized()");
-            
             // 选中生成的文件
             var script = AssetDatabase.LoadAssetAtPath<TextAsset>(outputPath);
             EditorGUIUtility.PingObject(script);
             Selection.activeObject = script;
+            
+            EditorUtility.DisplayDialog("成功", $"ResKit 代码生成完成！\n\n路径: {outputPath}", "确定");
+        }
+        
+        private void OnGenerateUserResKitClicked()
+        {
+            string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/DefaultResKit.cs.sbn";
+            string outputPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
+
+            if (!File.Exists(templatePath))
+            {
+                EditorUtility.DisplayDialog("错误", $"模板文件不存在！\n\n路径: {templatePath}", "确定");
+                return;
+            }
+
+            // 读取模板
+            string template = File.ReadAllText(templatePath);
+
+            // 替换变量
+            string generated = template
+                .Replace("{{ namespace }}", "EUFramework.Extension.EURes")
+                .Replace("{{ class_name }}", "ResKit");
+
+            // 确保输出目录存在
+            string outputDir = Path.GetDirectoryName(outputPath);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // 保存生成的代码
+            File.WriteAllText(outputPath, generated);
+            AssetDatabase.Refresh();
+
+            // 选中生成的文件
+            var script = AssetDatabase.LoadAssetAtPath<TextAsset>(outputPath);
+            EditorGUIUtility.PingObject(script);
+            Selection.activeObject = script;
+            
+            EditorUtility.DisplayDialog("成功", $"ResKit 用户代码生成完成！\n\n路径: {outputPath}\n\n包含功能:\n- 资源包初始化\n- 热更新流程\n- UI 交互逻辑", "确定");
         }
 
         #endregion
@@ -176,6 +1122,12 @@ namespace EUFramework.Extension.EURes.Editor
 
         private void CreateAssetBundleCollectorSetting(string basePath)
         {
+            if (!Directory.Exists(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+                AssetDatabase.Refresh();
+            }
+            
             string path = Path.Combine(basePath, "AssetBundleCollectorSetting.asset");
             
             var existing = AssetDatabase.LoadAssetAtPath<AssetBundleCollectorSetting>(path);
@@ -183,64 +1135,125 @@ namespace EUFramework.Extension.EURes.Editor
             {
                 Debug.Log($"[ResKit] AssetBundleCollectorSetting 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
+                _collectorSetting = existing;
                 return;
             }
 
             var setting = ScriptableObject.CreateInstance<AssetBundleCollectorSetting>();
             AssetDatabase.CreateAsset(setting, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
             Debug.Log($"[ResKit] AssetBundleCollectorSetting 创建成功: {path}");
-        }
-
-        private void CreateYooAssetSettings(string basePath)
-        {
-            string path = Path.Combine(basePath, "YooAssetSettings.asset");
-            
-            // YooAsset 的设置类型可能不同，这里使用通用方法
-            var existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-            if (existing != null)
-            {
-                Debug.Log($"[ResKit] YooAssetSettings 已存在: {path}");
-                EditorGUIUtility.PingObject(existing);
-                return;
-            }
-
-            // 尝试创建 YooAsset 的构建设置
-            try
-            {
-                var settingType = System.Type.GetType("YooAsset.Editor.AssetBundleBuilderSetting,YooAsset.Editor");
-                if (settingType != null)
-                {
-                    var setting = ScriptableObject.CreateInstance(settingType);
-                    AssetDatabase.CreateAsset(setting, path);
-                    Debug.Log($"[ResKit] YooAssetSettings 创建成功: {path}");
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning($"[ResKit] YooAssetSettings 创建失败: {e.Message}");
-            }
+            _collectorSetting = setting;
         }
 
         private void CreateResServerConfig(string basePath)
         {
+            if (!Directory.Exists(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+                AssetDatabase.Refresh();
+            }
+            
             string path = Path.Combine(basePath, "ResServerConfig.asset");
             
-            var existing = AssetDatabase.LoadAssetAtPath<EUFramework.Extension.EURes.ResServerConfig>(path);
+            var existing = AssetDatabase.LoadAssetAtPath<ResServerConfig>(path);
             if (existing != null)
             {
                 Debug.Log($"[ResKit] ResServerConfig 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
+                _resServerConfig = existing;
                 return;
             }
 
-            var config = ScriptableObject.CreateInstance<EUFramework.Extension.EURes.ResServerConfig>();
-            config.protocol = EUFramework.Extension.EURes.ServerProtocol.HTTP;
+            var config = ScriptableObject.CreateInstance<ResServerConfig>();
+            config.protocol = ServerProtocol.HTTP;
             config.hostServer = "127.0.0.1";
             config.port = 80;
             config.appVersion = "1.0.0";
             
             AssetDatabase.CreateAsset(config, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
             Debug.Log($"[ResKit] ResServerConfig 创建成功: {path}");
+            _resServerConfig = config;
+        }
+        
+        private void CreateYooAssetSettings(string basePath)
+        {
+            if (!Directory.Exists(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+                AssetDatabase.Refresh();
+            }
+            
+            string path = Path.Combine(basePath, "YooAssetSettings.asset");
+            
+            var existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+            if (existing != null)
+            {
+                Debug.Log($"[ResKit] YooAssetSettings 已存在: {path}");
+                EditorGUIUtility.PingObject(existing);
+                _yooAssetSettings = existing;
+                return;
+            }
+
+            // 使用反射创建 YooAssetSettings（因为是 internal 类）
+            var yooAssetSettingsType = typeof(YooAssets).Assembly.GetType("YooAsset.YooAssetSettings");
+            if (yooAssetSettingsType != null)
+            {
+                var settings = ScriptableObject.CreateInstance(yooAssetSettingsType);
+                
+                // 设置默认值
+                var folderNameField = yooAssetSettingsType.GetField("DefaultYooFolderName");
+                var manifestPrefixField = yooAssetSettingsType.GetField("PackageManifestPrefix");
+                
+                if (folderNameField != null)
+                    folderNameField.SetValue(settings, "yoo");
+                if (manifestPrefixField != null)
+                    manifestPrefixField.SetValue(settings, string.Empty);
+                
+                AssetDatabase.CreateAsset(settings, path);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log($"[ResKit] YooAssetSettings 创建成功: {path}");
+                _yooAssetSettings = settings;
+            }
+            else
+            {
+                Debug.LogError("[ResKit] 无法找到 YooAsset.YooAssetSettings 类型");
+            }
+        }
+        
+        private void CreateResKitPackageConfig(string basePath)
+        {
+            if (!Directory.Exists(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+                AssetDatabase.Refresh();
+            }
+            
+            string path = Path.Combine(basePath, "ResKitPackageConfig.asset");
+            
+            var existing = AssetDatabase.LoadAssetAtPath<ResKitPackageConfig>(path);
+            if (existing != null)
+            {
+                Debug.Log($"[ResKit] ResKitPackageConfig 已存在: {path}");
+                EditorGUIUtility.PingObject(existing);
+                _packageConfig = existing;
+                return;
+            }
+
+            var config = ScriptableObject.CreateInstance<ResKitPackageConfig>();
+            
+            // 添加默认 Package
+            config.AddPackage("DefaultPackage", EPlayMode.EditorSimulateMode, true);
+            
+            AssetDatabase.CreateAsset(config, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[ResKit] ResKitPackageConfig 创建成功: {path}");
+            _packageConfig = config;
         }
 
         #endregion
@@ -307,8 +1320,8 @@ namespace EUFramework.Extension.EURes.Editor
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.white;
             
-            // 使用 Unity 默认字体
-            textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            // 使用 Unity 默认字体（LegacyRuntime.ttf 适用于新版本 Unity）
+            textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
         private void CreateButton(Transform parent, string name, string text, Vector2 position)
@@ -343,21 +1356,12 @@ namespace EUFramework.Extension.EURes.Editor
             textComponent.fontSize = 16;
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.white;
-            textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
         #endregion
 
         #region UI 更新
-
-        private void UpdateContentArea(string message)
-        {
-            var contentLabel = rootVisualElement.Q<Label>("content-label");
-            if (contentLabel != null)
-            {
-                contentLabel.text = message;
-            }
-        }
 
         private void CreateFallbackUI()
         {

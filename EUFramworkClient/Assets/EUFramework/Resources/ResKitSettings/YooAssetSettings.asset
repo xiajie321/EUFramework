@@ -9,9 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d816bebaf418cc140af5febc9994efc8, type: 3}
-  m_Name: ResServerConfig
+  m_Script: {fileID: 11500000, guid: 5bd1afdce9715f84eb4cbc901922afc2, type: 3}
+  m_Name: YooAssetSettings
   m_EditorClassIdentifier: 
-  hostServerIP: 127.0.0.1
-  port: 80
-  appVersion: 1.0.0
+  DefaultYooFolderName: yoo
+  PackageManifestPrefix: test

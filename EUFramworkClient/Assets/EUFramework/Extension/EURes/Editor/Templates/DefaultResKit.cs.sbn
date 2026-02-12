@@ -1,0 +1,269 @@
+using System;
+using UnityEngine;
+using YooAsset;
+using Cysharp.Threading.Tasks;
+
+namespace {{ namespace }}
+{
+    /// <summary>
+    /// ResKit 资源管理入口类
+    /// 用户可编辑版本 - 包含初始化逻辑和 UI 交互
+    /// </summary>
+    public partial class {{ class_name }}
+    {
+        private static ResKitUserOpePopUp _currentPopup;
+        
+        /// <summary>
+        /// 初始化资源系统
+        /// </summary>
+        /// <param name="packageName">资源包名称（从 AssetBundleCollectorSetting 中获取）</param>
+        /// <param name="playMode">运行模式</param>
+        public static async UniTask<bool> InitializeAsync(string packageName = "DefaultPackage", EPlayMode playMode = EPlayMode.EditorSimulateMode)
+        {
+            try
+            {
+                // 初始化 YooAsset
+                YooAssets.Initialize();
+                
+                // 创建资源包
+                var package = YooAssets.TryGetPackage(packageName);
+                if (package == null)
+                {
+                    package = YooAssets.CreatePackage(packageName);
+                    YooAssets.SetDefaultPackage(package);
+                }
+                
+                // 初始化资源包
+                InitializationOperation initOperation = null;
+                
+                switch (playMode)
+                {
+                    case EPlayMode.EditorSimulateMode:
+                        var simulateParams = new EditorSimulateModeParameters();
+                        simulateParams.SimulateManifestFilePath = EditorSimulateModeHelper.SimulateBuild(EDefaultBuildPipeline.BuiltinBuildPipeline, packageName);
+                        initOperation = package.InitializeAsync(simulateParams);
+                        break;
+                        
+                    case EPlayMode.OfflinePlayMode:
+                        var offlineParams = new OfflinePlayModeParameters();
+                        initOperation = package.InitializeAsync(offlineParams);
+                        break;
+                        
+                    case EPlayMode.HostPlayMode:
+                        // 从 ResServerConfig 获取服务器配置
+                        var serverConfig = Resources.Load<ResServerConfig>("ResKitSettings/ResServerConfig");
+                        if (serverConfig == null)
+                        {
+                            Debug.LogError("[ResKit] 未找到 ResServerConfig，请先创建配置文件");
+                            return false;
+                        }
+                        
+                        var hostParams = new HostPlayModeParameters();
+                        hostParams.BuildinQueryServices = new GameQueryServices();
+                        hostParams.DeliveryQueryServices = new DefaultDeliveryQueryServices();
+                        hostParams.RemoteServices = new RemoteServices(serverConfig.GetServerUrl());
+                        initOperation = package.InitializeAsync(hostParams);
+                        break;
+                        
+                    case EPlayMode.WebPlayMode:
+                        var webParams = new WebPlayModeParameters();
+                        webParams.BuildinQueryServices = new GameQueryServices();
+                        webParams.RemoteServices = new RemoteServices("WebCDN地址");
+                        initOperation = package.InitializeAsync(webParams);
+                        break;
+                }
+                
+                await initOperation.ToUniTask();
+                
+                if (initOperation.Status == EOperationStatus.Succeed)
+                {
+                    Debug.Log($"[ResKit] 资源包 {packageName} 初始化成功");
+                    return true;
+                }
+                else
+                {
+                    Debug.LogError($"[ResKit] 资源包初始化失败: {initOperation.Error}");
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[ResKit] 初始化异常: {e.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// 执行资源热更新流程
+        /// </summary>
+        /// <param name="packageName">资源包名称</param>
+        /// <param name="playMode">运行模式</param>
+        public static async UniTask<bool> RunPatchUpdateAsync(string packageName = "DefaultPackage", EPlayMode playMode = EPlayMode.HostPlayMode)
+        {
+            var package = YooAssets.GetPackage(packageName);
+            if (package == null)
+            {
+                Debug.LogError($"[ResKit] 资源包 {packageName} 不存在");
+                return false;
+            }
+            
+            // 创建热更新操作
+            var patchOperation = new ResKitPatchOperation(packageName, playMode);
+            
+            // 绑定回调 - 初始化失败
+            patchOperation.OnInitializePackageFailed = () =>
+            {
+                ShowUserOperationPopup(
+                    "初始化失败",
+                    "资源包初始化失败，是否重试？",
+                    onConfirm: () => patchOperation.UserRetryInitialize(),
+                    onCancel: () => QuitGame()
+                );
+            };
+            
+            // 绑定回调 - 版本请求失败
+            patchOperation.OnPackageVersionRequestFailed = () =>
+            {
+                ShowUserOperationPopup(
+                    "网络错误",
+                    "无法获取资源版本信息，请检查网络后重试",
+                    onConfirm: () => patchOperation.UserRetryRequestVersion(),
+                    onCancel: () => QuitGame()
+                );
+            };
+            
+            // 绑定回调 - 清单更新失败
+            patchOperation.OnUpdatePackageManifestFailed = () =>
+            {
+                ShowUserOperationPopup(
+                    "更新失败",
+                    "资源清单更新失败，是否重试？",
+                    onConfirm: () => patchOperation.UserRetryUpdateManifest(),
+                    onCancel: () => QuitGame()
+                );
+            };
+            
+            // 绑定回调 - 发现需要更新的文件
+            patchOperation.OnFoundUpdateFiles = (totalCount, totalBytes) =>
+            {
+                string sizeText = GetBytesString(totalBytes);
+                ShowUserOperationPopup(
+                    "发现更新",
+                    $"发现 {totalCount} 个文件需要更新\n大小: {sizeText}\n\n是否开始下载？",
+                    onConfirm: () => patchOperation.UserBeginDownloadWebFiles(),
+                    onCancel: () => QuitGame()
+                );
+            };
+            
+            // 绑定回调 - 下载进度
+            patchOperation.OnDownloadUpdate = (totalCount, currentCount, totalBytes, currentBytes) =>
+            {
+                float progress = (float)currentCount / totalCount;
+                string sizeText = $"{GetBytesString(currentBytes)}/{GetBytesString(totalBytes)}";
+                Debug.Log($"[ResKit] 下载进度: {currentCount}/{totalCount} ({progress:P2}) - {sizeText}");
+                
+                // 这里可以更新 UI 进度条
+                UpdateDownloadProgress(progress, currentCount, totalCount, sizeText);
+            };
+            
+            // 绑定回调 - 下载错误
+            patchOperation.OnDownloadError = (fileName, errorInfo) =>
+            {
+                Debug.LogError($"[ResKit] 下载失败: {fileName} - {errorInfo}");
+                ShowUserOperationPopup(
+                    "下载失败",
+                    $"文件下载失败:\n{fileName}\n\n错误信息:\n{errorInfo}",
+                    onConfirm: () => QuitGame(),
+                    onCancel: () => QuitGame()
+                );
+            };
+            
+            // 启动热更新流程
+            YooAssets.StartOperation(patchOperation);
+            
+            // 等待完成
+            await patchOperation.ToUniTask();
+            
+            return patchOperation.Status == EOperationStatus.Succeed;
+        }
+        
+        /// <summary>
+        /// 显示用户操作弹窗
+        /// </summary>
+        private static void ShowUserOperationPopup(string title, string content, Action onConfirm, Action onCancel)
+        {
+            // 关闭之前的弹窗
+            CloseUserOperationPopup();
+            
+            // 加载弹窗预制体
+            var prefab = Resources.Load<GameObject>("ResKitUI/ResKitUserOpePopUp");
+            if (prefab == null)
+            {
+                Debug.LogError("[ResKit] 未找到 ResKitUserOpePopUp 预制体，请先生成");
+                return;
+            }
+            
+            var popupObj = UnityEngine.Object.Instantiate(prefab);
+            _currentPopup = popupObj.GetComponent<ResKitUserOpePopUp>();
+            
+            if (_currentPopup != null)
+            {
+                _currentPopup.Show(title, content, onConfirm, onCancel);
+            }
+            else
+            {
+                Debug.LogError("[ResKit] ResKitUserOpePopUp 组件未找到");
+            }
+        }
+        
+        /// <summary>
+        /// 关闭用户操作弹窗
+        /// </summary>
+        private static void CloseUserOperationPopup()
+        {
+            if (_currentPopup != null)
+            {
+                UnityEngine.Object.Destroy(_currentPopup.gameObject);
+                _currentPopup = null;
+            }
+        }
+        
+        /// <summary>
+        /// 更新下载进度（可由用户自定义实现）
+        /// </summary>
+        private static void UpdateDownloadProgress(float progress, int currentCount, int totalCount, string sizeText)
+        {
+            // 用户可以在这里实现自己的进度显示逻辑
+            // 例如：更新进度条 UI
+        }
+        
+        /// <summary>
+        /// 退出游戏
+        /// </summary>
+        private static void QuitGame()
+        {
+            Debug.Log("[ResKit] 用户选择退出游戏");
+            
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+        
+        /// <summary>
+        /// 字节数转换为可读字符串
+        /// </summary>
+        private static string GetBytesString(long bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            else if (bytes < 1024 * 1024)
+                return $"{bytes / 1024f:F2} KB";
+            else if (bytes < 1024 * 1024 * 1024)
+                return $"{bytes / (1024f * 1024f):F2} MB";
+            else
+                return $"{bytes / (1024f * 1024f * 1024f):F2} GB";
+        }
+    }
+}
