@@ -71,6 +71,19 @@ namespace EUFramework.Extension.MarkdownDocManager
         // 跳转目标
         private int pendingScrollLineIndex = -1;
 
+        // 异步渲染相关状态
+        private bool isRendering = false;
+        private string[] pendingRenderLines;
+        private int currentRenderIndex;
+        private VisualElement pendingContentPanel;
+        private const int LINES_PER_FRAME = 100; // 每帧处理的行数，可根据性能调整
+        
+        // 渲染上下文状态
+        private bool renderInCodeBlock = false;
+        private string renderCodeBlockContent = "";
+        private string renderCodeBlockLanguage = "";
+        private bool renderInList = false;
+
         public enum SearchMode
         {
             FileName,
@@ -103,6 +116,7 @@ namespace EUFramework.Extension.MarkdownDocManager
 
         private void OnDisable()
         {
+            isRendering = false;
             EditorApplication.update -= OnEditorUpdate;
             CleanupResources();
         }
@@ -145,6 +159,12 @@ namespace EUFramework.Extension.MarkdownDocManager
             {
                 isSearching = false;
                 PerformSearchAsync();
+            }
+
+            // 处理异步渲染
+            if (isRendering)
+            {
+                ContinueRendering();
             }
         }
 
@@ -1291,6 +1311,9 @@ namespace EUFramework.Extension.MarkdownDocManager
         
         private void RenderMarkdown(string markdown, string title)
         {
+            // 停止之前的渲染
+            isRendering = false;
+
             contentScrollView.Clear();
             currentHeaders.Clear();
             currentSearchMatches.Clear();
@@ -1301,6 +1324,7 @@ namespace EUFramework.Extension.MarkdownDocManager
             
             var contentPanel = new VisualElement();
             contentPanel.AddToClassList("markdown-content");
+            pendingContentPanel = contentPanel;
             
             // 标题
             var titleElement = new Label(title);
@@ -1308,128 +1332,157 @@ namespace EUFramework.Extension.MarkdownDocManager
             CheckAndRegisterSearchMatch(title, titleElement, -1);
             contentPanel.Add(titleElement);
             
-            // 解析并渲染Markdown
-            var lines = markdown.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            
-            bool inCodeBlock = false;
-            string codeBlockContent = "";
-            string codeBlockLanguage = "";
-            bool inList = false;
-            
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i];
-                
-                // 图片处理 - 简单匹配 ![](url) 格式
-                var imgMatch = Regex.Match(line, @"!\[(.*?)\]\((.*?)\)");
-                if (imgMatch.Success)
-                {
-                    string altText = imgMatch.Groups[1].Value;
-                    string imgPath = imgMatch.Groups[2].Value;
-                    
-                    if (IsVideoFile(imgPath) || altText.ToLower().Contains("video"))
-                    {
-                        CreateVideoPlayer(imgPath, altText, contentPanel);
-                    }
-                    else
-                    {
-                        CreateImage(imgPath, altText, contentPanel);
-                    }
-                    continue;
-                }
-
-                // 分割线处理
-                if (Regex.IsMatch(line, @"^(\*{3,}|-{3,}|_{3,})$"))
-                {
-                    var separator = new VisualElement();
-                    separator.AddToClassList("markdown-separator");
-                    contentPanel.Add(separator);
-                    continue;
-                }
-
-                // 代码块处理
-                if (line.TrimStart().StartsWith("```"))
-                {
-                    if (!inCodeBlock)
-                    {
-                        inCodeBlock = true;
-                        codeBlockLanguage = line.TrimStart().Substring(3).Trim();
-                        codeBlockContent = "";
-                    }
-                    else
-                    {
-                        inCodeBlock = false;
-                        var codeBlock = CreateCodeBlock(codeBlockContent, codeBlockLanguage);
-                        contentPanel.Add(codeBlock);
-                        codeBlockContent = "";
-                        codeBlockLanguage = "";
-                    }
-                    continue;
-                }
-                
-                if (inCodeBlock)
-                {
-                    codeBlockContent += line + "\n";
-                    continue;
-                }
-                
-                // 引用块处理
-                if (line.TrimStart().StartsWith(">"))
-                {
-                    inList = false;
-                    var quote = CreateBlockquote(line, i);
-                    contentPanel.Add(quote);
-                    continue;
-                }
-
-                // 标题处理
-                if (line.StartsWith("#"))
-                {
-                    inList = false;
-                    var header = CreateHeader(line, contentPanel, i);
-                    contentPanel.Add(header);
-                    continue;
-                }
-                
-                // 列表处理
-                if (Regex.IsMatch(line, @"^\s*[-*+]\s+") || Regex.IsMatch(line, @"^\s*\d+\.\s+"))
-                {
-                    if (!inList)
-                    {
-                        inList = true;
-                    }
-                    var listItem = CreateListItem(line, i);
-                    contentPanel.Add(listItem);
-                    continue;
-                }
-                else
-                {
-                    inList = false;
-                }
-                
-                // 空行
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    var spacer = new VisualElement();
-                    spacer.AddToClassList("markdown-spacer");
-                    contentPanel.Add(spacer);
-                    continue;
-                }
-                
-                // 普通段落
-                var paragraph = CreateParagraph(line, i);
-                contentPanel.Add(paragraph);
-            }
-            
             contentScrollView.Add(contentPanel);
             
+            // 初始化渲染状态
+            pendingRenderLines = markdown.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            currentRenderIndex = 0;
+            renderInCodeBlock = false;
+            renderCodeBlockContent = "";
+            renderCodeBlockLanguage = "";
+            renderInList = false;
+            
+            // 开始异步渲染
+            isRendering = true;
+        }
+
+        private void ContinueRendering()
+        {
+            if (pendingRenderLines == null || pendingContentPanel == null)
+            {
+                isRendering = false;
+                return;
+            }
+
+            int endIndex = Mathf.Min(currentRenderIndex + LINES_PER_FRAME, pendingRenderLines.Length);
+            
+            for (int i = currentRenderIndex; i < endIndex; i++)
+            {
+                ProcessLine(pendingRenderLines[i], i, pendingContentPanel);
+            }
+            
+            currentRenderIndex = endIndex;
+            
+            if (currentRenderIndex >= pendingRenderLines.Length)
+            {
+                FinishRendering();
+            }
+        }
+
+        private void FinishRendering()
+        {
+            isRendering = false;
+            
             // 使用 USS 过渡动画
-            contentPanel.schedule.Execute(() => {
-                contentPanel.AddToClassList("markdown-content-visible");
+            pendingContentPanel.schedule.Execute(() => {
+                pendingContentPanel.AddToClassList("markdown-content-visible");
             }).StartingIn(50);
 
             // 等待布局完成后更新导航
-            contentPanel.RegisterCallback<GeometryChangedEvent>(OnContentLayoutUpdated);
+            pendingContentPanel.RegisterCallback<GeometryChangedEvent>(OnContentLayoutUpdated);
+        }
+
+        private void ProcessLine(string line, int index, VisualElement contentPanel)
+        {
+            // 图片处理 - 简单匹配 ![](url) 格式
+            var imgMatch = Regex.Match(line, @"!\[(.*?)\]\((.*?)\)");
+            if (imgMatch.Success)
+            {
+                string altText = imgMatch.Groups[1].Value;
+                string imgPath = imgMatch.Groups[2].Value;
+                
+                if (IsVideoFile(imgPath) || altText.ToLower().Contains("video"))
+                {
+                    CreateVideoPlayer(imgPath, altText, contentPanel);
+                }
+                else
+                {
+                    CreateImage(imgPath, altText, contentPanel);
+                }
+                return;
+            }
+
+            // 分割线处理
+            if (Regex.IsMatch(line, @"^(\*{3,}|-{3,}|_{3,})$"))
+            {
+                var separator = new VisualElement();
+                separator.AddToClassList("markdown-separator");
+                contentPanel.Add(separator);
+                return;
+            }
+
+            // 代码块处理
+            if (line.TrimStart().StartsWith("```"))
+            {
+                if (!renderInCodeBlock)
+                {
+                    renderInCodeBlock = true;
+                    renderCodeBlockLanguage = line.TrimStart().Substring(3).Trim();
+                    renderCodeBlockContent = "";
+                }
+                else
+                {
+                    renderInCodeBlock = false;
+                    var codeBlock = CreateCodeBlock(renderCodeBlockContent, renderCodeBlockLanguage);
+                    contentPanel.Add(codeBlock);
+                    renderCodeBlockContent = "";
+                    renderCodeBlockLanguage = "";
+                }
+                return;
+            }
+            
+            if (renderInCodeBlock)
+            {
+                renderCodeBlockContent += line + "\n";
+                return;
+            }
+            
+            // 引用块处理
+            if (line.TrimStart().StartsWith(">"))
+            {
+                renderInList = false;
+                var quote = CreateBlockquote(line, index);
+                contentPanel.Add(quote);
+                return;
+            }
+
+            // 标题处理
+            if (line.StartsWith("#"))
+            {
+                renderInList = false;
+                var header = CreateHeader(line, contentPanel, index);
+                contentPanel.Add(header);
+                return;
+            }
+            
+            // 列表处理
+            if (Regex.IsMatch(line, @"^\s*[-*+]\s+") || Regex.IsMatch(line, @"^\s*\d+\.\s+"))
+            {
+                if (!renderInList)
+                {
+                    renderInList = true;
+                }
+                var listItem = CreateListItem(line, index);
+                contentPanel.Add(listItem);
+                return;
+            }
+            else
+            {
+                renderInList = false;
+            }
+            
+            // 空行
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                var spacer = new VisualElement();
+                spacer.AddToClassList("markdown-spacer");
+                contentPanel.Add(spacer);
+                return;
+            }
+            
+            // 普通段落
+            var paragraph = CreateParagraph(line, index);
+            contentPanel.Add(paragraph);
         }
 
         private void OnContentLayoutUpdated(GeometryChangedEvent evt)
