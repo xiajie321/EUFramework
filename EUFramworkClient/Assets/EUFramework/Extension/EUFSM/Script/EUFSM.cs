@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-/// <summary>
+namespace EUFramwork.Extension.FSM
+{
+    /// <summary>
 /// EUFSM 状态机
 /// </summary>
 /// <typeparam name="TKey">枚举类型的状态ID</typeparam>
@@ -22,6 +24,7 @@ public class EUFSM<TKey> where TKey : struct, Enum
     private IState _previousState;
     // 上一个状态ID
     private TKey _previousId;
+    private Action<TKey, TKey> _onStateChanged;
 
     /// <summary>
     /// 获取当前状态对象
@@ -39,7 +42,7 @@ public class EUFSM<TKey> where TKey : struct, Enum
     /// 获取上一个状态ID
     /// </summary>
     public TKey PreviousId => _previousId;
-
+    public Action<TKey, TKey> OnStateChanged => _onStateChanged;
     /// <summary>
     /// 将枚举转换为int索引
     /// </summary>
@@ -134,16 +137,16 @@ public class EUFSM<TKey> where TKey : struct, Enum
         
         // 如果是同一状态，则不进行切换
         if (_stateList[index] == _currentState) return;
-
         // 记录上一个状态
         _previousId = _currentId;
         _previousState = _currentState;
-        // 退出当前状态
+        //退出上一次的状态
         _previousState?.OnExit();
-        
         // 进入新状态
         _currentId = id;
         _currentState = _stateList[index];
+        //状态更改时执行的方法
+        _onStateChanged?.Invoke(_currentId,_previousId);
         _currentState?.OnEnter();
     }
     
@@ -208,31 +211,7 @@ public class EUFSM<TKey> where TKey : struct, Enum
         _currentState?.OnFixedUpdate();
     }
 }
-
-/// <summary>
-/// 状态接口
-/// </summary>
-public interface IState
-{
-    /// <summary>
-    /// 是否进入状态的逻辑
-    /// </summary>
-    /// <returns>是否进入当前状态</returns>
-    public bool OnCondition();
-    /// <summary>
-    /// 进入状态时的逻辑
-    /// </summary>
-    public void OnEnter();
-    /// <summary>
-    /// 退出状态时的逻辑
-    /// </summary>
-    public void OnExit();
-    /// <summary>
-    /// 该状态每帧执行的逻辑
-    /// </summary>
-    public void OnUpdate();
-    /// <summary>
-    /// 该状态每物理帧执行的逻辑
-    /// </summary>
-    public void OnFixedUpdate();
 }
+
+
+
