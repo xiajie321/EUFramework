@@ -13,6 +13,7 @@ EULog 是一个高性能的日志工具类，旨在解决 Unity 原生 `Debug.Lo
 ### 1. 自动开启
 
 EULog 默认在以下情况下自动开启：
+
 - **Unity Editor**：在编辑器中运行时始终开启。
 - **Development Build**：打包时勾选 "Development Build" 选项时开启。
 
@@ -28,20 +29,20 @@ public class Example : MonoBehaviour
     void Start()
     {
         // 普通日志
-        EULog.Log("Hello World");
-        
+        EUDebug.Log("Hello World");
+
         // 带上下文的日志（点击日志可跳转到对应物体）
-        EULog.Log("Hello Object", this);
-        
+        EUDebug.Log("Hello Object", this);
+
         // 格式化日志
         // 如果在 Release 版本中，字符串拼接 "Value: " + 100 不会执行
-        EULog.LogFormat("Value: {0}", 100);
-        
+        EUDebug.LogFormat("Value: {0}", 100);
+
         // 警告
-        EULog.LogWarning("This is a warning");
-        
+        EUDebug.LogWarning("This is a warning");
+
         // 错误
-        EULog.LogError("This is an error");
+        EUDebug.LogError("This is an error");
     }
 }
 ```
