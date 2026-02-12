@@ -1,9 +1,9 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
-    internal class FsmDownloadPackageOver : IStateNode
+    internal class FsmStartGame : IStateNode
     {
         private StateMachine _machine;
 
@@ -14,8 +14,7 @@ namespace EUFarmworker.Extension.EURes
 
         public void OnEnter()
         {
-            // 下载完成，进入启动游戏状态
-              _machine.ChangeState<FsmClearCacheBundle>();
+            (_machine.Owner as ResKitPatchOperation)?.SetFinish();
         }
 
         public void OnUpdate()

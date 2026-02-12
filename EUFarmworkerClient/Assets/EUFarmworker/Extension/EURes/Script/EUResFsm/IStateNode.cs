@@ -1,4 +1,4 @@
-    namespace EUFarmworker.Extension.EURes
+    namespace EUFramework.Extension.EURes
     {
         public interface IStateNode
         {

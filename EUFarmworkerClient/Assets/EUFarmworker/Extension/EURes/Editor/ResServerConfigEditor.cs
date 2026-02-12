@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 
-namespace EUFarmworker.Extension.EURes.Editor
+namespace EUFramework.Extension.EURes.Editor
 {
     /// <summary>
     /// ResServerConfig 编辑器扩展

@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using YooAsset;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
     /// <summary>
     /// 资源热更新异步操作

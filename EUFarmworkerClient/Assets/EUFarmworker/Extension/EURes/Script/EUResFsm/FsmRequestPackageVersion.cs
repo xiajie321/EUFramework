@@ -2,7 +2,7 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
     internal class FsmRequestPackageVersion : IStateNode
     {

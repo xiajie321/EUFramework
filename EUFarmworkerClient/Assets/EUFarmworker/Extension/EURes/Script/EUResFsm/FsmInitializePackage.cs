@@ -2,7 +2,7 @@ using Cysharp.Threading.Tasks;
 using YooAsset;
 using UnityEngine;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
     internal class FsmInitializePackage : IStateNode
     {

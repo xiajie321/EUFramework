@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
     public class StateMachine
     {

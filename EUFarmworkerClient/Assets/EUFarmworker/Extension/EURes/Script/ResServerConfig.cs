@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace EUFarmworker.Extension.EURes
+namespace EUFramework.Extension.EURes
 {
     /// <summary>
     /// 服务器协议类型
