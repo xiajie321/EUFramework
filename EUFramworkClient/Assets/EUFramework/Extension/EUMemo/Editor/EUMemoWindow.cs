@@ -285,17 +285,17 @@ namespace EUFramework.Extension.Memo
             isInitialized = false;
             LoadData();
 
-            // 加载 UXML
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/EUFramework/Extension/EUMemo/ConfigPanel/EUMemo.uxml");
+            // 动态加载 UXML
+            var visualTree = LoadAsset<VisualTreeAsset>("EUMemo", "VisualTreeAsset");
             if (visualTree == null)
             {
-                Debug.LogError("找不到 EUMemo.uxml");
+                Debug.LogError("找不到 EUMemo.uxml，请确保文件存在于项目中。");
                 return;
             }
             visualTree.CloneTree(rootVisualElement);
 
-            // 加载 USS
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/EUFramework/Extension/EUMemo/ConfigPanel/EUMemo.uss");
+            // 动态加载 USS
+            var styleSheet = LoadAsset<StyleSheet>("EUMemo", "StyleSheet");
             if (styleSheet != null)
             {
                 rootVisualElement.styleSheets.Add(styleSheet);
@@ -310,6 +310,42 @@ namespace EUFramework.Extension.Memo
                 RefreshSidebar();
                 isInitialized = true;
             });
+        }
+
+        /// <summary>
+        /// 动态查找并加载资源，支持文件移动后仍能找到
+        /// </summary>
+        private T LoadAsset<T>(string name, string type) where T : UnityEngine.Object
+        {
+            // 查找所有匹配名称和类型的资源 GUID
+            string[] guids = AssetDatabase.FindAssets($"{name} t:{type}");
+            if (guids.Length == 0)
+                return null;
+
+            // 遍历所有找到的资源
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                
+                // 优先匹配路径中包含 "EUMemo/Editor" 的资源，避免同名文件冲突
+                // 同时确保文件名完全匹配（FindAssets 是模糊匹配）
+                if (path.Contains("EUMemo/Editor") && Path.GetFileNameWithoutExtension(path) == name)
+                {
+                    return AssetDatabase.LoadAssetAtPath<T>(path);
+                }
+            }
+
+            // 如果没有精确匹配，尝试放宽条件，只要文件名匹配即可
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileNameWithoutExtension(path) == name)
+                {
+                    return AssetDatabase.LoadAssetAtPath<T>(path);
+                }
+            }
+
+            return null;
         }
 
         private void InitializeUI()

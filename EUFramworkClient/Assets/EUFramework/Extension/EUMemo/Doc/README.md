@@ -20,8 +20,7 @@
 
 ## 文件结构
 
-- `ConfigPanel/`: 包含 UI 布局 (UXML) 和样式 (USS) 文件。
-- `Script/`: 包含核心逻辑代码。
+- `Editor/`: 包含编辑器脚本、UI 布局 (UXML) 和样式 (USS) 文件。
 - `Doc/`: 文档说明。
 - `extension.json`: 扩展描述文件。
 
