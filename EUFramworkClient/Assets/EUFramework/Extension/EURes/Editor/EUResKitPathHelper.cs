@@ -6,10 +6,10 @@ using UnityEngine;
 namespace EUFramework.Extension.EURes.Editor
 {
     /// <summary>
-    /// ResKit 路径管理工具
+    /// EUResKit 路径管理工具
     /// 提供动态路径查找和命名空间计算功能
     /// </summary>
-    public static class ResKitPathHelper
+    public static class EUResKitPathHelper
     {
         private static string _moduleRoot;
         private static string _namespace;
@@ -39,7 +39,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             if (string.IsNullOrEmpty(_moduleRoot))
             {
-                Debug.LogError("[ResKit] 无法找到 EURes.asmdef 文件，请确保模块结构完整");
+                Debug.LogError("[EUResKit] 无法找到 EURes.asmdef 文件，请确保模块结构完整");
             }
             
             return _moduleRoot;
@@ -56,7 +56,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             string root = GetModuleRoot();
             if (string.IsNullOrEmpty(root))
-                return "ResKit"; // 默认命名空间
+                return "EUResKit"; // 默认命名空间
             
             // 移除 Assets/ 前缀
             string withoutAssets = root.Replace("Assets/", "").Replace("Assets\\", "");
@@ -84,7 +84,7 @@ namespace EUFramework.Extension.EURes.Editor
         /// </summary>
         public static string GetSettingsPath()
         {
-            return Path.Combine(GetResourcesPath(), "ResKitSettings").Replace("\\", "/");
+            return Path.Combine(GetResourcesPath(), "EUResKitSettings").Replace("\\", "/");
         }
         
         /// <summary>

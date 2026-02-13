@@ -6,11 +6,11 @@ using YooAsset;
 namespace EUFramework.Extension.EURes
 {
     /// <summary>
-    /// ResKit Package 配置
+    /// EUResKit Package 配置
     /// 用于管理所有资源包的信息和加载方式
     /// </summary>
-    [CreateAssetMenu(fileName = "ResKitPackageConfig", menuName = "EUFramework/ResKit Package Config", order = 0)]
-    public class ResKitPackageConfig : ScriptableObject
+    [CreateAssetMenu(fileName = "EUResKitPackageConfig", menuName = "EUFramework/EUResKit Package Config", order = 0)]
+    public class EUResKitPackageConfig : ScriptableObject
     {
         [Header("Package 配置列表")]
         [SerializeField]
@@ -78,7 +78,7 @@ namespace EUFramework.Extension.EURes
         {
             if (packages.Exists(p => p.packageName == packageName))
             {
-                Debug.LogWarning($"[ResKitPackageConfig] Package '{packageName}' 已存在");
+                Debug.LogWarning($"[EUResKitPackageConfig] Package '{packageName}' 已存在");
                 return;
             }
             
@@ -171,7 +171,7 @@ namespace EUFramework.Extension.EURes
                 }
                 else if (!string.IsNullOrEmpty(pkg.packageName))
                 {
-                    Debug.LogWarning($"[ResKitPackageConfig] 移除重复的 Package: {pkg.packageName}");
+                    Debug.LogWarning($"[EUResKitPackageConfig] 移除重复的 Package: {pkg.packageName}");
                 }
             }
             
@@ -179,7 +179,7 @@ namespace EUFramework.Extension.EURes
             {
                 packages.Clear();
                 packages.AddRange(uniquePackages);
-                Debug.Log($"[ResKitPackageConfig] 已清理重复的 Package，当前共 {packages.Count} 个");
+                Debug.Log($"[EUResKitPackageConfig] 已清理重复的 Package，当前共 {packages.Count} 个");
             }
         }
         
@@ -203,7 +203,7 @@ namespace EUFramework.Extension.EURes
             
             if (defaultCount > 1)
             {
-                Debug.LogWarning("[ResKitPackageConfig] 只能有一个默认 Package，已自动调整");
+                Debug.LogWarning("[EUResKitPackageConfig] 只能有一个默认 Package，已自动调整");
                 foreach (var pkg in packages)
                 {
                     pkg.isDefault = (pkg == lastDefault);

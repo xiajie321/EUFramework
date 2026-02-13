@@ -27,13 +27,13 @@ namespace EUFramework.Extension.EURes
 
             if (operation.Status != EOperationStatus.Succeed)
             {
-                (_machine.Owner as ResKitPatchOperation)?.OnUpdatePackageManifestFailed?.Invoke();
+                (_machine.Owner as EUResKitPatchOperation)?.OnUpdatePackageManifestFailed?.Invoke();
                 return;
             }
             else
             {
                 // 清单更新成功，清零重试计数器
-                (_machine.Owner as ResKitPatchOperation)?.ResetManifestRetryCount();
+                (_machine.Owner as EUResKitPatchOperation)?.ResetManifestRetryCount();
                 _machine.ChangeState<FsmCreateDownloader>();
             }
         }

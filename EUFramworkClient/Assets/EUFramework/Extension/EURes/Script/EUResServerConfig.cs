@@ -16,8 +16,8 @@ namespace EUFramework.Extension.EURes
     /// <summary>
     /// 资源服务器配置
     /// </summary>
-    [CreateAssetMenu(fileName = "ResServerConfig", menuName = "YooAsset/Create ResServer Config", order = 0)]
-    public class ResServerConfig : ScriptableObject
+    [CreateAssetMenu(fileName = "EUResServerConfig", menuName = "YooAsset/Create EUResServer Config", order = 0)]
+    public class EUResServerConfig : ScriptableObject
     {
         [Header("服务器配置")]
         [Tooltip("协议类型")]
@@ -104,7 +104,7 @@ namespace EUFramework.Extension.EURes
                     // 验证URL是否包含协议
                     if (!customUrl.StartsWith("http://") && !customUrl.StartsWith("https://"))
                     {
-                        Debug.LogWarning($"[ResServerConfig] 自定义URL建议包含协议前缀 (http:// 或 https://): {customUrl}");
+                        Debug.LogWarning($"[EUResServerConfig] 自定义URL建议包含协议前缀 (http:// 或 https://): {customUrl}");
                     }
                 }
             }
@@ -129,7 +129,7 @@ namespace EUFramework.Extension.EURes
                         }
                         if (!isValidIP)
                         {
-                            Debug.LogWarning($"[ResServerConfig] IP地址格式可能不正确: {hostServer}");
+                            Debug.LogWarning($"[EUResServerConfig] IP地址格式可能不正确: {hostServer}");
                         }
                     }
                     // 否则假设是域名，域名格式较为灵活，这里不做严格验证
@@ -138,7 +138,7 @@ namespace EUFramework.Extension.EURes
                 // 验证端口号
                 if (port < 1 || port > 65535)
                 {
-                    Debug.LogWarning($"[ResServerConfig] 端口号必须在 1-65535 之间: {port}");
+                    Debug.LogWarning($"[EUResServerConfig] 端口号必须在 1-65535 之间: {port}");
                     port = Mathf.Clamp(port, 1, 65535);
                 }
             }
@@ -148,7 +148,7 @@ namespace EUFramework.Extension.EURes
             {
                 if (!System.Text.RegularExpressions.Regex.IsMatch(appVersion, @"^\d+\.\d+\.\d+"))
                 {
-                    Debug.LogWarning($"[ResServerConfig] 版本号格式建议使用 x.x.x 格式: {appVersion}");
+                    Debug.LogWarning($"[EUResServerConfig] 版本号格式建议使用 x.x.x 格式: {appVersion}");
                 }
             }
         }

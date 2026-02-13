@@ -8,7 +8,7 @@ namespace EUFramework.Extension.EURes
     /// 资源热更新异步操作
     /// 基于状态机实现的资源包热更新流程，支持初始化、版本检查、清单更新、资源下载等完整流程
     /// </summary>
-    internal class ResKitPatchOperation : GameAsyncOperation
+    internal class EUResKitPatchOperation : GameAsyncOperation
     {
         private enum ESteps
         {
@@ -80,7 +80,7 @@ namespace EUFramework.Extension.EURes
         /// </summary>
         /// <param name="packageName">资源包名称</param>
         /// <param name="playMode">运行模式（编辑器模式、离线模式、联机模式等）</param>
-        public ResKitPatchOperation(string packageName, EPlayMode playMode)
+        public EUResKitPatchOperation(string packageName, EPlayMode playMode)
         {
             _packageName = packageName;
 
@@ -119,7 +119,7 @@ namespace EUFramework.Extension.EURes
             _initRetryCount++;
             if (_initRetryCount > MAX_RETRY_COUNT)
             {
-                Debug.LogError($"[ResKitPatchOperation] 初始化重试次数已达上限({MAX_RETRY_COUNT}次)");
+                Debug.LogError($"[EUResKitPatchOperation] 初始化重试次数已达上限({MAX_RETRY_COUNT}次)");
                 SetFinish();
                 return;
             }
@@ -139,7 +139,7 @@ namespace EUFramework.Extension.EURes
             _versionRetryCount++;
             if (_versionRetryCount > MAX_RETRY_COUNT)
             {
-                Debug.LogError($"[ResKitPatchOperation] 版本请求重试次数已达上限({MAX_RETRY_COUNT}次)");
+                Debug.LogError($"[EUResKitPatchOperation] 版本请求重试次数已达上限({MAX_RETRY_COUNT}次)");
                 SetFinish();
                 return;
             }
@@ -159,7 +159,7 @@ namespace EUFramework.Extension.EURes
             _manifestRetryCount++;
             if (_manifestRetryCount > MAX_RETRY_COUNT)
             {
-                Debug.LogError($"[ResKitPatchOperation] 清单更新重试次数已达上限({MAX_RETRY_COUNT}次)");
+                Debug.LogError($"[EUResKitPatchOperation] 清单更新重试次数已达上限({MAX_RETRY_COUNT}次)");
                 SetFinish();
                 return;
             }

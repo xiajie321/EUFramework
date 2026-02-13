@@ -1,12 +1,12 @@
-# ResKit 使用说明
+# EUResKit 使用说明
 
 ## 📖 简介
 
-**ResKit** 是基于 YooAsset 构建的资源管理模块，提供资源加载和热更新功能。
+**EUResKit** 是基于 YooAsset 构建的资源管理模块，提供资源加载和热更新功能。
 
 ### 🔌 插拔式设计
 
-ResKit 采用独立的插拔式设计，真正做到"复制即用"：
+EUResKit 采用独立的插拔式设计，真正做到"复制即用"：
 - ✅ **零模块耦合**: 不依赖其他业务模块
 - ✅ **路径自适应**: 可放置在项目任意位置
 - ✅ **命名空间自动**: 根据文件夹路径自动生成命名空间
@@ -28,17 +28,17 @@ EURes/                    # 模块可以放在任意位置
 └── Doc/                 # 文档
 ```
 
-## 🔧 ResKit 编辑器工具
+## 🔧 EUResKit 编辑器工具
 
-打开方式：`菜单栏 → EUFramework → 拓展 → ResKit 配置工具`
+打开方式：`菜单栏 → EUFramework → 拓展 → EUResKit 配置工具`
 
 ### 1. 配置文件面板
 
 **作用**：管理资源相关的配置文件
 
 - **AssetBundleCollectorSetting**: 配置哪些资源需要打包
-- **ResKitPackageConfig**: 配置资源包的运行模式（编辑器模拟/离线/联机/WebGL）
-- **ResServerConfig**: 配置资源服务器地址（用于热更新）
+- **EUResKitPackageConfig**: 配置资源包的运行模式（编辑器模拟/离线/联机/WebGL）
+- **EUResServerConfig**: 配置资源服务器地址（用于热更新）
 - **YooAssetSettings**: YooAsset 的全局设置
 
 **使用步骤**：
@@ -47,17 +47,17 @@ EURes/                    # 模块可以放在任意位置
 3. 点击 "同步 Packages" 同步包配置
 4. 选择每个包的运行模式并保存
 
-### 2. ResFacade 面板
+### 2. EUResFacade 面板
 
 **作用**：生成资源管理所需的代码和 UI
 
 #### UI Prefab 和脚本
 - **生成 UI Prefab**: 生成下载进度和用户交互界面
-- **ResKitUserOpePopUp**: 用户可自定义的交互弹窗
+- **EUResKitUserOpePopUp**: 用户可自定义的交互弹窗
 
-#### ResKit 分部类（Partial Class）
-- **ResKit.Generated.cs**: 自动生成的基础工具类（可重新生成）
-- **ResKit.cs**: 用户编辑的业务逻辑类（请勿覆盖）
+#### EUResKit 分部类（Partial Class）
+- **EUResKit.Generated.cs**: 自动生成的基础工具类（可重新生成）
+- **EUResKit.cs**: 用户编辑的业务逻辑类（请勿覆盖）
 
 #### 程序集引用管理
 - **刷新程序集引用**: 解决 YooAsset 和 UniTask 引用丢失问题
@@ -68,14 +68,14 @@ EURes/                    # 模块可以放在任意位置
 
 **首次使用步骤**：
 1. 点击 "生成 UI Prefab 和脚本"
-2. 点击 "生成 ResKit 分部类（同时生成两个文件）"
+2. 点击 "生成 EUResKit 分部类（同时生成两个文件）"
 3. 查看底部显示的当前模块位置和命名空间
 
 ## 💻 代码使用
 
 > **注意**：示例代码中的命名空间 `EUFramework.Extension.EURes` 仅为示例。
 > 实际命名空间根据您的模块位置自动生成（排除 Assets 后的文件夹路径）。
-> 例如：`Assets/Plugins/ResKit/` → `Plugins.ResKit`
+> 例如：`Assets/Plugins/EUResKit/` → `Plugins.EUResKit`
 
 ### 初始化资源系统
 
@@ -91,7 +91,7 @@ public class GameLauncher : MonoBehaviour
     private async void Start()
     {
         // 初始化所有资源包
-        bool success = await ResKit.InitializeAllPackagesAsync();
+        bool success = await EUResKit.InitializeAllPackagesAsync();
         
         if (success)
         {
@@ -114,7 +114,7 @@ public class GameLauncher : MonoBehaviour
 ```csharp
 private async void Start()
 {
-    await ResKit.InitializeAllPackagesAsync(
+    await EUResKit.InitializeAllPackagesAsync(
         // 回调1：每个包初始化完成时触发
         onPackageInitialized: (packageName, isSuccess) =>
         {
@@ -148,10 +148,10 @@ public class LoadingUI : MonoBehaviour
     private async void Start()
     {
         // 设置下载进度回调
-        ResKit.SetDownloadProgressCallback(OnDownloadProgress);
+        EUResKit.SetDownloadProgressCallback(OnDownloadProgress);
         
         // 开始初始化
-        await ResKit.InitializeAllPackagesAsync(
+        await EUResKit.InitializeAllPackagesAsync(
             onAllCompleted: (success) =>
             {
                 if (success)
@@ -189,7 +189,7 @@ public class LoadingUI : MonoBehaviour
 using YooAsset;
 
 // 异步加载预制体
-var handle = ResKit.GetPackage().LoadAssetAsync<GameObject>("Assets/Prefabs/Player.prefab");
+var handle = EUResKit.GetPackage().LoadAssetAsync<GameObject>("Assets/Prefabs/Player.prefab");
 await handle.ToUniTask();
 GameObject player = handle.AssetObject as GameObject;
 Instantiate(player);
@@ -200,7 +200,7 @@ handle.Release();
 
 ## 🎮 运行模式说明
 
-在 ResKit 配置工具中可以为每个包选择运行模式：
+在 EUResKit 配置工具中可以为每个包选择运行模式：
 
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
@@ -209,19 +209,19 @@ handle.Release();
 | **HostPlayMode** | 联机模式，支持热更新 | 线上游戏 |
 | **WebPlayMode** | WebGL 模式 | 网页游戏 |
 
-> 💡 使用 **HostPlayMode** 或 **WebPlayMode** 时，需要在 ResServerConfig 中配置 CDN 地址。
+> 💡 使用 **HostPlayMode** 或 **WebPlayMode** 时，需要在 EUResServerConfig 中配置 CDN 地址。
 
 ## 🚀 迁移和部署指南
 
-### 将 ResKit 迁移到新项目
+### 将 EUResKit 迁移到新项目
 
 1. **复制模块文件夹**
    - 将整个 `EURes` 文件夹复制到新项目的任意位置
-   - 例如：`Assets/Plugins/ResKit/`、`Assets/Tools/ResourceManager/` 等
+   - 例如：`Assets/Plugins/EUResKit/`、`Assets/Tools/ResourceManager/` 等
 
 2. **刷新命名空间**
-   - 打开 ResKit 配置工具
-   - 进入 "ResFacade" 面板
+   - 打开 EUResKit 配置工具
+   - 进入 "EUResFacade" 面板
    - 点击 "🔄 刷新命名空间"
    - 选择是否重新生成代码文件
 
@@ -236,7 +236,7 @@ handle.Release();
 
 如果需要清理所有生成的文件：
 
-1. 打开 ResKit 配置工具 → ResFacade 面板
+1. 打开 EUResKit 配置工具 → EUResFacade 面板
 2. 点击 "🗑️ 删除所有生成的文件"
 3. 选择删除范围：
    - **仅删除代码和UI**：保留配置文件（推荐）
@@ -247,14 +247,14 @@ handle.Release();
 
 ### Q: 编译错误找不到 YooAsset 或 UniTask？
 
-**A**: 在 ResKit 配置工具的 "ResFacade" 面板，点击 "刷新程序集引用"
+**A**: 在 EUResKit 配置工具的 "EUResFacade" 面板，点击 "刷新程序集引用"
 
 ### Q: 如何添加新的资源包？
 
 **A**: 
-1. 在 ResKit 配置工具点击 "配置资源收集"
+1. 在 EUResKit 配置工具点击 "配置资源收集"
 2. 在 YooAsset 收集器中添加新的 Package
-3. 回到 ResKit 配置工具，点击 "同步 Packages"
+3. 回到 EUResKit 配置工具，点击 "同步 Packages"
 
 ### Q: 资源加载失败？
 
@@ -266,23 +266,23 @@ handle.Release();
 ### Q: 将模块移动到新位置后出现编译错误？
 
 **A**: 
-1. 打开 ResKit 配置工具
-2. 进入 "ResFacade" 面板
+1. 打开 EUResKit 配置工具
+2. 进入 "EUResFacade" 面板
 3. 点击 "🔄 刷新命名空间"，会自动更新 asmdef 和重新生成代码
 4. 等待编译完成
 
 ### Q: 当前使用的命名空间是什么？
 
 **A**: 
-- 打开 ResKit 配置工具 → ResFacade 面板
+- 打开 EUResKit 配置工具 → EUResFacade 面板
 - 查看底部的"📦 当前命名空间"信息
 - 命名空间根据模块路径自动生成（排除 Assets 的文件夹路径）
 
 ### Q: 如何自定义弹窗 UI？
 
 **A**: 
-1. 生成 UI 后，编辑 `Script/ResKitUserOpePopUp.cs` 脚本
-2. 修改 `Resources/ResKitUI/ResKitUserOpePopUp.prefab` 预制体
+1. 生成 UI 后，编辑 `Script/EUResKitUserOpePopUp.cs` 脚本
+2. 修改 `Resources/EUResKitUI/EUResKitUserOpePopUp.prefab` 预制体
 3. 这两个文件都是用户可编辑的，不会被覆盖
 
 ---

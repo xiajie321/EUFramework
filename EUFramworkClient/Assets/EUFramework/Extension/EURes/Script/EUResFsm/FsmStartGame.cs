@@ -14,7 +14,7 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
-            (_machine.Owner as ResKitPatchOperation)?.SetFinish();
+            (_machine.Owner as EUResKitPatchOperation)?.SetFinish();
         }
 
         public void OnUpdate()

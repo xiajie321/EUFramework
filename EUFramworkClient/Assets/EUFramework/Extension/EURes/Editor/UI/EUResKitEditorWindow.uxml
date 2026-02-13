@@ -3,7 +3,7 @@
         
         <!-- 左侧侧边栏 -->
         <ui:VisualElement name="sidebar" class="sidebar">
-            <ui:Label text="ResKit 工具" class="sidebar-title" />
+            <ui:Label text="EUResKit 工具" class="sidebar-title" />
             
             <!-- 配置文件按钮 -->
             <ui:VisualElement name="btn-config-files-container" class="sidebar-button-container">
@@ -16,12 +16,12 @@
                 </ui:Button>
             </ui:VisualElement>
             
-            <!-- ResFacade 按钮 -->
+            <!-- EUResFacade 按钮 -->
             <ui:VisualElement name="btn-res-facade-container" class="sidebar-button-container">
                 <ui:Button name="btn-res-facade" class="sidebar-button">
                     <ui:Label text="R" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="ResFacade" class="sidebar-button-title" />
+                        <ui:Label text="EUResFacade" class="sidebar-button-title" />
                         <ui:Label text="代码生成和工具" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>

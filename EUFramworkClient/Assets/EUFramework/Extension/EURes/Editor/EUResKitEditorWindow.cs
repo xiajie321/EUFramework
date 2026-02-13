@@ -11,18 +11,18 @@ using EUFramework.Extension.EURes;
 
 namespace EUFramework.Extension.EURes.Editor
 {
-    public class ResKitEditorWindow : EditorWindow
+    public class EUResKitEditorWindow : EditorWindow
     {
-        private ResServerConfig _resServerConfig;
+        private EUResServerConfig _resServerConfig;
         private AssetBundleCollectorSetting _collectorSetting;
         private ScriptableObject _yooAssetSettings; // YooAssetSettings 是 internal，用 ScriptableObject 引用
-        private ResKitPackageConfig _packageConfig;
+        private EUResKitPackageConfig _packageConfig;
         
-        // 动态路径（通过 ResKitPathHelper 获取）
-        private static string SETTINGS_PATH => ResKitPathHelper.GetSettingsPath();
+        // 动态路径（通过 EUResKitPathHelper 获取）
+        private static string SETTINGS_PATH => EUResKitPathHelper.GetSettingsPath();
         
         // 记录哪个配置面板被展开
-        private bool _showResServerConfig = false;
+        private bool _showEUResServerConfig = false;
         private bool _showYooAssetSettings = false;
         private bool _showPackageConfig = false;
         
@@ -33,11 +33,11 @@ namespace EUFramework.Extension.EURes.Editor
         private Vector2 _resFacadeScrollPos;
         private Vector2 _fileStatusScrollPos;
         
-        [MenuItem("EUFramework/拓展/ResKit 配置工具", priority = 100)]
+        [MenuItem("EUFramework/拓展/EUResKit 配置工具", priority = 100)]
         public static void ShowWindow()
         {
-            var window = GetWindow<ResKitEditorWindow>();
-            window.titleContent = new GUIContent("ResKit 配置工具");
+            var window = GetWindow<EUResKitEditorWindow>();
+            window.titleContent = new GUIContent("EUResKit 配置工具");
             
             // 设置窗口大小（扩大100px）
             Vector2 windowSize = new Vector2(900, 700);
@@ -53,7 +53,7 @@ namespace EUFramework.Extension.EURes.Editor
         private void CreateGUI()
         {
             // 加载 UXML（动态路径）
-            string uxmlPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uxml").Replace("\\", "/");
+            string uxmlPath = Path.Combine(EUResKitPathHelper.GetEditorPath(), "UI/EUResKitEditorWindow.uxml").Replace("\\", "/");
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             
             if (visualTree != null)
@@ -67,7 +67,7 @@ namespace EUFramework.Extension.EURes.Editor
             }
 
             // 加载样式（动态路径）
-            string ussPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uss").Replace("\\", "/");
+            string ussPath = Path.Combine(EUResKitPathHelper.GetEditorPath(), "UI/EUResKitEditorWindow.uss").Replace("\\", "/");
             var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             
             if (styleSheet != null)
@@ -93,9 +93,9 @@ namespace EUFramework.Extension.EURes.Editor
 
         private void LoadConfigs()
         {
-            // 加载 ResServerConfig
-            string resServerPath = Path.Combine(SETTINGS_PATH, "ResServerConfig.asset");
-            _resServerConfig = AssetDatabase.LoadAssetAtPath<ResServerConfig>(resServerPath);
+            // 加载 EUResServerConfig
+            string resServerPath = Path.Combine(SETTINGS_PATH, "EUResServerConfig.asset");
+            _resServerConfig = AssetDatabase.LoadAssetAtPath<EUResServerConfig>(resServerPath);
             
             // 加载 AssetBundleCollectorSetting
             string collectorPath = Path.Combine(SETTINGS_PATH, "AssetBundleCollectorSetting.asset");
@@ -105,9 +105,9 @@ namespace EUFramework.Extension.EURes.Editor
             string yooSettingsPath = Path.Combine(SETTINGS_PATH, "YooAssetSettings.asset");
             _yooAssetSettings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(yooSettingsPath);
             
-            // 加载 ResKitPackageConfig
-            string packageConfigPath = Path.Combine(SETTINGS_PATH, "ResKitPackageConfig.asset");
-            _packageConfig = AssetDatabase.LoadAssetAtPath<ResKitPackageConfig>(packageConfigPath);
+            // 加载 EUResKitPackageConfig
+            string packageConfigPath = Path.Combine(SETTINGS_PATH, "EUResKitPackageConfig.asset");
+            _packageConfig = AssetDatabase.LoadAssetAtPath<EUResKitPackageConfig>(packageConfigPath);
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.justifyContent = Justify.FlexStart;
             
             // 添加标题
-            var header = CreateContentHeader("配置文件管理", "管理 ResKit 所需的各项配置文件");
+            var header = CreateContentHeader("配置文件管理", "管理 EUResKit 所需的各项配置文件");
             contentArea.Add(header);
             
             // 创建 IMGUIContainer 来显示文件状态和配置编辑
@@ -168,7 +168,7 @@ namespace EUFramework.Extension.EURes.Editor
             DrawFileStatusPanel();
             
             // 如果有展开的配置，在下方绘制
-            if (_showResServerConfig || _showYooAssetSettings || _showPackageConfig)
+            if (_showEUResServerConfig || _showYooAssetSettings || _showPackageConfig)
             {
                 GUILayout.Space(20);
                 DrawConfigEditPanel();
@@ -210,19 +210,19 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.Space(5);
             
-            // 检查 ResServerConfig
-            string resServerPath = Path.Combine(SETTINGS_PATH, "ResServerConfig.asset");
+            // 检查 EUResServerConfig
+            string resServerPath = Path.Combine(SETTINGS_PATH, "EUResServerConfig.asset");
             bool resServerExists = File.Exists(resServerPath);
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResServerConfig:", GUILayout.Width(250));
+            GUILayout.Label("EUResServerConfig:", GUILayout.Width(250));
             if (resServerExists)
             {
                 GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
-                string buttonText = _showResServerConfig ? "收起配置" : "配置服务器信息";
+                string buttonText = _showEUResServerConfig ? "收起配置" : "配置服务器信息";
                 if (GUILayout.Button(buttonText, GUILayout.Width(150)))
                 {
-                    _showResServerConfig = !_showResServerConfig;
+                    _showEUResServerConfig = !_showEUResServerConfig;
                     _showYooAssetSettings = false;
                     _showPackageConfig = false;
                 }
@@ -232,7 +232,7 @@ namespace EUFramework.Extension.EURes.Editor
                 GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
                 if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
                 {
-                    CreateResServerConfig(SETTINGS_PATH);
+                    CreateEUResServerConfig(SETTINGS_PATH);
                     LoadConfigs();
                 }
             }
@@ -253,7 +253,7 @@ namespace EUFramework.Extension.EURes.Editor
                 if (GUILayout.Button(buttonText, GUILayout.Width(150)))
                 {
                     _showYooAssetSettings = !_showYooAssetSettings;
-                    _showResServerConfig = false;
+                    _showEUResServerConfig = false;
                     _showPackageConfig = false;
                 }
             }
@@ -270,12 +270,12 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.Space(5);
             
-            // 检查 ResKitPackageConfig
-            string packageConfigPath = Path.Combine(SETTINGS_PATH, "ResKitPackageConfig.asset");
+            // 检查 EUResKitPackageConfig
+            string packageConfigPath = Path.Combine(SETTINGS_PATH, "EUResKitPackageConfig.asset");
             bool packageConfigExists = File.Exists(packageConfigPath);
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKitPackageConfig:", GUILayout.Width(250));
+            GUILayout.Label("EUResKitPackageConfig:", GUILayout.Width(250));
             if (packageConfigExists)
             {
                 GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
@@ -283,7 +283,7 @@ namespace EUFramework.Extension.EURes.Editor
                 if (GUILayout.Button(buttonText, GUILayout.Width(150)))
                 {
                     _showPackageConfig = !_showPackageConfig;
-                    _showResServerConfig = false;
+                    _showEUResServerConfig = false;
                     _showYooAssetSettings = false;
                 }
             }
@@ -292,7 +292,7 @@ namespace EUFramework.Extension.EURes.Editor
                 GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
                 if (GUILayout.Button("创建配置文件", GUILayout.Width(150)))
                 {
-                    CreateResKitPackageConfig(SETTINGS_PATH);
+                    CreateEUResKitPackageConfig(SETTINGS_PATH);
                     LoadConfigs();
                 }
             }
@@ -305,10 +305,10 @@ namespace EUFramework.Extension.EURes.Editor
         {
             GUILayout.BeginVertical("box");
             
-            // ResServerConfig 配置编辑
-            if (_showResServerConfig && _resServerConfig != null)
+            // EUResServerConfig 配置编辑
+            if (_showEUResServerConfig && _resServerConfig != null)
             {
-                DrawResServerConfigPanel();
+                DrawEUResServerConfigPanel();
             }
             
             // YooAssetSettings 配置编辑
@@ -326,7 +326,7 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.EndVertical();
         }
         
-        private void DrawResServerConfigPanel()
+        private void DrawEUResServerConfigPanel()
         {
             GUILayout.Label("资源服务器配置", EditorStyles.boldLabel);
             GUILayout.Space(5);
@@ -522,7 +522,7 @@ namespace EUFramework.Extension.EURes.Editor
         {
             if (_packageConfig == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                EditorUtility.DisplayDialog("错误", "未找到 EUResKitPackageConfig", "确定");
                 return;
             }
             
@@ -557,7 +557,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             if (_packageConfig == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                EditorUtility.DisplayDialog("错误", "未找到 EUResKitPackageConfig", "确定");
                 return;
             }
             
@@ -665,7 +665,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             if (_packageConfig == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 ResKitPackageConfig", "确定");
+                EditorUtility.DisplayDialog("错误", "未找到 EUResKitPackageConfig", "确定");
                 return;
             }
             
@@ -805,10 +805,10 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.justifyContent = Justify.FlexStart;
             
             // 添加标题
-            var header = CreateContentHeader("ResFacade 生成工具", "生成资源管理相关的代码和 UI 预制体");
+            var header = CreateContentHeader("EUResFacade 生成工具", "生成资源管理相关的代码和 UI 预制体");
             contentArea.Add(header);
             
-            // 创建 IMGUIContainer 来显示 ResFacade 功能
+            // 创建 IMGUIContainer 来显示 EUResFacade 功能
             var imguiContainer = new IMGUIContainer(() =>
             {
                 DrawResFacadePanel();
@@ -831,14 +831,14 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.Label("UI Prefab 和脚本", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
-            string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI/ResKitUserOpePopUp.prefab").Replace("\\", "/");
-            string scriptPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/");
+            string prefabPath = Path.Combine(EUResKitPathHelper.GetResourcesPath(), "EUResKitUI/EUResKitUserOpePopUp.prefab").Replace("\\", "/");
+            string scriptPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKitUserOpePopUp.cs").Replace("\\", "/");
             bool prefabExists = File.Exists(prefabPath);
             bool scriptExists = File.Exists(scriptPath);
             
             // 显示脚本状态
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKitUserOpePopUp.cs:", GUILayout.Width(250));
+            GUILayout.Label("EUResKitUserOpePopUp.cs:", GUILayout.Width(250));
             if (scriptExists)
             {
                 GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
@@ -851,7 +851,7 @@ namespace EUFramework.Extension.EURes.Editor
             
             // 显示 prefab 状态
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKitUserOpePopUp.prefab:", GUILayout.Width(250));
+            GUILayout.Label("EUResKitUserOpePopUp.prefab:", GUILayout.Width(250));
             if (prefabExists)
             {
                 GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
@@ -862,7 +862,7 @@ namespace EUFramework.Extension.EURes.Editor
             }
             GUILayout.EndHorizontal();
             
-            EditorGUILayout.HelpBox("⚠️ 业务脚本：用户可自定义 UI 交互逻辑，请勿覆盖！\nPrefab：位于 Resources/ResKitUI/ 目录", MessageType.Warning);
+            EditorGUILayout.HelpBox("⚠️ 业务脚本：用户可自定义 UI 交互逻辑，请勿覆盖！\nPrefab：位于 Resources/EUResKitUI/ 目录", MessageType.Warning);
             
             if (prefabExists && scriptExists)
             {
@@ -908,12 +908,12 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.Space(20);
             
-            // ResKit 分部类生成区域（同时生成）
-            GUILayout.Label("ResKit 分部类（Partial Class）", EditorStyles.boldLabel);
+            // EUResKit 分部类生成区域（同时生成）
+            GUILayout.Label("EUResKit 分部类（Partial Class）", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
-            string codeGeneratedPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated/ResKit.Generated.cs").Replace("\\", "/");
-            string codeUserPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/");
+            string codeGeneratedPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "Generated/EUResKit.Generated.cs").Replace("\\", "/");
+            string codeUserPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKit.cs").Replace("\\", "/");
             bool codeGeneratedExists = File.Exists(codeGeneratedPath);
             bool codeUserExists = File.Exists(codeUserPath);
             bool bothExist = codeGeneratedExists && codeUserExists;
@@ -922,7 +922,7 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.BeginVertical("box");
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKit.Generated.cs:", GUILayout.Width(200));
+            GUILayout.Label("EUResKit.Generated.cs:", GUILayout.Width(200));
             if (codeGeneratedExists)
             {
                 GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
@@ -934,7 +934,7 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.EndHorizontal();
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("ResKit.cs:", GUILayout.Width(200));
+            GUILayout.Label("EUResKit.cs:", GUILayout.Width(200));
             if (codeUserExists)
             {
                 GUILayout.Label("✓ 已生成", EditorStyles.boldLabel);
@@ -949,8 +949,8 @@ namespace EUFramework.Extension.EURes.Editor
             
             EditorGUILayout.HelpBox(
                 "📋 分部类说明：\n" +
-                "• ResKit.Generated.cs - 自动生成的基础工具类（可重新生成）\n" +
-                "• ResKit.cs - 用户编辑的业务逻辑类（请勿覆盖）\n" +
+                "• EUResKit.Generated.cs - 自动生成的基础工具类（可重新生成）\n" +
+                "• EUResKit.cs - 用户编辑的业务逻辑类（请勿覆盖）\n" +
                 "• 两个文件作为 partial class 相互引用，必须同时存在", 
                 MessageType.Info);
             
@@ -975,8 +975,8 @@ namespace EUFramework.Extension.EURes.Editor
                 if (GUILayout.Button("🔄 重新生成 Generated 部分", GUILayout.Height(35)))
                 {
                     if (EditorUtility.DisplayDialog("确认", 
-                        "是否重新生成 ResKit.Generated.cs？\n\n" +
-                        "ResKit.cs（用户脚本）不会被修改", 
+                        "是否重新生成 EUResKit.Generated.cs？\n\n" +
+                        "EUResKit.cs（用户脚本）不会被修改", 
                         "确定", "取消"))
                     {
                         OnGenerateResKitGeneratedOnly();
@@ -987,7 +987,7 @@ namespace EUFramework.Extension.EURes.Editor
             {
                 // 只有用户脚本存在
                 EditorGUILayout.HelpBox("⚠️ 缺少 Generated 部分，可能导致编译错误！", MessageType.Warning);
-                if (GUILayout.Button("生成 ResKit.Generated.cs", GUILayout.Height(40)))
+                if (GUILayout.Button("生成 EUResKit.Generated.cs", GUILayout.Height(40)))
                 {
                     OnGenerateResKitGeneratedOnly();
                 }
@@ -996,7 +996,7 @@ namespace EUFramework.Extension.EURes.Editor
             {
                 // 只有 Generated 存在
                 EditorGUILayout.HelpBox("⚠️ 缺少用户脚本部分，可能导致编译错误！", MessageType.Warning);
-                if (GUILayout.Button("生成 ResKit.cs", GUILayout.Height(40)))
+                if (GUILayout.Button("生成 EUResKit.cs", GUILayout.Height(40)))
                 {
                     OnGenerateUserResKitClicked();
                 }
@@ -1004,8 +1004,8 @@ namespace EUFramework.Extension.EURes.Editor
             else
             {
                 // 都不存在
-                EditorGUILayout.HelpBox("⚠️ ResKit 分部类尚未生成", MessageType.Warning);
-                if (GUILayout.Button("🎯 生成 ResKit 分部类（同时生成两个文件）", GUILayout.Height(40)))
+                EditorGUILayout.HelpBox("⚠️ EUResKit 分部类尚未生成", MessageType.Warning);
+                if (GUILayout.Button("🎯 生成 EUResKit 分部类（同时生成两个文件）", GUILayout.Height(40)))
                 {
                     OnGenerateBothResKitFiles();
                 }
@@ -1053,8 +1053,8 @@ namespace EUFramework.Extension.EURes.Editor
             // 显示当前模块信息
             GUILayout.Space(10);
             EditorGUILayout.HelpBox(
-                $"📍 当前模块位置：\n{ResKitPathHelper.GetModuleRoot()}\n\n" +
-                $"📦 当前命名空间：\n{ResKitPathHelper.GetNamespace()}",
+                $"📍 当前模块位置：\n{EUResKitPathHelper.GetModuleRoot()}\n\n" +
+                $"📦 当前命名空间：\n{EUResKitPathHelper.GetNamespace()}",
                 MessageType.None);
             
             GUILayout.EndVertical();
@@ -1065,13 +1065,13 @@ namespace EUFramework.Extension.EURes.Editor
 
         private void OnCreatePrefabClicked()
         {
-            // 1. 先生成 ResKitUserOpePopUp.cs 脚本
-            string scriptPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/");
-            bool scriptGenerated = GenerateResKitUserOpePopUpScript(scriptPath);
+            // 1. 先生成 EUResKitUserOpePopUp.cs 脚本
+            string scriptPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKitUserOpePopUp.cs").Replace("\\", "/");
+            bool scriptGenerated = GenerateEUResKitUserOpePopUpScript(scriptPath);
             
             if (!scriptGenerated)
             {
-                EditorUtility.DisplayDialog("错误", "ResKitUserOpePopUp.cs 脚本生成失败，无法继续", "确定");
+                EditorUtility.DisplayDialog("错误", "EUResKitUserOpePopUp.cs 脚本生成失败，无法继续", "确定");
                 return;
             }
             
@@ -1082,7 +1082,7 @@ namespace EUFramework.Extension.EURes.Editor
             System.Threading.Thread.Sleep(500);
             
             // 2. 创建 Prefab
-            string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI").Replace("\\", "/");
+            string prefabPath = Path.Combine(EUResKitPathHelper.GetResourcesPath(), "EUResKitUI").Replace("\\", "/");
             
             if (!Directory.Exists(prefabPath))
             {
@@ -1090,7 +1090,7 @@ namespace EUFramework.Extension.EURes.Editor
                 AssetDatabase.Refresh();
             }
 
-            string fullPath = Path.Combine(prefabPath, "ResKitUserOpePopUp.prefab");
+            string fullPath = Path.Combine(prefabPath, "EUResKitUserOpePopUp.prefab");
 
             // 创建默认的弹窗预制体
             GameObject popup = CreateDefaultPopupPrefab();
@@ -1099,8 +1099,8 @@ namespace EUFramework.Extension.EURes.Editor
             GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(popup, fullPath);
             DestroyImmediate(popup);
 
-            // 添加 ResKitUserOpePopUp 组件到 prefab
-            AddResKitUserOpePopUpComponent(prefabAsset);
+            // 添加 EUResKitUserOpePopUp 组件到 prefab
+            AddEUResKitUserOpePopUpComponent(prefabAsset);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -1113,17 +1113,17 @@ namespace EUFramework.Extension.EURes.Editor
                 $"UI Prefab 和脚本创建完成！\n\n" +
                 $"Prefab 路径: {fullPath}\n" +
                 $"脚本路径: {scriptPath}\n\n" +
-                $"已自动添加并绑定 ResKitUserOpePopUp 组件", 
+                $"已自动添加并绑定 EUResKitUserOpePopUp 组件", 
                 "确定");
         }
         
-        private bool GenerateResKitUserOpePopUpScript(string outputPath)
+        private bool GenerateEUResKitUserOpePopUpScript(string outputPath)
         {
-            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "ResKitUserOpePopUp.cs.sbn").Replace("\\", "/");
+            string templatePath = Path.Combine(EUResKitPathHelper.GetTemplatesPath(), "EUResKitUserOpePopUp.cs.sbn").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
-                Debug.LogError($"[ResKit] 模板文件不存在: {templatePath}");
+                Debug.LogError($"[EUResKit] 模板文件不存在: {templatePath}");
                 return false;
             }
 
@@ -1132,8 +1132,8 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
-                .Replace("{{ class_name }}", "ResKitUserOpePopUp");
+                .Replace("{{ namespace }}", EUResKitPathHelper.GetNamespace())
+                .Replace("{{ class_name }}", "EUResKitUserOpePopUp");
 
             // 确保输出目录存在
             string outputDir = Path.GetDirectoryName(outputPath);
@@ -1144,16 +1144,16 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 保存生成的代码
             File.WriteAllText(outputPath, generated);
-            Debug.Log($"[ResKit] ResKitUserOpePopUp.cs 生成成功: {outputPath}");
+            Debug.Log($"[EUResKit] EUResKitUserOpePopUp.cs 生成成功: {outputPath}");
             
             return true;
         }
         
-        private void AddResKitUserOpePopUpComponent(GameObject prefabAsset)
+        private void AddEUResKitUserOpePopUpComponent(GameObject prefabAsset)
         {
             // 使用反射添加组件，避免直接引用运行时类型
             var assemblyName = "EURes";
-            var typeName = "EUFramework.Extension.EURes.ResKitUserOpePopUp";
+            var typeName = "EUFramework.Extension.EURes.EUResKitUserOpePopUp";
             
             var assembly = System.AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == assemblyName);
@@ -1165,21 +1165,21 @@ namespace EUFramework.Extension.EURes.Editor
                 {
                     var component = prefabAsset.AddComponent(componentType);
                     EditorUtility.SetDirty(prefabAsset);
-                    Debug.Log($"[ResKit] 已添加 {typeName} 组件到 Prefab");
+                    Debug.Log($"[EUResKit] 已添加 {typeName} 组件到 Prefab");
                 }
                 else
                 {
-                    Debug.LogWarning($"[ResKit] 未找到类型 {typeName}，请确保 ResKitUserOpePopUp.cs 已编译");
+                    Debug.LogWarning($"[EUResKit] 未找到类型 {typeName}，请确保 EUResKitUserOpePopUp.cs 已编译");
                 }
             }
             else
             {
-                Debug.LogWarning($"[ResKit] 未找到程序集 {assemblyName}");
+                Debug.LogWarning($"[EUResKit] 未找到程序集 {assemblyName}");
             }
         }
 
         /// <summary>
-        /// 同时生成 ResKit 的两个分部类文件
+        /// 同时生成 EUResKit 的两个分部类文件
         /// </summary>
         private void OnGenerateBothResKitFiles()
         {
@@ -1196,20 +1196,20 @@ namespace EUFramework.Extension.EURes.Editor
             }
             
             EditorUtility.DisplayDialog("生成完成", 
-                "ResKit 分部类已生成完成！\n\n" +
-                "✓ ResKit.Generated.cs（自动生成）\n" +
-                "✓ ResKit.cs（用户编辑）\n\n" +
+                "EUResKit 分部类已生成完成！\n\n" +
+                "✓ EUResKit.Generated.cs（自动生成）\n" +
+                "✓ EUResKit.cs（用户编辑）\n\n" +
                 "两个文件作为 partial class 相互引用，已同时创建", 
                 "确定");
         }
         
         /// <summary>
-        /// 只生成 ResKit.Generated.cs（自动生成部分）
+        /// 只生成 EUResKit.Generated.cs（自动生成部分）
         /// </summary>
         private bool OnGenerateResKitGeneratedOnly()
         {
-            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "DefaultResKit.Generated.sbn").Replace("\\", "/");
-            string outputPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated/ResKit.Generated.cs").Replace("\\", "/");
+            string templatePath = Path.Combine(EUResKitPathHelper.GetTemplatesPath(), "DefaultResKit.Generated.sbn").Replace("\\", "/");
+            string outputPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "Generated/EUResKit.Generated.cs").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
@@ -1222,8 +1222,8 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
-                .Replace("{{ class_name }}", "ResKit");
+                .Replace("{{ namespace }}", EUResKitPathHelper.GetNamespace())
+                .Replace("{{ class_name }}", "EUResKit");
 
             // 确保输出目录存在
             string outputDir = Path.GetDirectoryName(outputPath);
@@ -1248,12 +1248,12 @@ namespace EUFramework.Extension.EURes.Editor
         }
         
         /// <summary>
-        /// 只生成 ResKit.cs（用户编辑部分）
+        /// 只生成 EUResKit.cs（用户编辑部分）
         /// </summary>
         private bool OnGenerateResKitUserOnly()
         {
-            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "DefaultResKit.cs.sbn").Replace("\\", "/");
-            string outputPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/");
+            string templatePath = Path.Combine(EUResKitPathHelper.GetTemplatesPath(), "DefaultResKit.cs.sbn").Replace("\\", "/");
+            string outputPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKit.cs").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
@@ -1266,8 +1266,8 @@ namespace EUFramework.Extension.EURes.Editor
 
             // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
-                .Replace("{{ class_name }}", "ResKit");
+                .Replace("{{ namespace }}", EUResKitPathHelper.GetNamespace())
+                .Replace("{{ class_name }}", "EUResKit");
 
             // 确保输出目录存在
             string outputDir = Path.GetDirectoryName(outputPath);
@@ -1316,7 +1316,7 @@ namespace EUFramework.Extension.EURes.Editor
             var existing = AssetDatabase.LoadAssetAtPath<AssetBundleCollectorSetting>(path);
             if (existing != null)
             {
-                Debug.Log($"[ResKit] AssetBundleCollectorSetting 已存在: {path}");
+                Debug.Log($"[EUResKit] AssetBundleCollectorSetting 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
                 _collectorSetting = existing;
                 return;
@@ -1326,11 +1326,11 @@ namespace EUFramework.Extension.EURes.Editor
             AssetDatabase.CreateAsset(setting, path);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[ResKit] AssetBundleCollectorSetting 创建成功: {path}");
+            Debug.Log($"[EUResKit] AssetBundleCollectorSetting 创建成功: {path}");
             _collectorSetting = setting;
         }
 
-        private void CreateResServerConfig(string basePath)
+        private void CreateEUResServerConfig(string basePath)
         {
             if (!Directory.Exists(basePath))
             {
@@ -1338,18 +1338,18 @@ namespace EUFramework.Extension.EURes.Editor
                 AssetDatabase.Refresh();
             }
             
-            string path = Path.Combine(basePath, "ResServerConfig.asset");
+            string path = Path.Combine(basePath, "EUResServerConfig.asset");
             
-            var existing = AssetDatabase.LoadAssetAtPath<ResServerConfig>(path);
+            var existing = AssetDatabase.LoadAssetAtPath<EUResServerConfig>(path);
             if (existing != null)
             {
-                Debug.Log($"[ResKit] ResServerConfig 已存在: {path}");
+                Debug.Log($"[EUResKit] EUResServerConfig 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
                 _resServerConfig = existing;
                 return;
             }
 
-            var config = ScriptableObject.CreateInstance<ResServerConfig>();
+            var config = ScriptableObject.CreateInstance<EUResServerConfig>();
             config.protocol = ServerProtocol.HTTP;
             config.hostServer = "127.0.0.1";
             config.port = 80;
@@ -1358,7 +1358,7 @@ namespace EUFramework.Extension.EURes.Editor
             AssetDatabase.CreateAsset(config, path);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[ResKit] ResServerConfig 创建成功: {path}");
+            Debug.Log($"[EUResKit] EUResServerConfig 创建成功: {path}");
             _resServerConfig = config;
         }
         
@@ -1375,7 +1375,7 @@ namespace EUFramework.Extension.EURes.Editor
             var existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
             if (existing != null)
             {
-                Debug.Log($"[ResKit] YooAssetSettings 已存在: {path}");
+                Debug.Log($"[EUResKit] YooAssetSettings 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
                 _yooAssetSettings = existing;
                 return;
@@ -1399,16 +1399,16 @@ namespace EUFramework.Extension.EURes.Editor
                 AssetDatabase.CreateAsset(settings, path);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-                Debug.Log($"[ResKit] YooAssetSettings 创建成功: {path}");
+                Debug.Log($"[EUResKit] YooAssetSettings 创建成功: {path}");
                 _yooAssetSettings = settings;
             }
             else
             {
-                Debug.LogError("[ResKit] 无法找到 YooAsset.YooAssetSettings 类型");
+                Debug.LogError("[EUResKit] 无法找到 YooAsset.YooAssetSettings 类型");
             }
         }
         
-        private void CreateResKitPackageConfig(string basePath)
+        private void CreateEUResKitPackageConfig(string basePath)
         {
             if (!Directory.Exists(basePath))
             {
@@ -1416,18 +1416,18 @@ namespace EUFramework.Extension.EURes.Editor
                 AssetDatabase.Refresh();
             }
             
-            string path = Path.Combine(basePath, "ResKitPackageConfig.asset");
+            string path = Path.Combine(basePath, "EUResKitPackageConfig.asset");
             
-            var existing = AssetDatabase.LoadAssetAtPath<ResKitPackageConfig>(path);
+            var existing = AssetDatabase.LoadAssetAtPath<EUResKitPackageConfig>(path);
             if (existing != null)
             {
-                Debug.Log($"[ResKit] ResKitPackageConfig 已存在: {path}");
+                Debug.Log($"[EUResKit] EUResKitPackageConfig 已存在: {path}");
                 EditorGUIUtility.PingObject(existing);
                 _packageConfig = existing;
                 return;
             }
 
-            var config = ScriptableObject.CreateInstance<ResKitPackageConfig>();
+            var config = ScriptableObject.CreateInstance<EUResKitPackageConfig>();
             
             // 注意：创建时不添加默认 Package，应该从 AssetBundleCollector 同步
             // 如果需要默认配置，请在创建后使用"从 AssetBundleCollector 同步"功能
@@ -1435,7 +1435,7 @@ namespace EUFramework.Extension.EURes.Editor
             AssetDatabase.CreateAsset(config, path);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[ResKit] ResKitPackageConfig 创建成功: {path}");
+            Debug.Log($"[EUResKit] EUResKitPackageConfig 创建成功: {path}");
             _packageConfig = config;
         }
 
@@ -1446,7 +1446,7 @@ namespace EUFramework.Extension.EURes.Editor
         private GameObject CreateDefaultPopupPrefab()
         {
             // 创建根对象
-            GameObject root = new GameObject("ResKitUserOpePopUp");
+            GameObject root = new GameObject("EUResKitUserOpePopUp");
             
             // 添加 Canvas 组件
             var canvas = root.AddComponent<Canvas>();
@@ -1549,7 +1549,7 @@ namespace EUFramework.Extension.EURes.Editor
         {
             try
             {
-                Debug.Log("[ResKit] 开始刷新程序集引用...");
+                Debug.Log("[EUResKit] 开始刷新程序集引用...");
                 
                 // 1. 刷新 AssetDatabase
                 AssetDatabase.Refresh();
@@ -1557,8 +1557,8 @@ namespace EUFramework.Extension.EURes.Editor
                 // 2. 强制重新导入关键的 asmdef 文件（动态路径）
                 string[] asmdefPaths = new[]
                 {
-                    Path.Combine(ResKitPathHelper.GetModuleRoot(), "EURes.asmdef").Replace("\\", "/"),
-                    Path.Combine(ResKitPathHelper.GetEditorPath(), "EURes.Editor.asmdef").Replace("\\", "/")
+                    Path.Combine(EUResKitPathHelper.GetModuleRoot(), "EURes.asmdef").Replace("\\", "/"),
+                    Path.Combine(EUResKitPathHelper.GetEditorPath(), "EURes.Editor.asmdef").Replace("\\", "/")
                 };
                 
                 foreach (var path in asmdefPaths)
@@ -1566,7 +1566,7 @@ namespace EUFramework.Extension.EURes.Editor
                     if (File.Exists(path))
                     {
                         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-                        Debug.Log($"[ResKit] 重新导入: {path}");
+                        Debug.Log($"[EUResKit] 重新导入: {path}");
                     }
                 }
                 
@@ -1584,11 +1584,11 @@ namespace EUFramework.Extension.EURes.Editor
                     "• 删除 Library 文件夹后重新打开项目", 
                     "确定");
                 
-                Debug.Log("[ResKit] ✓ 程序集引用刷新完成");
+                Debug.Log("[EUResKit] ✓ 程序集引用刷新完成");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[ResKit] 刷新程序集引用失败: {e.Message}");
+                Debug.LogError($"[EUResKit] 刷新程序集引用失败: {e.Message}");
                 EditorUtility.DisplayDialog("刷新失败", $"刷新程序集引用时出错：\n{e.Message}", "确定");
             }
         }
@@ -1605,9 +1605,9 @@ namespace EUFramework.Extension.EURes.Editor
             try
             {
                 // 1. 计算当前命名空间
-                ResKitPathHelper.ClearCache(); // 清除缓存确保获取最新路径
-                string currentNamespace = ResKitPathHelper.GetNamespace();
-                string moduleRoot = ResKitPathHelper.GetModuleRoot();
+                EUResKitPathHelper.ClearCache(); // 清除缓存确保获取最新路径
+                string currentNamespace = EUResKitPathHelper.GetNamespace();
+                string moduleRoot = EUResKitPathHelper.GetModuleRoot();
                 
                 if (string.IsNullOrEmpty(currentNamespace) || string.IsNullOrEmpty(moduleRoot))
                 {
@@ -1645,7 +1645,7 @@ namespace EUFramework.Extension.EURes.Editor
                 bool regenerate = EditorUtility.DisplayDialog("重新生成代码？",
                     "命名空间已更新！\n\n" +
                     "是否重新生成所有代码文件以匹配新命名空间？\n" +
-                    "（包括 ResKit.cs, ResKit.Generated.cs, ResKitUserOpePopUp.cs）",
+                    "（包括 EUResKit.cs, EUResKit.Generated.cs, EUResKitUserOpePopUp.cs）",
                     "是", "稍后手动生成");
                 
                 if (regenerate)
@@ -1655,11 +1655,11 @@ namespace EUFramework.Extension.EURes.Editor
                     OnCreatePrefabClicked();
                 }
                 
-                Debug.Log($"[ResKit] ✓ 命名空间已更新为: {currentNamespace}");
+                Debug.Log($"[EUResKit] ✓ 命名空间已更新为: {currentNamespace}");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[ResKit] 刷新命名空间失败: {e.Message}\n{e.StackTrace}");
+                Debug.LogError($"[EUResKit] 刷新命名空间失败: {e.Message}\n{e.StackTrace}");
                 EditorUtility.DisplayDialog("错误", $"刷新命名空间时出错：\n{e.Message}", "确定");
             }
         }
@@ -1674,16 +1674,16 @@ namespace EUFramework.Extension.EURes.Editor
                 string asmdefPath;
                 if (asmdefFileName == "EURes.asmdef")
                 {
-                    asmdefPath = Path.Combine(ResKitPathHelper.GetModuleRoot(), asmdefFileName).Replace("\\", "/");
+                    asmdefPath = Path.Combine(EUResKitPathHelper.GetModuleRoot(), asmdefFileName).Replace("\\", "/");
                 }
                 else
                 {
-                    asmdefPath = Path.Combine(ResKitPathHelper.GetEditorPath(), asmdefFileName).Replace("\\", "/");
+                    asmdefPath = Path.Combine(EUResKitPathHelper.GetEditorPath(), asmdefFileName).Replace("\\", "/");
                 }
                 
                 if (!File.Exists(asmdefPath))
                 {
-                    Debug.LogError($"[ResKit] 未找到 {asmdefFileName} 文件: {asmdefPath}");
+                    Debug.LogError($"[EUResKit] 未找到 {asmdefFileName} 文件: {asmdefPath}");
                     return false;
                 }
                 
@@ -1721,7 +1721,7 @@ namespace EUFramework.Extension.EURes.Editor
                 
                 if (!updated)
                 {
-                    Debug.LogWarning($"[ResKit] 无法更新 {asmdefFileName} 的命名空间");
+                    Debug.LogWarning($"[EUResKit] 无法更新 {asmdefFileName} 的命名空间");
                     return false;
                 }
                 
@@ -1729,12 +1729,12 @@ namespace EUFramework.Extension.EURes.Editor
                 File.WriteAllText(asmdefPath, string.Join("\n", lines));
                 AssetDatabase.ImportAsset(asmdefPath);
                 
-                Debug.Log($"[ResKit] 已更新 {asmdefFileName} 命名空间为: {newNamespace}");
+                Debug.Log($"[EUResKit] 已更新 {asmdefFileName} 命名空间为: {newNamespace}");
                 return true;
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[ResKit] 更新 {asmdefFileName} 失败: {e.Message}");
+                Debug.LogError($"[EUResKit] 更新 {asmdefFileName} 失败: {e.Message}");
                 return false;
             }
         }
@@ -1751,9 +1751,9 @@ namespace EUFramework.Extension.EURes.Editor
                     "删除生成的文件",
                     "请选择删除范围：\n\n" +
                     "1. 仅删除代码和UI - 保留配置文件\n" +
-                    "   (ResKit.cs, ResKit.Generated.cs, ResKitUserOpePopUp等)\n\n" +
+                    "   (EUResKit.cs, EUResKit.Generated.cs, EUResKitUserOpePopUp等)\n\n" +
                     "2. 完全清理 - 删除所有生成内容\n" +
-                    "   (包括配置文件：ResKitPackageConfig等)\n\n" +
+                    "   (包括配置文件：EUResKitPackageConfig等)\n\n" +
                     "⚠️ 此操作不可撤销！",
                     "仅删除代码和UI",  // 0
                     "取消",            // 1
@@ -1775,21 +1775,21 @@ namespace EUFramework.Extension.EURes.Editor
                 
                 // 3. 执行删除
                 List<string> deletedFiles = new List<string>();
-                string moduleRoot = ResKitPathHelper.GetModuleRoot();
+                string moduleRoot = EUResKitPathHelper.GetModuleRoot();
                 
                 // 删除代码文件
-                DeleteFileIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/"), deletedFiles);
-                DeleteFileIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/"), deletedFiles);
-                DeleteDirectoryIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated").Replace("\\", "/"), deletedFiles);
+                DeleteFileIfExists(Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKit.cs").Replace("\\", "/"), deletedFiles);
+                DeleteFileIfExists(Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKitUserOpePopUp.cs").Replace("\\", "/"), deletedFiles);
+                DeleteDirectoryIfExists(Path.Combine(EUResKitPathHelper.GetScriptPath(), "Generated").Replace("\\", "/"), deletedFiles);
                 
                 // 删除 UI Prefab
-                string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI/ResKitUserOpePopUp.prefab").Replace("\\", "/");
+                string prefabPath = Path.Combine(EUResKitPathHelper.GetResourcesPath(), "EUResKitUI/EUResKitUserOpePopUp.prefab").Replace("\\", "/");
                 DeleteFileIfExists(prefabPath, deletedFiles);
                 
                 // 可选：删除配置文件
                 if (deleteConfig)
                 {
-                    string settingsPath = ResKitPathHelper.GetSettingsPath();
+                    string settingsPath = EUResKitPathHelper.GetSettingsPath();
                     DeleteDirectoryIfExists(settingsPath, deletedFiles);
                 }
                 
@@ -1813,11 +1813,11 @@ namespace EUFramework.Extension.EURes.Editor
                 }
                 
                 EditorUtility.DisplayDialog("删除完成", message, "确定");
-                Debug.Log($"[ResKit] 删除完成，共删除 {deletedFiles.Count} 个文件/文件夹");
+                Debug.Log($"[EUResKit] 删除完成，共删除 {deletedFiles.Count} 个文件/文件夹");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[ResKit] 删除文件失败: {e.Message}\n{e.StackTrace}");
+                Debug.LogError($"[EUResKit] 删除文件失败: {e.Message}\n{e.StackTrace}");
                 EditorUtility.DisplayDialog("错误", $"删除文件时出错：\n{e.Message}", "确定");
             }
         }
@@ -1838,11 +1838,11 @@ namespace EUFramework.Extension.EURes.Editor
                         File.Delete(metaPath);
                     }
                     deletedFiles.Add(path);
-                    Debug.Log($"[ResKit] 已删除文件: {path}");
+                    Debug.Log($"[EUResKit] 已删除文件: {path}");
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"[ResKit] 删除文件失败 {path}: {e.Message}");
+                    Debug.LogError($"[EUResKit] 删除文件失败 {path}: {e.Message}");
                 }
             }
         }
@@ -1863,11 +1863,11 @@ namespace EUFramework.Extension.EURes.Editor
                         File.Delete(metaPath);
                     }
                     deletedFiles.Add(path);
-                    Debug.Log($"[ResKit] 已删除目录: {path}");
+                    Debug.Log($"[EUResKit] 已删除目录: {path}");
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"[ResKit] 删除目录失败 {path}: {e.Message}");
+                    Debug.LogError($"[EUResKit] 删除目录失败 {path}: {e.Message}");
                 }
             }
         }
@@ -1883,7 +1883,7 @@ namespace EUFramework.Extension.EURes.Editor
             container.style.justifyContent = Justify.Center;
             container.style.alignItems = Align.Center;
             
-            string uxmlPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uxml").Replace("\\", "/");
+            string uxmlPath = Path.Combine(EUResKitPathHelper.GetEditorPath(), "UI/EUResKitEditorWindow.uxml").Replace("\\", "/");
             var label = new Label($"UXML 文件未找到！\n请确保文件存在:\n{uxmlPath}");
             label.style.fontSize = 16;
             label.style.unityTextAlign = TextAnchor.MiddleCenter;

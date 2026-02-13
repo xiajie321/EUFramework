@@ -19,8 +19,8 @@ namespace EUFramework.Extension.EURes
         private async UniTask UniTaskBeginDownloadAsync()
         {
             var downloader = (ResourceDownloaderOperation)_machine.GetBlackboardValue("Downloader");
-            downloader.DownloadErrorCallback = (_machine.Owner as ResKitPatchOperation).SendDownloadErrorEventMessage;
-            downloader.DownloadUpdateCallback = (_machine.Owner as ResKitPatchOperation).SendDownloadUpdateDataEventMessage;
+            downloader.DownloadErrorCallback = (_machine.Owner as EUResKitPatchOperation).SendDownloadErrorEventMessage;
+            downloader.DownloadUpdateCallback = (_machine.Owner as EUResKitPatchOperation).SendDownloadUpdateDataEventMessage;
             downloader.BeginDownload();
             await downloader;
 

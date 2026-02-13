@@ -5,10 +5,10 @@ using UnityEngine.UI;
 namespace EUFramework.Extension.EURes
 {
     /// <summary>
-    /// ResKit 用户操作弹窗组件
+    /// EUResKit 用户操作弹窗组件
     /// 用户可自定义修改此脚本以实现特定的 UI 交互逻辑
     /// </summary>
-    public class ResKitUserOpePopUp : MonoBehaviour
+    public class EUResKitUserOpePopUp : MonoBehaviour
     {
         [Header("UI 引用")]
         [SerializeField] private Text titleText;

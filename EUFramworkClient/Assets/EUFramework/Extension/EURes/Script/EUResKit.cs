@@ -6,16 +6,16 @@ using Cysharp.Threading.Tasks;
 namespace EUFramework.Extension.EURes
 {
     /// <summary>
-    /// ResKit 资源管理入口类
+    /// EUResKit 资源管理入口类
     /// 用户可编辑版本 - 包含初始化逻辑
     /// </summary>
-    public partial class ResKit
+    public partial class EUResKit
     {
         #region 私有字段
         
-        private static ResKitPackageConfig _packageConfig;
+        private static EUResKitPackageConfig _packageConfig;
         private static GameObject _cachedPopupPrefab;
-        private static ResKitUserOpePopUp _popupInstance;
+        private static EUResKitUserOpePopUp _popupInstance;
         private static Canvas _popupCanvas;
         private static Action<string, int, int, long, long> _onDownloadProgressChanged;
         private static bool _isYooAssetInitialized = false;
@@ -40,7 +40,7 @@ namespace EUFramework.Extension.EURes
         /// </param>
         /// <example>
         /// <code>
-        /// ResKit.SetDownloadProgressCallback((packageName, totalCount, currentCount, totalBytes, currentBytes) =>
+        /// EUResKit.SetDownloadProgressCallback((packageName, totalCount, currentCount, totalBytes, currentBytes) =>
         /// {
         ///     float progress = (float)currentBytes / totalBytes * 100f;
         ///     Debug.Log($"[{packageName}] 下载进度: {progress:F1}%");
@@ -87,14 +87,14 @@ namespace EUFramework.Extension.EURes
         /// <summary>
         /// 加载 Package 配置
         /// </summary>
-        private static ResKitPackageConfig LoadPackageConfig()
+        private static EUResKitPackageConfig LoadPackageConfig()
         {
             if (_packageConfig == null)
             {
-                _packageConfig = Resources.Load<ResKitPackageConfig>("ResKitSettings/ResKitPackageConfig");
+                _packageConfig = Resources.Load<EUResKitPackageConfig>("EUResKitSettings/EUResKitPackageConfig");
                 if (_packageConfig == null)
                 {
-                    Debug.LogError("[ResKit] 未找到 ResKitPackageConfig，请先创建配置文件");
+                    Debug.LogError("[EUResKit] 未找到 EUResKitPackageConfig，请先创建配置文件");
                 }
             }
             return _packageConfig;
@@ -114,10 +114,10 @@ namespace EUFramework.Extension.EURes
                 return _cachedPopupPrefab;
             }
             
-            _cachedPopupPrefab = Resources.Load<GameObject>("ResKitUI/ResKitUserOpePopUp");
+            _cachedPopupPrefab = Resources.Load<GameObject>("EUResKitUI/EUResKitUserOpePopUp");
             if (_cachedPopupPrefab == null)
             {
-                Debug.LogError("[ResKit] 未找到 ResKitUserOpePopUp Prefab，路径: Resources/ResKitUI/ResKitUserOpePopUp");
+                Debug.LogError("[EUResKit] 未找到 EUResKitUserOpePopUp Prefab，路径: Resources/EUResKitUI/EUResKitUserOpePopUp");
                 return null;
             }
             
@@ -224,7 +224,7 @@ namespace EUFramework.Extension.EURes
         /// <summary>
         /// 获取或创建用户操作弹窗实例（单例）
         /// </summary>
-        private static ResKitUserOpePopUp GetOrCreatePopupInstance()
+        private static EUResKitUserOpePopUp GetOrCreatePopupInstance()
         {
             if (_popupInstance != null)
             {
@@ -240,7 +240,7 @@ namespace EUFramework.Extension.EURes
             var canvas = GetOrCreatePopupCanvas();
             if (canvas == null)
             {
-                Debug.LogError("[ResKit] 无法创建或找到 Canvas");
+                Debug.LogError("[EUResKit] 无法创建或找到 Canvas");
                 return null;
             }
             
@@ -248,10 +248,10 @@ namespace EUFramework.Extension.EURes
             var instance = UnityEngine.Object.Instantiate(prefab, canvas.transform);
             
             // 检查并确保组件存在
-            var component = instance.GetComponent<ResKitUserOpePopUp>();
+            var component = instance.GetComponent<EUResKitUserOpePopUp>();
             if (component == null)
             {
-                component = instance.AddComponent<ResKitUserOpePopUp>();
+                component = instance.AddComponent<EUResKitUserOpePopUp>();
             }
             
             // 跨场景保持
@@ -271,7 +271,7 @@ namespace EUFramework.Extension.EURes
         /// <summary>
         /// 配置补丁操作的用户交互回调
         /// </summary>
-        internal static void SetupPatchOperationCallbacks(ResKitPatchOperation patchOperation, string packageName)
+        internal static void SetupPatchOperationCallbacks(EUResKitPatchOperation patchOperation, string packageName)
         {
             if (patchOperation == null)
             {
@@ -279,12 +279,12 @@ namespace EUFramework.Extension.EURes
             }
             
             // 懒加载 Popup 实例
-            Func<ResKitUserOpePopUp> GetPopup = () =>
+            Func<EUResKitUserOpePopUp> GetPopup = () =>
             {
                 var popup = GetOrCreatePopupInstance();
                 if (popup == null)
                 {
-                    Debug.LogError("[ResKit] 无法创建用户操作弹窗");
+                    Debug.LogError("[EUResKit] 无法创建用户操作弹窗");
                 }
                 return popup;
             };
@@ -299,7 +299,7 @@ namespace EUFramework.Extension.EURes
                         title: "初始化失败",
                         content: $"资源包 [{packageName}] 初始化失败\n是否重试？",
                         onConfirm: () => patchOperation.UserRetryInitialize(),
-                        onCancel: () => Debug.LogError($"[ResKit] 用户取消初始化资源包: {packageName}")
+                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消初始化资源包: {packageName}")
                     );
                 }
             };
@@ -314,7 +314,7 @@ namespace EUFramework.Extension.EURes
                         title: "版本检查失败",
                         content: $"无法获取资源包 [{packageName}] 的版本信息\n请检查网络连接后重试",
                         onConfirm: () => patchOperation.UserRetryRequestVersion(),
-                        onCancel: () => Debug.LogError($"[ResKit] 用户取消版本检查: {packageName}")
+                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消版本检查: {packageName}")
                     );
                 }
             };
@@ -329,7 +329,7 @@ namespace EUFramework.Extension.EURes
                         title: "更新失败",
                         content: $"资源包 [{packageName}] 清单更新失败\n是否重试？",
                         onConfirm: () => patchOperation.UserRetryUpdateManifest(),
-                        onCancel: () => Debug.LogError($"[ResKit] 用户取消清单更新: {packageName}")
+                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消清单更新: {packageName}")
                     );
                 }
             };
@@ -345,7 +345,7 @@ namespace EUFramework.Extension.EURes
                         title: "发现新版本",
                         content: $"需要下载 {totalCount} 个文件\n大小: {sizeMB:F2} MB\n是否开始下载？",
                         onConfirm: () => patchOperation.UserBeginDownloadWebFiles(),
-                        onCancel: () => Debug.LogError($"[ResKit] 用户取消下载: {packageName}")
+                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消下载: {packageName}")
                     );
                 }
             };
@@ -360,7 +360,7 @@ namespace EUFramework.Extension.EURes
                         title: "下载失败",
                         content: $"文件下载失败\n文件: {fileName}\n错误: {errorInfo}\n是否重试？",
                         onConfirm: () => patchOperation.UserBeginDownloadWebFiles(),
-                        onCancel: () => Debug.LogError($"[ResKit] 用户取消下载重试: {packageName}")
+                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消下载重试: {packageName}")
                     );
                 }
             };
@@ -397,7 +397,7 @@ namespace EUFramework.Extension.EURes
             var config = LoadPackageConfig();
             if (config == null)
             {
-                Debug.LogError("[ResKit] 配置文件加载失败，无法初始化");
+                Debug.LogError("[EUResKit] 配置文件加载失败，无法初始化");
                 onAllCompleted?.Invoke(false);
                 return false;
             }
@@ -405,7 +405,7 @@ namespace EUFramework.Extension.EURes
             var packages = config.GetAllPackages();
             if (packages == null || packages.Count == 0)
             {
-                Debug.LogWarning("[ResKit] 没有配置任何 Package");
+                Debug.LogWarning("[EUResKit] 没有配置任何 Package");
                 onAllCompleted?.Invoke(false);
                 return false;
             }           
@@ -429,7 +429,7 @@ namespace EUFramework.Extension.EURes
                 }
                 else
                 {
-                    Debug.LogError($"[ResKit] 包 {packageInfo.packageName} 初始化失败");
+                    Debug.LogError($"[EUResKit] 包 {packageInfo.packageName} 初始化失败");
                     allSuccess = false;
                     
                     // 回调：包初始化失败

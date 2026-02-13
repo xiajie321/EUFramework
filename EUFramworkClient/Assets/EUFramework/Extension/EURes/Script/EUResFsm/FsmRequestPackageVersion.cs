@@ -27,12 +27,12 @@ namespace EUFramework.Extension.EURes
             await operation;
             if (operation.Status != EOperationStatus.Succeed)
             {
-                (_machine.Owner as ResKitPatchOperation)?.OnPackageVersionRequestFailed?.Invoke();
+                (_machine.Owner as EUResKitPatchOperation)?.OnPackageVersionRequestFailed?.Invoke();
             }
             else
             {
                 // 版本请求成功，清零重试计数器
-                (_machine.Owner as ResKitPatchOperation)?.ResetVersionRetryCount();
+                (_machine.Owner as EUResKitPatchOperation)?.ResetVersionRetryCount();
                 _machine.SetBlackboardValue("PackageVersion", operation.PackageVersion);
                 _machine.ChangeState<FsmUpdatePackageManifest>();
             }

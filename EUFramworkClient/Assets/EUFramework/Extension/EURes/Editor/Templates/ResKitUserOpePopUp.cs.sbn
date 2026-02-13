@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace {{ namespace }}
 {
     /// <summary>
-    /// ResKit 用户操作弹窗组件
+    /// EUResKit 用户操作弹窗组件
     /// 用户可自定义修改此脚本以实现特定的 UI 交互逻辑
     /// </summary>
     public class {{ class_name }} : MonoBehaviour

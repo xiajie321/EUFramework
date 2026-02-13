@@ -66,7 +66,7 @@ namespace EUFramework.Extension.EURes
             }
 
             // 若未进入任何模式或被空包保护提前返回，避免空引用
-            var owner = _machine.Owner as ResKitPatchOperation;
+            var owner = _machine.Owner as EUResKitPatchOperation;
             if (initializationOperation == null)
             {
 
@@ -96,16 +96,16 @@ namespace EUFramework.Extension.EURes
         private string GetHostServerURL()
         {
             // 加载服务器配置
-            var config = Resources.Load<ResServerConfig>("ResKitSettings/ResServerConfig");
+            var config = Resources.Load<EUResServerConfig>("EUResKitSettings/EUResServerConfig");
             if (config == null)
             {
-                Debug.LogError("[FsmInitializePackage] 未找到 ResServerConfig 配置文件，请先创建配置！");
+                Debug.LogError("[FsmInitializePackage] 未找到 EUResServerConfig 配置文件，请先创建配置！");
                 return string.Empty;
             }
 
             if (!config.IsValid())
             {
-                Debug.LogError("[FsmInitializePackage] ResServerConfig 配置无效，请检查配置！");
+                Debug.LogError("[FsmInitializePackage] EUResServerConfig 配置无效，请检查配置！");
                 return string.Empty;
             }
 

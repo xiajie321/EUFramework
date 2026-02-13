@@ -33,7 +33,7 @@ namespace EUFramework.Extension.EURes
             {
                 int totalDownloadCount = downloader.TotalDownloadCount;
                 long totalDownloadBytes = downloader.TotalDownloadBytes;
-                (_machine.Owner as ResKitPatchOperation)?.OnFoundUpdateFiles?.Invoke(totalDownloadCount, totalDownloadBytes);
+                (_machine.Owner as EUResKitPatchOperation)?.OnFoundUpdateFiles?.Invoke(totalDownloadCount, totalDownloadBytes);
             }
 
         }

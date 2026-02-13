@@ -5,13 +5,13 @@ using System.IO;
 namespace EUFramework.Extension.EURes.Editor
 {
     /// <summary>
-    /// ResServerConfig 编辑器扩展
+    /// EUResServerConfig 编辑器扩展
     /// </summary>
-    public static class ResServerConfigEditor
+    public static class EUResServerConfigEditor
     {
         // 使用动态路径
-        private static string DEFAULT_PATH => ResKitPathHelper.GetSettingsPath();
-        private const string DEFAULT_FILENAME = "ResServerConfig.asset";
+        private static string DEFAULT_PATH => EUResKitPathHelper.GetSettingsPath();
+        private const string DEFAULT_FILENAME = "EUResServerConfig.asset";
 
         [MenuItem("YooAsset/Create ResServer Config", false, 100)]
         public static void CreateResServerConfig()
@@ -26,7 +26,7 @@ namespace EUFramework.Extension.EURes.Editor
             string fullPath = Path.Combine(DEFAULT_PATH, DEFAULT_FILENAME);
 
             // 检查是否已存在
-            var existingAsset = AssetDatabase.LoadAssetAtPath<ResServerConfig>(fullPath);
+            var existingAsset = AssetDatabase.LoadAssetAtPath<EUResServerConfig>(fullPath);
             if (existingAsset != null)
             {
                 bool overwrite = EditorUtility.DisplayDialog(
@@ -45,7 +45,7 @@ namespace EUFramework.Extension.EURes.Editor
             }
 
             // 创建新配置
-            ResServerConfig config = ScriptableObject.CreateInstance<ResServerConfig>();
+            EUResServerConfig config = ScriptableObject.CreateInstance<EUResServerConfig>();
             config.protocol = ServerProtocol.HTTP;
             config.hostServer = "127.0.0.1";
             config.port = 80;
@@ -60,14 +60,14 @@ namespace EUFramework.Extension.EURes.Editor
             EditorGUIUtility.PingObject(config);
             Selection.activeObject = config;
 
-            Debug.Log($"[ResServerConfig] 配置文件创建成功: {fullPath}");
+            Debug.Log($"[EUResServerConfig] 配置文件创建成功: {fullPath}");
         }
 
         [MenuItem("YooAsset/Open ResServer Config", false, 101)]
         public static void OpenResServerConfig()
         {
             string fullPath = Path.Combine(DEFAULT_PATH, DEFAULT_FILENAME);
-            var config = AssetDatabase.LoadAssetAtPath<ResServerConfig>(fullPath);
+            var config = AssetDatabase.LoadAssetAtPath<EUResServerConfig>(fullPath);
 
             if (config != null)
             {
@@ -78,7 +78,7 @@ namespace EUFramework.Extension.EURes.Editor
             {
                 bool create = EditorUtility.DisplayDialog(
                     "配置不存在",
-                    "ResServerConfig 配置文件不存在，是否创建？",
+                    "EUResServerConfig 配置文件不存在，是否创建？",
                     "创建",
                     "取消"
                 );
@@ -92,10 +92,10 @@ namespace EUFramework.Extension.EURes.Editor
     }
 
     /// <summary>
-    /// ResServerConfig 自定义 Inspector
+    /// EUResServerConfig 自定义 Inspector
     /// </summary>
-    [CustomEditor(typeof(ResServerConfig))]
-    public class ResServerConfigInspector : UnityEditor.Editor
+    [CustomEditor(typeof(EUResServerConfig))]
+    public class EUResServerConfigInspector : UnityEditor.Editor
     {
         private SerializedProperty protocolProp;
         private SerializedProperty hostServerProp;
@@ -114,7 +114,7 @@ namespace EUFramework.Extension.EURes.Editor
 
         public override void OnInspectorGUI()
         {
-            ResServerConfig config = (ResServerConfig)target;
+            EUResServerConfig config = (EUResServerConfig)target;
 
             serializedObject.Update();
 
