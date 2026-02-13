@@ -5,7 +5,7 @@ using Cysharp.Threading.Tasks;
 using YooAsset;
 using UnityEngine;
 
-namespace EUFramework.Extension.EURes
+namespace {{ namespace }}
 {
     /// <summary>
     /// 资源管理工具类 - 自动生成

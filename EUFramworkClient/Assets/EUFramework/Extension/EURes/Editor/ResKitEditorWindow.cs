@@ -17,7 +17,9 @@ namespace EUFramework.Extension.EURes.Editor
         private AssetBundleCollectorSetting _collectorSetting;
         private ScriptableObject _yooAssetSettings; // YooAssetSettings 是 internal，用 ScriptableObject 引用
         private ResKitPackageConfig _packageConfig;
-        private const string SETTINGS_PATH = "Assets/EUFramework/Resources/ResKitSettings";
+        
+        // 动态路径（通过 ResKitPathHelper 获取）
+        private static string SETTINGS_PATH => ResKitPathHelper.GetSettingsPath();
         
         // 记录哪个配置面板被展开
         private bool _showResServerConfig = false;
@@ -26,6 +28,10 @@ namespace EUFramework.Extension.EURes.Editor
         
         // 当前选中的按钮
         private Button _selectedButton;
+        
+        // 滚动位置
+        private Vector2 _resFacadeScrollPos;
+        private Vector2 _fileStatusScrollPos;
         
         [MenuItem("EUFramework/拓展/ResKit 配置工具", priority = 100)]
         public static void ShowWindow()
@@ -46,9 +52,9 @@ namespace EUFramework.Extension.EURes.Editor
 
         private void CreateGUI()
         {
-            // 加载 UXML
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-                "Assets/EUFramework/Extension/EURes/Editor/UI/ResKitEditorWindow.uxml");
+            // 加载 UXML（动态路径）
+            string uxmlPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uxml").Replace("\\", "/");
+            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             
             if (visualTree != null)
             {
@@ -60,9 +66,9 @@ namespace EUFramework.Extension.EURes.Editor
                 return;
             }
 
-            // 加载样式
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
-                "Assets/EUFramework/Extension/EURes/Editor/UI/ResKitEditorWindow.uss");
+            // 加载样式（动态路径）
+            string ussPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uss").Replace("\\", "/");
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             
             if (styleSheet != null)
             {
@@ -156,6 +162,8 @@ namespace EUFramework.Extension.EURes.Editor
         
         private void DrawFileStatusAndConfig()
         {
+            _fileStatusScrollPos = GUILayout.BeginScrollView(_fileStatusScrollPos);
+            
             // 绘制文件状态
             DrawFileStatusPanel();
             
@@ -165,6 +173,8 @@ namespace EUFramework.Extension.EURes.Editor
                 GUILayout.Space(20);
                 DrawConfigEditPanel();
             }
+            
+            GUILayout.EndScrollView();
         }
 
         private void DrawFileStatusPanel()
@@ -813,6 +823,7 @@ namespace EUFramework.Extension.EURes.Editor
         
         private void DrawResFacadePanel()
         {
+            _resFacadeScrollPos = GUILayout.BeginScrollView(_resFacadeScrollPos);
             GUILayout.BeginVertical();
             GUILayout.Space(5);
             
@@ -820,8 +831,8 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.Label("UI Prefab 和脚本", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
-            string prefabPath = "Assets/EUFramework/Resources/ResKitUI/ResKitUserOpePopUp.prefab";
-            string scriptPath = "Assets/EUFramework/Extension/EURes/Script/ResKitUserOpePopUp.cs";
+            string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI/ResKitUserOpePopUp.prefab").Replace("\\", "/");
+            string scriptPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/");
             bool prefabExists = File.Exists(prefabPath);
             bool scriptExists = File.Exists(scriptPath);
             
@@ -901,8 +912,8 @@ namespace EUFramework.Extension.EURes.Editor
             GUILayout.Label("ResKit 分部类（Partial Class）", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
-            string codeGeneratedPath = "Assets/EUFramework/Extension/EURes/Script/Generated/ResKit.Generated.cs";
-            string codeUserPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
+            string codeGeneratedPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated/ResKit.Generated.cs").Replace("\\", "/");
+            string codeUserPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/");
             bool codeGeneratedExists = File.Exists(codeGeneratedPath);
             bool codeUserExists = File.Exists(codeUserPath);
             bool bothExist = codeGeneratedExists && codeUserExists;
@@ -1013,7 +1024,41 @@ namespace EUFramework.Extension.EURes.Editor
                 RefreshAssemblyReferences();
             }
             
+            GUILayout.Space(20);
+            
+            // 模块管理工具区域
+            GUILayout.Label("模块管理工具", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            EditorGUILayout.HelpBox(
+                "🔧 工具说明：\n" +
+                "• 刷新命名空间：当模块位置改变时，自动更新命名空间和 asmdef\n" +
+                "• 删除生成的文件：清理所有生成的代码和资源文件",
+                MessageType.Info);
+            
+            GUILayout.BeginHorizontal();
+            
+            if (GUILayout.Button("🔄 刷新命名空间", GUILayout.Height(40)))
+            {
+                OnRefreshNamespace();
+            }
+            
+            if (GUILayout.Button("🗑️ 删除所有生成的文件", GUILayout.Height(40)))
+            {
+                OnDeleteGeneratedFiles();
+            }
+            
+            GUILayout.EndHorizontal();
+            
+            // 显示当前模块信息
+            GUILayout.Space(10);
+            EditorGUILayout.HelpBox(
+                $"📍 当前模块位置：\n{ResKitPathHelper.GetModuleRoot()}\n\n" +
+                $"📦 当前命名空间：\n{ResKitPathHelper.GetNamespace()}",
+                MessageType.None);
+            
             GUILayout.EndVertical();
+            GUILayout.EndScrollView();
         }
 
         #region 生成操作
@@ -1021,7 +1066,7 @@ namespace EUFramework.Extension.EURes.Editor
         private void OnCreatePrefabClicked()
         {
             // 1. 先生成 ResKitUserOpePopUp.cs 脚本
-            string scriptPath = "Assets/EUFramework/Extension/EURes/Script/ResKitUserOpePopUp.cs";
+            string scriptPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/");
             bool scriptGenerated = GenerateResKitUserOpePopUpScript(scriptPath);
             
             if (!scriptGenerated)
@@ -1037,7 +1082,7 @@ namespace EUFramework.Extension.EURes.Editor
             System.Threading.Thread.Sleep(500);
             
             // 2. 创建 Prefab
-            string prefabPath = "Assets/EUFramework/Resources/ResKitUI";
+            string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI").Replace("\\", "/");
             
             if (!Directory.Exists(prefabPath))
             {
@@ -1074,7 +1119,7 @@ namespace EUFramework.Extension.EURes.Editor
         
         private bool GenerateResKitUserOpePopUpScript(string outputPath)
         {
-            string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/ResKitUserOpePopUp.cs.sbn";
+            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "ResKitUserOpePopUp.cs.sbn").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
@@ -1085,9 +1130,9 @@ namespace EUFramework.Extension.EURes.Editor
             // 读取模板
             string template = File.ReadAllText(templatePath);
 
-            // 替换变量
+            // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", "EUFramework.Extension.EURes")
+                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
                 .Replace("{{ class_name }}", "ResKitUserOpePopUp");
 
             // 确保输出目录存在
@@ -1163,8 +1208,8 @@ namespace EUFramework.Extension.EURes.Editor
         /// </summary>
         private bool OnGenerateResKitGeneratedOnly()
         {
-            string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/DefaultResKit.Generated.sbn";
-            string outputPath = "Assets/EUFramework/Extension/EURes/Script/Generated/ResKit.Generated.cs";
+            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "DefaultResKit.Generated.sbn").Replace("\\", "/");
+            string outputPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated/ResKit.Generated.cs").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
@@ -1175,9 +1220,9 @@ namespace EUFramework.Extension.EURes.Editor
             // 读取模板
             string template = File.ReadAllText(templatePath);
 
-            // 替换变量
+            // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", "EUFramework.Extension.EURes")
+                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
                 .Replace("{{ class_name }}", "ResKit");
 
             // 确保输出目录存在
@@ -1207,8 +1252,8 @@ namespace EUFramework.Extension.EURes.Editor
         /// </summary>
         private bool OnGenerateResKitUserOnly()
         {
-            string templatePath = "Assets/EUFramework/Extension/EURes/Editor/Templates/DefaultResKit.cs.sbn";
-            string outputPath = "Assets/EUFramework/Extension/EURes/Script/ResKit.cs";
+            string templatePath = Path.Combine(ResKitPathHelper.GetTemplatesPath(), "DefaultResKit.cs.sbn").Replace("\\", "/");
+            string outputPath = Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/");
 
             if (!File.Exists(templatePath))
             {
@@ -1219,9 +1264,9 @@ namespace EUFramework.Extension.EURes.Editor
             // 读取模板
             string template = File.ReadAllText(templatePath);
 
-            // 替换变量
+            // 替换变量（使用动态命名空间）
             string generated = template
-                .Replace("{{ namespace }}", "EUFramework.Extension.EURes")
+                .Replace("{{ namespace }}", ResKitPathHelper.GetNamespace())
                 .Replace("{{ class_name }}", "ResKit");
 
             // 确保输出目录存在
@@ -1509,11 +1554,11 @@ namespace EUFramework.Extension.EURes.Editor
                 // 1. 刷新 AssetDatabase
                 AssetDatabase.Refresh();
                 
-                // 2. 强制重新导入关键的 asmdef 文件
+                // 2. 强制重新导入关键的 asmdef 文件（动态路径）
                 string[] asmdefPaths = new[]
                 {
-                    "Assets/EUFramework/Extension/EURes/EURes.asmdef",
-                    "Assets/EUFramework/Extension/EURes/Editor/EURes.Editor.asmdef"
+                    Path.Combine(ResKitPathHelper.GetModuleRoot(), "EURes.asmdef").Replace("\\", "/"),
+                    Path.Combine(ResKitPathHelper.GetEditorPath(), "EURes.Editor.asmdef").Replace("\\", "/")
                 };
                 
                 foreach (var path in asmdefPaths)
@@ -1550,6 +1595,285 @@ namespace EUFramework.Extension.EURes.Editor
 
         #endregion
 
+        #region 模块管理工具
+
+        /// <summary>
+        /// 刷新命名空间（根据模块位置自动更新）
+        /// </summary>
+        private void OnRefreshNamespace()
+        {
+            try
+            {
+                // 1. 计算当前命名空间
+                ResKitPathHelper.ClearCache(); // 清除缓存确保获取最新路径
+                string currentNamespace = ResKitPathHelper.GetNamespace();
+                string moduleRoot = ResKitPathHelper.GetModuleRoot();
+                
+                if (string.IsNullOrEmpty(currentNamespace) || string.IsNullOrEmpty(moduleRoot))
+                {
+                    EditorUtility.DisplayDialog("错误", "无法检测模块位置，请确保 EURes.asmdef 文件存在", "确定");
+                    return;
+                }
+                
+                // 2. 显示确认对话框
+                bool confirm = EditorUtility.DisplayDialog("刷新命名空间",
+                    $"检测到模块位置:\n{moduleRoot}\n\n" +
+                    $"将更新命名空间为:\n{currentNamespace}\n\n" +
+                    $"此操作会:\n" +
+                    $"1. 更新 EURes.asmdef 的 rootNamespace\n" +
+                    $"2. 更新 EURes.Editor.asmdef 的 rootNamespace\n" +
+                    $"3. 可选择重新生成所有代码文件\n\n" +
+                    $"是否继续？",
+                    "确定", "取消");
+                
+                if (!confirm) return;
+                
+                // 3. 更新 asmdef 文件
+                bool success = true;
+                success &= UpdateAsmdefNamespace("EURes.asmdef", currentNamespace);
+                success &= UpdateAsmdefNamespace("EURes.Editor.asmdef", currentNamespace + ".Editor");
+                
+                if (!success)
+                {
+                    EditorUtility.DisplayDialog("警告", "部分 asmdef 文件更新失败，请检查控制台日志", "确定");
+                    return;
+                }
+                
+                AssetDatabase.Refresh();
+                
+                // 4. 提示是否重新生成代码
+                bool regenerate = EditorUtility.DisplayDialog("重新生成代码？",
+                    "命名空间已更新！\n\n" +
+                    "是否重新生成所有代码文件以匹配新命名空间？\n" +
+                    "（包括 ResKit.cs, ResKit.Generated.cs, ResKitUserOpePopUp.cs）",
+                    "是", "稍后手动生成");
+                
+                if (regenerate)
+                {
+                    // 重新生成所有代码
+                    OnGenerateBothResKitFiles();
+                    OnCreatePrefabClicked();
+                }
+                
+                Debug.Log($"[ResKit] ✓ 命名空间已更新为: {currentNamespace}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResKit] 刷新命名空间失败: {e.Message}\n{e.StackTrace}");
+                EditorUtility.DisplayDialog("错误", $"刷新命名空间时出错：\n{e.Message}", "确定");
+            }
+        }
+        
+        /// <summary>
+        /// 更新 asmdef 文件的命名空间
+        /// </summary>
+        private bool UpdateAsmdefNamespace(string asmdefFileName, string newNamespace)
+        {
+            try
+            {
+                string asmdefPath;
+                if (asmdefFileName == "EURes.asmdef")
+                {
+                    asmdefPath = Path.Combine(ResKitPathHelper.GetModuleRoot(), asmdefFileName).Replace("\\", "/");
+                }
+                else
+                {
+                    asmdefPath = Path.Combine(ResKitPathHelper.GetEditorPath(), asmdefFileName).Replace("\\", "/");
+                }
+                
+                if (!File.Exists(asmdefPath))
+                {
+                    Debug.LogError($"[ResKit] 未找到 {asmdefFileName} 文件: {asmdefPath}");
+                    return false;
+                }
+                
+                // 读取并解析 JSON
+                string jsonContent = File.ReadAllText(asmdefPath);
+                
+                // 使用简单的字符串替换更新 rootNamespace（避免 JsonUtility 的限制）
+                var lines = jsonContent.Split('\n').ToList();
+                bool updated = false;
+                
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (lines[i].Contains("\"rootNamespace\""))
+                    {
+                        // 替换整行
+                        lines[i] = $"    \"rootNamespace\": \"{newNamespace}\",";
+                        updated = true;
+                        break;
+                    }
+                }
+                
+                // 如果没有 rootNamespace 字段，在 name 字段后添加
+                if (!updated)
+                {
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (lines[i].Contains("\"name\""))
+                        {
+                            lines.Insert(i + 1, $"    \"rootNamespace\": \"{newNamespace}\",");
+                            updated = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!updated)
+                {
+                    Debug.LogWarning($"[ResKit] 无法更新 {asmdefFileName} 的命名空间");
+                    return false;
+                }
+                
+                // 写回文件
+                File.WriteAllText(asmdefPath, string.Join("\n", lines));
+                AssetDatabase.ImportAsset(asmdefPath);
+                
+                Debug.Log($"[ResKit] 已更新 {asmdefFileName} 命名空间为: {newNamespace}");
+                return true;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResKit] 更新 {asmdefFileName} 失败: {e.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// 删除所有生成的文件
+        /// </summary>
+        private void OnDeleteGeneratedFiles()
+        {
+            try
+            {
+                // 1. 显示选项对话框
+                int option = EditorUtility.DisplayDialogComplex(
+                    "删除生成的文件",
+                    "请选择删除范围：\n\n" +
+                    "1. 仅删除代码和UI - 保留配置文件\n" +
+                    "   (ResKit.cs, ResKit.Generated.cs, ResKitUserOpePopUp等)\n\n" +
+                    "2. 完全清理 - 删除所有生成内容\n" +
+                    "   (包括配置文件：ResKitPackageConfig等)\n\n" +
+                    "⚠️ 此操作不可撤销！",
+                    "仅删除代码和UI",  // 0
+                    "取消",            // 1
+                    "完全清理"         // 2
+                );
+                
+                if (option == 1) return; // 取消
+                
+                bool deleteConfig = (option == 2); // 完全清理
+                
+                // 2. 二次确认
+                bool confirm = EditorUtility.DisplayDialog("确认删除",
+                    deleteConfig 
+                        ? "即将删除所有生成的文件（包括配置）！\n此操作不可撤销！"
+                        : "即将删除代码和UI文件（保留配置）！\n此操作不可撤销！",
+                    "确定删除", "取消");
+                
+                if (!confirm) return;
+                
+                // 3. 执行删除
+                List<string> deletedFiles = new List<string>();
+                string moduleRoot = ResKitPathHelper.GetModuleRoot();
+                
+                // 删除代码文件
+                DeleteFileIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKit.cs").Replace("\\", "/"), deletedFiles);
+                DeleteFileIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "ResKitUserOpePopUp.cs").Replace("\\", "/"), deletedFiles);
+                DeleteDirectoryIfExists(Path.Combine(ResKitPathHelper.GetScriptPath(), "Generated").Replace("\\", "/"), deletedFiles);
+                
+                // 删除 UI Prefab
+                string prefabPath = Path.Combine(ResKitPathHelper.GetResourcesPath(), "ResKitUI/ResKitUserOpePopUp.prefab").Replace("\\", "/");
+                DeleteFileIfExists(prefabPath, deletedFiles);
+                
+                // 可选：删除配置文件
+                if (deleteConfig)
+                {
+                    string settingsPath = ResKitPathHelper.GetSettingsPath();
+                    DeleteDirectoryIfExists(settingsPath, deletedFiles);
+                }
+                
+                AssetDatabase.Refresh();
+                
+                // 4. 显示结果
+                string message = $"删除完成！\n\n已删除 {deletedFiles.Count} 个文件/文件夹：\n\n";
+                if (deletedFiles.Count > 0)
+                {
+                    int displayCount = Mathf.Min(deletedFiles.Count, 10);
+                    for (int i = 0; i < displayCount; i++)
+                    {
+                        message += $"• {Path.GetFileName(deletedFiles[i])}\n";
+                    }
+                    if (deletedFiles.Count > 10)
+                        message += $"... 还有 {deletedFiles.Count - 10} 个";
+                }
+                else
+                {
+                    message = "没有找到需要删除的文件";
+                }
+                
+                EditorUtility.DisplayDialog("删除完成", message, "确定");
+                Debug.Log($"[ResKit] 删除完成，共删除 {deletedFiles.Count} 个文件/文件夹");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ResKit] 删除文件失败: {e.Message}\n{e.StackTrace}");
+                EditorUtility.DisplayDialog("错误", $"删除文件时出错：\n{e.Message}", "确定");
+            }
+        }
+        
+        /// <summary>
+        /// 删除文件（如果存在）
+        /// </summary>
+        private void DeleteFileIfExists(string path, List<string> deletedFiles)
+        {
+            if (File.Exists(path))
+            {
+                try
+                {
+                    File.Delete(path);
+                    string metaPath = path + ".meta";
+                    if (File.Exists(metaPath))
+                    {
+                        File.Delete(metaPath);
+                    }
+                    deletedFiles.Add(path);
+                    Debug.Log($"[ResKit] 已删除文件: {path}");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[ResKit] 删除文件失败 {path}: {e.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 删除目录（如果存在）
+        /// </summary>
+        private void DeleteDirectoryIfExists(string path, List<string> deletedFiles)
+        {
+            if (Directory.Exists(path))
+            {
+                try
+                {
+                    Directory.Delete(path, true);
+                    string metaPath = path + ".meta";
+                    if (File.Exists(metaPath))
+                    {
+                        File.Delete(metaPath);
+                    }
+                    deletedFiles.Add(path);
+                    Debug.Log($"[ResKit] 已删除目录: {path}");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[ResKit] 删除目录失败 {path}: {e.Message}");
+                }
+            }
+        }
+
+        #endregion
+
         #region UI 更新
 
         private void CreateFallbackUI()
@@ -1559,7 +1883,8 @@ namespace EUFramework.Extension.EURes.Editor
             container.style.justifyContent = Justify.Center;
             container.style.alignItems = Align.Center;
             
-            var label = new Label("UXML 文件未找到！\n请确保文件存在:\nAssets/EUFramework/Extension/EURes/Editor/UI/ResKitEditorWindow.uxml");
+            string uxmlPath = Path.Combine(ResKitPathHelper.GetEditorPath(), "UI/ResKitEditorWindow.uxml").Replace("\\", "/");
+            var label = new Label($"UXML 文件未找到！\n请确保文件存在:\n{uxmlPath}");
             label.style.fontSize = 16;
             label.style.unityTextAlign = TextAnchor.MiddleCenter;
             label.style.color = new Color(1f, 0.5f, 0.5f);

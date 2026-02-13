@@ -9,7 +9,8 @@ namespace EUFramework.Extension.EURes.Editor
     /// </summary>
     public static class ResServerConfigEditor
     {
-        private const string DEFAULT_PATH = "Assets/EUFramework/Resources/Config";
+        // 使用动态路径
+        private static string DEFAULT_PATH => ResKitPathHelper.GetSettingsPath();
         private const string DEFAULT_FILENAME = "ResServerConfig.asset";
 
         [MenuItem("YooAsset/Create ResServer Config", false, 100)]

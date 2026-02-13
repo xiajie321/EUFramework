@@ -2,15 +2,31 @@
 
 ## 📖 简介
 
-**ResKit** 是 EUFramework 的资源管理扩展模块，基于 YooAsset 构建，提供资源加载和热更新功能。
+**ResKit** 是基于 YooAsset 构建的资源管理模块，提供资源加载和热更新功能。
 
 ### 🔌 插拔式设计
 
-ResKit 采用完全独立的插拔式设计：
-- ✅ **零耦合**: 不依赖 EUFramework 其他模块
-- ✅ **易集成**: 复制文件夹到项目即可使用
-- ✅ **易移除**: 删除文件夹不影响其他系统
-- ✅ **自包含**: 配置、代码、资源完全独立
+ResKit 采用独立的插拔式设计，真正做到"复制即用"：
+- ✅ **零模块耦合**: 不依赖其他业务模块
+- ✅ **路径自适应**: 可放置在项目任意位置
+- ✅ **命名空间自动**: 根据文件夹路径自动生成命名空间
+- ✅ **易集成易移除**: 复制文件夹到项目即可使用，删除不影响其他系统
+
+### 📦 依赖说明
+
+**必需依赖**（需要自行安装）：
+- Unity 2021.3 或更高版本
+- YooAsset（资源管理框架）
+- UniTask（异步任务库）
+
+**文件结构**：
+```
+EURes/                    # 模块可以放在任意位置
+├── Editor/              # 编辑器工具
+├── Script/              # 运行时代码
+├── Resources/           # 配置文件和 UI 资源
+└── Doc/                 # 文档
+```
 
 ## 🔧 ResKit 编辑器工具
 
@@ -35,22 +51,38 @@ ResKit 采用完全独立的插拔式设计：
 
 **作用**：生成资源管理所需的代码和 UI
 
+#### UI Prefab 和脚本
 - **生成 UI Prefab**: 生成下载进度和用户交互界面
-- **生成 ResKit 分部类**: 生成资源管理 API 代码
-- **刷新程序集引用**: 修复编译错误
+- **ResKitUserOpePopUp**: 用户可自定义的交互弹窗
 
-**使用步骤**：
+#### ResKit 分部类（Partial Class）
+- **ResKit.Generated.cs**: 自动生成的基础工具类（可重新生成）
+- **ResKit.cs**: 用户编辑的业务逻辑类（请勿覆盖）
+
+#### 程序集引用管理
+- **刷新程序集引用**: 解决 YooAsset 和 UniTask 引用丢失问题
+
+#### 模块管理工具（新功能）
+- **🔄 刷新命名空间**: 当模块位置改变时，自动更新命名空间和 asmdef
+- **🗑️ 删除所有生成的文件**: 清理所有生成的代码和资源文件
+
+**首次使用步骤**：
 1. 点击 "生成 UI Prefab 和脚本"
 2. 点击 "生成 ResKit 分部类（同时生成两个文件）"
+3. 查看底部显示的当前模块位置和命名空间
 
 ## 💻 代码使用
+
+> **注意**：示例代码中的命名空间 `EUFramework.Extension.EURes` 仅为示例。
+> 实际命名空间根据您的模块位置自动生成（排除 Assets 后的文件夹路径）。
+> 例如：`Assets/Plugins/ResKit/` → `Plugins.ResKit`
 
 ### 初始化资源系统
 
 在游戏启动时调用初始化方法：
 
 ```csharp
-using EUFramework.Extension.EURes;
+using EUFramework.Extension.EURes; // 根据实际命名空间修改
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -179,6 +211,38 @@ handle.Release();
 
 > 💡 使用 **HostPlayMode** 或 **WebPlayMode** 时，需要在 ResServerConfig 中配置 CDN 地址。
 
+## 🚀 迁移和部署指南
+
+### 将 ResKit 迁移到新项目
+
+1. **复制模块文件夹**
+   - 将整个 `EURes` 文件夹复制到新项目的任意位置
+   - 例如：`Assets/Plugins/ResKit/`、`Assets/Tools/ResourceManager/` 等
+
+2. **刷新命名空间**
+   - 打开 ResKit 配置工具
+   - 进入 "ResFacade" 面板
+   - 点击 "🔄 刷新命名空间"
+   - 选择是否重新生成代码文件
+
+3. **安装依赖**
+   - 确保项目已安装 YooAsset 和 UniTask
+
+4. **完成**
+   - 查看配置工具底部显示的当前命名空间
+   - 在代码中使用新的命名空间即可
+
+### 清理和重置
+
+如果需要清理所有生成的文件：
+
+1. 打开 ResKit 配置工具 → ResFacade 面板
+2. 点击 "🗑️ 删除所有生成的文件"
+3. 选择删除范围：
+   - **仅删除代码和UI**：保留配置文件（推荐）
+   - **完全清理**：删除包括配置在内的所有生成内容
+4. 确认删除
+
 ## ❓ 常见问题
 
 ### Q: 编译错误找不到 YooAsset 或 UniTask？
@@ -199,7 +263,31 @@ handle.Release();
 2. 确认资源已添加到 AssetBundleCollector
 3. 确认包已正确初始化
 
+### Q: 将模块移动到新位置后出现编译错误？
+
+**A**: 
+1. 打开 ResKit 配置工具
+2. 进入 "ResFacade" 面板
+3. 点击 "🔄 刷新命名空间"，会自动更新 asmdef 和重新生成代码
+4. 等待编译完成
+
+### Q: 当前使用的命名空间是什么？
+
+**A**: 
+- 打开 ResKit 配置工具 → ResFacade 面板
+- 查看底部的"📦 当前命名空间"信息
+- 命名空间根据模块路径自动生成（排除 Assets 的文件夹路径）
+
+### Q: 如何自定义弹窗 UI？
+
+**A**: 
+1. 生成 UI 后，编辑 `Script/ResKitUserOpePopUp.cs` 脚本
+2. 修改 `Resources/ResKitUI/ResKitUserOpePopUp.prefab` 预制体
+3. 这两个文件都是用户可编辑的，不会被覆盖
+
 ---
 
+## 📚 更多资源
 
-更多详细信息请参考 YooAsset 官方文档：https://www.yooasset.com/
+- YooAsset 官方文档：https://www.yooasset.com/
+- UniTask 文档：https://github.com/Cysharp/UniTask
