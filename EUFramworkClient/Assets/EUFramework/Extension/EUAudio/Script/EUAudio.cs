@@ -21,9 +21,10 @@ namespace EUFramwork.Extension.EUAudioKit
         private static float _voiceVolume = 1.0f;
         private static float _globalVolume = 1.0f;
         private static GameObject _root;
-        private static EUAudioSource _bgm1; //背景音乐
-        private static EUAudioSource _bgm2; //背景音乐()
+        private static EUAudioSource _bgm; //背景音乐
+        private static EUAudioSource _bgmGd; //背景音乐(用于过渡)
         private static EUAudioSource _voice;
+        private static EUAudioSource _voiceGd;
         private static Action<float> _onSoundVolumeChange;
         private static Action<float> _onBgmVolumeChange;
         private static Action<float> _onVoiceVolumeChange;
@@ -54,7 +55,6 @@ namespace EUFramwork.Extension.EUAudioKit
                 {
                     _sound[_useSound[i]].Source.volume = ls;
                 }
-
                 _onSoundVolumeChange?.Invoke(_soundVolume);
             }
         }
@@ -66,7 +66,7 @@ namespace EUFramwork.Extension.EUAudioKit
             {
                 if (!_init) Init();
                 _bgmVolume = math.clamp(value, 0, 1);
-                _bgm1.Source.volume = _bgmVolume * _globalVolume;
+                _bgm.Source.volume = _bgmVolume * _globalVolume;
                 _onBgmVolumeChange?.Invoke(_bgmVolume);
             }
         }
@@ -125,9 +125,9 @@ namespace EUFramwork.Extension.EUAudioKit
 
         private static void EUAudioSourceInit()
         {
-            _bgm1 = new GameObject($"EUBGM").AddComponent<EUAudioSource>();
+            _bgm = new GameObject($"EUBGM").AddComponent<EUAudioSource>();
             _voice = new GameObject($"EUVoice").AddComponent<EUAudioSource>();
-            _bgm1.transform.SetParent(_root.transform);
+            _bgm.transform.SetParent(_root.transform);
             _voice.transform.SetParent(_root.transform);
             for (int i = 0; i < _startSound; i++)
             {
@@ -144,7 +144,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _sound[_useSound[i]].Source.volume = ls;
             }
 
-            _bgm1.Source.volume = _bgmVolume * _globalVolume;
+            _bgm.Source.volume = _bgmVolume * _globalVolume;
             _voice.Source.volume = _voiceVolume * _globalVolume;
         }
 
@@ -215,7 +215,7 @@ namespace EUFramwork.Extension.EUAudioKit
             if (_useSoundIndex.IsCreated) _useSoundIndex.Dispose();
         }
 
-        public static void PlaySound(AudioClip clip, Vector3 position, float volume = -1,Action<AudioClip> onAudioEnd=null)
+        public static void PlaySound(AudioClip clip, Vector3 position,Action<AudioClip> onAudioEnd=null)
         {
             if (!GetSound(out var ls)) return;
             var lsSource = ls.Source;
@@ -223,45 +223,38 @@ namespace EUFramwork.Extension.EUAudioKit
             ls.transform.position = position;
             if(onAudioEnd != null) ls.SetAudioEndListener(onAudioEnd);
             lsSource.clip = clip;
-            var lsVolume = volume * _globalVolume;
-            if (lsVolume < 0) lsVolume = _soundVolume * _globalVolume;
-            lsSource.volume = lsVolume;
             ls.Play();
-        }
-        
-        public static void PlaySound(AudioClip clip, float volume = -1,Action<AudioClip> onAudioEnd=null)
-        {
-            PlaySound(clip, Vector3.zero, volume, onAudioEnd);
         }
 
         public static void PlaySound(AudioClip clip,Action<AudioClip> onAudioEnd = null)
         {
-            PlaySound(clip, Vector3.zero,-1, onAudioEnd);
+            PlaySound(clip, Vector3.zero, onAudioEnd);
         }
 
-        public static void SetBGM(AudioClip clip, float fadeTime = 0,float volume = -1 ,bool loop = true)
+        public static void SetBGM(AudioClip clip, float fadeTime = 0,bool loop = true)
         {
             
         }
-        public static void PlayBGM(AudioClip clip, float fadeTime = 0,float volume = -1 ,bool loop = true)
+        public static void PlayBGM(AudioClip clip, float fadeTime = 0,bool loop = true)
         {
             //设置并播放    
         }
 
         public static void PlayBGM()
         {
+             
         }
         public static void StopBGM()
         {
             
         }
 
-        public static void SetVoice(AudioClip clip, float fadeTime = 0, float volume = -1, bool loop = false)
+        public static void SetVoice(AudioClip clip, float fadeTime = 0, bool loop = false)
         {
             
         }
 
-        public static void PlayVoice(AudioClip clip, float fadeTime = 0 ,float volume = -1 ,bool loop = false)
+        public static void PlayVoice(AudioClip clip, float fadeTime = 0 ,bool loop = false)
         {
             //设置并播放
         }
