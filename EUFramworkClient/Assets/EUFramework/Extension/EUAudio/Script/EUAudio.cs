@@ -24,10 +24,10 @@ namespace EUFramwork.Extension.EUAudioKit
         private static EUAudioSource _bgm1; //背景音乐
         private static EUAudioSource _bgm2; //背景音乐()
         private static EUAudioSource _voice;
-        private static Action<float> _onChangeVolume;
-        private static Action<float> _onChangeBgmVolume;
-        private static Action<float> _onChangeVoiceVolume;
-        private static Action<float> _onChangeGlobalVolume;
+        private static Action<float> _onSoundVolumeChange;
+        private static Action<float> _onBgmVolumeChange;
+        private static Action<float> _onVoiceVolumeChange;
+        private static Action<float> _onGlobalVolumeChange;
         private static readonly List<EUAudioSource> _sound = new();
         private static readonly Stack<int> _soundPool = new(); //可以使用的音效播放器
         private static NativeList<int> _useSound; //已经使用的音效播放
@@ -55,7 +55,7 @@ namespace EUFramwork.Extension.EUAudioKit
                     _sound[_useSound[i]].Source.volume = ls;
                 }
 
-                _onChangeVolume?.Invoke(_soundVolume);
+                _onSoundVolumeChange?.Invoke(_soundVolume);
             }
         }
 
@@ -67,7 +67,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 if (!_init) Init();
                 _bgmVolume = math.clamp(value, 0, 1);
                 _bgm1.Source.volume = _bgmVolume * _globalVolume;
-                _onChangeBgmVolume?.Invoke(_bgmVolume);
+                _onBgmVolumeChange?.Invoke(_bgmVolume);
             }
         }
 
@@ -79,7 +79,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 if (!_init) Init();
                 _voiceVolume = math.clamp(value, 0, 1);
                 _voice.Source.volume = _voiceVolume * _globalVolume;
-                _onChangeVoiceVolume?.Invoke(_voiceVolume);
+                _onVoiceVolumeChange?.Invoke(_voiceVolume);
             }
         }
 
@@ -91,7 +91,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 if (!_init) Init();
                 _globalVolume = math.clamp(value, 0, 1);
                 UpdateAllVolume();
-                _onChangeGlobalVolume?.Invoke(_globalVolume);
+                _onGlobalVolumeChange?.Invoke(_globalVolume);
             }
         }
 
@@ -274,6 +274,24 @@ namespace EUFramwork.Extension.EUAudioKit
         {
         }
         
-        //TODO 补充监听事件的设置
+        public static void SetSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange = action;
+        public static void AddSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange += action;
+        public static void RemoveSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange -= action;
+        public static void RemoveAllSoundVolumeChangeListener() => _onSoundVolumeChange = null;
+
+        public static void SetBgmVolumeChangeListener(Action<float> action) => _onBgmVolumeChange = action;
+        public static void AddBgmVolumeChangeListener(Action<float> action) => _onBgmVolumeChange += action;
+        public static void RemoveBgmVolumeChangeListener(Action<float> action) => _onBgmVolumeChange -= action;
+        public static void RemoveAllBgmVolumeChangeListener() => _onBgmVolumeChange = null;
+
+        public static void SetVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange = action;
+        public static void AddVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange += action;
+        public static void RemoveVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange -= action;
+        public static void  RemoveAllVoiceVolumeChangeListener() => _onVoiceVolumeChange = null;
+
+        public static void SetGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange = action;
+        public static void AddGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange += action;
+        public static void RemoveGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange -= action;
+        public static void RemoveAllGlobalVolumeChangeListener() => _onGlobalVolumeChange = null;
     }
 }
