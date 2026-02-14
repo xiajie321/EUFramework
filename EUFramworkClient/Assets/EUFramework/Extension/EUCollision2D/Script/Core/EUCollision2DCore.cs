@@ -74,7 +74,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
     public struct ObjectCommand
     {
         /// <summary> 目标碰撞对象组件 </summary>
-        public AbsEUCollision2D Collision2D;
+        public EUAbsCollision2D Collision2D;
         /// <summary> 指令类型 </summary>
         public ObjectCommandType CommandType;
     }
@@ -140,7 +140,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         #endregion
 
         /// <summary> 管理所有碰撞对象组件的列表，用于触发回调事件 </summary>
-        private static List<AbsEUCollision2D> _objects;
+        private static List<EUAbsCollision2D> _objects;
         /// <summary> 延迟执行的指令队列，避免在 Job 运行期间直接修改集合导致冲突 </summary>
         private static Queue<ObjectCommand> _commandQueue;
 
@@ -326,7 +326,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 提交一个添加碰撞对象的指令
         /// </summary>
-        public static void AddObjectCommand(AbsEUCollision2D collision2D)
+        public static void AddObjectCommand(EUAbsCollision2D collision2D)
         {
             Init();
             _commandQueue.Enqueue(new()
@@ -339,7 +339,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 提交一个移除碰撞对象的指令
         /// </summary>
-        public static void RemoveObjectCommand(AbsEUCollision2D collision2D)
+        public static void RemoveObjectCommand(EUAbsCollision2D collision2D)
         {
             Init();
             _commandQueue.Enqueue(new()
@@ -352,7 +352,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 提交一个更新对象数据的指令（例如当碰撞形状参数改变时）
         /// </summary>
-        public static void UpdateObjectDataCommand(AbsEUCollision2D collision2D)
+        public static void UpdateObjectDataCommand(EUAbsCollision2D collision2D)
         {
             Init();
             _commandQueue.Enqueue(new()
@@ -365,7 +365,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 实际执行添加对象的逻辑，处理数组扩容和下标分配
         /// </summary>
-        private static void AddObject(AbsEUCollision2D collision2D)
+        private static void AddObject(EUAbsCollision2D collision2D)
         {
             if (_entityCount + 1 >= _maxObjectSum) MaxObjectSum *= 2; //两倍扩容
             collision2D.Entity.Id = _objects.Count;
@@ -378,7 +378,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 实际执行移除对象的逻辑，使用 SwapBack (交换末尾删除) 优化 O(1) 复杂度
         /// </summary>
-        private static void RemoveObject(AbsEUCollision2D collision2D)
+        private static void RemoveObject(EUAbsCollision2D collision2D)
         {
             int index = collision2D.Entity.Id;
             _objects[^1].Entity.Id = index; //将最后一个对象的Entity下标改为被删除的那个对象的下标;
@@ -393,7 +393,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// <summary>
         /// 实际执行数据更新逻辑
         /// </summary>
-        private static void UpdateObject(AbsEUCollision2D collision2D)
+        private static void UpdateObject(EUAbsCollision2D collision2D)
         {
             _entitys[collision2D.Entity.Id] = collision2D.Entity; //更新数据到实体数组上
         }

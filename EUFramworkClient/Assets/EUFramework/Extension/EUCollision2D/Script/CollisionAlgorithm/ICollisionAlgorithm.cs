@@ -46,7 +46,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.CollisionAlgorithm
         /// <param name="entitys">传递给 Job 的实体数据数组</param>
         /// <param name="transformAccessArray">用于 Job 同步 Transform 数据的数组</param>
         /// <param name="entityCount">当前活跃的实体数量</param>
-        public void Update(in List<AbsEUCollision2D> collisions,ref NativeArray<Entity> entitys,ref TransformAccessArray transformAccessArray, in int entityCount);
+        public void Update(in List<EUAbsCollision2D> collisions,ref NativeArray<Entity> entitys,ref TransformAccessArray transformAccessArray, in int entityCount);
 
         /// <summary>
         /// 执行分帧碰撞检测逻辑，用于平滑大负载时的 CPU 峰值。
@@ -56,12 +56,12 @@ namespace EUFramwork.Extension.EUCollision2DKit.CollisionAlgorithm
         /// <param name="transformAccessArray">Transform 数据数组</param>
         /// <param name="entityCount">当前活跃的实体数量</param>
         /// <param name="perFrameMaxObjectSum">本帧允许处理的最大对象数量上限</param>
-        public void FrameSplitting(in List<AbsEUCollision2D> collisions,ref NativeArray<Entity> entitys,ref TransformAccessArray transformAccessArray, in int entityCount,in int perFrameMaxObjectSum);
+        public void FrameSplitting(in List<EUAbsCollision2D> collisions,ref NativeArray<Entity> entitys,ref TransformAccessArray transformAccessArray, in int entityCount,in int perFrameMaxObjectSum);
 
         /// <summary>
         /// 在计算完成后，在主线程执行具体的碰撞事件触发（如调用 CollisionEnter/Exit）。
         /// </summary>
         /// <param name="collisions">碰撞体组件列表</param>
-        public void RunCollisionObjectsLogic(in List<AbsEUCollision2D> collisions);
+        public void RunCollisionObjectsLogic(in List<EUAbsCollision2D> collisions);
     }
 }

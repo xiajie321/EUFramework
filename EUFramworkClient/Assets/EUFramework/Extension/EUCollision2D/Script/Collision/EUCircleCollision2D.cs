@@ -8,7 +8,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
     /// <summary>
     /// 2D 圆形碰撞体组件。
     /// </summary>
-    public class EUCircleCollision2D : AbsEUCollision2D
+    public class EUCircleCollision2D : EUAbsCollision2D
     {
         /// <summary> 圆形半径 </summary>
         [SerializeField] private float radius;

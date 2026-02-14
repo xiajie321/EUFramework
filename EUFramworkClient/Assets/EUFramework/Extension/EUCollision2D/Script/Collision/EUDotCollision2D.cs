@@ -8,7 +8,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
     /// <summary>
     /// 2D 点碰撞体组件。
     /// </summary>
-    public class EUDotCollision2D : AbsEUCollision2D
+    public class EUDotCollision2D : EUAbsCollision2D
     {
         /// <summary> 点相对于物体的偏移量 </summary>
         [SerializeField] private float2 offset;

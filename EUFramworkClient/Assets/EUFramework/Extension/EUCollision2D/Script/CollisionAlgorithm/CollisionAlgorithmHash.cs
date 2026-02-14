@@ -49,17 +49,17 @@ namespace EUFramwork.Extension.EUCollision2DKit.CollisionAlgorithm
     
         }
         
-        public void Update(in List<AbsEUCollision2D> collisions,ref NativeArray<Entity> entitiys,ref TransformAccessArray transformAccessArray,in int entityCount)
+        public void Update(in List<EUAbsCollision2D> collisions,ref NativeArray<Entity> entitiys,ref TransformAccessArray transformAccessArray,in int entityCount)
         {
             //EUCollision2DCore.EndHandle 使用这个方法向核心传递你当前最后的Job句柄Core会自动处理何时结束调用
         }
 
-        public void FrameSplitting(in List<AbsEUCollision2D> collisions,ref NativeArray<Entity> entitiys,ref TransformAccessArray transformAccessArray,in int entityCount,in int perFrameMaxObjectSum)
+        public void FrameSplitting(in List<EUAbsCollision2D> collisions,ref NativeArray<Entity> entitiys,ref TransformAccessArray transformAccessArray,in int entityCount,in int perFrameMaxObjectSum)
         {
             //EUCollision2DCore.EndHandle 使用这个方法向核心传递你当前最后的Job句柄Core会自动处理何时结束调用
         }
 
-        public void RunCollisionObjectsLogic(in List<AbsEUCollision2D> collisions)
+        public void RunCollisionObjectsLogic(in List<EUAbsCollision2D> collisions)
         {
             //这里会回到主线程进行方法回调
         }

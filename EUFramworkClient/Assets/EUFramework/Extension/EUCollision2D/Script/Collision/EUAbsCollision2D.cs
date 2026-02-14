@@ -9,20 +9,20 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
     /// 所有碰撞体组件的抽象基类。
     /// 负责持有底层的 Entity 数据并管理碰撞事件分发。
     /// </summary>
-    public class AbsEUCollision2D : MonoBehaviour
+    public class EUAbsCollision2D : MonoBehaviour
     {
         /// <summary> 底层实体数据，由子类填充并由算法读取 </summary>
         internal Entity Entity;
 
         /// <summary> 当另一个碰撞体进入时触发 </summary>
-        public event Action<AbsEUCollision2D> OnEnterTrigger;
+        public event Action<EUAbsCollision2D> OnEnterTrigger;
         /// <summary> 当另一个碰撞体离开时触发 </summary>
-        public event Action<AbsEUCollision2D> OnExitTrigger;
+        public event Action<EUAbsCollision2D> OnExitTrigger;
 
         /// <summary>
         /// 由碰撞算法在检测到碰撞开始时调用
         /// </summary>
-        internal void CollisionEnter(AbsEUCollision2D collision)
+        internal void CollisionEnter(EUAbsCollision2D collision)
         {
             OnEnterTrigger?.Invoke(collision);
         }
@@ -30,7 +30,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
         /// <summary>
         /// 由碰撞算法在检测到碰撞结束时调用
         /// </summary>
-        internal void CollisionExit(AbsEUCollision2D collision)
+        internal void CollisionExit(EUAbsCollision2D collision)
         {
             OnExitTrigger?.Invoke(collision);
         }

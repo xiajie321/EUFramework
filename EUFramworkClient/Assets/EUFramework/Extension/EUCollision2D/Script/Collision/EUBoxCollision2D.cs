@@ -8,7 +8,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
     /// <summary>
     /// 2D 矩形碰撞体组件 (AABB)。
     /// </summary>
-    public class EUBoxCollision2D : AbsEUCollision2D
+    public class EUBoxCollision2D : EUAbsCollision2D
     {
         /// <summary> 碰撞体宽度 </summary>
         [SerializeField] private float width;
