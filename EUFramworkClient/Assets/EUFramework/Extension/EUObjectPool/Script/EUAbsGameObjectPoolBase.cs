@@ -56,6 +56,7 @@ namespace EUFramework.Extension.EUObjectPoolKit
         public abstract void OnRelease(T obj);
         public virtual void Init()
         {
+            if(_isInit) return;
             _isInit = true;
             _root =  new GameObject(typeof(T).Name);
             Object.DontDestroyOnLoad(_root);
