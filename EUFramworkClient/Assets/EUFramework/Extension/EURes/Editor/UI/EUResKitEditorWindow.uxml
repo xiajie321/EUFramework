@@ -26,6 +26,17 @@
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
+            
+            <!-- 模块管理工具按钮 -->
+            <ui:VisualElement name="btn-module-manager-container" class="sidebar-button-container">
+                <ui:Button name="btn-module-manager" class="sidebar-button">
+                    <ui:Label text="M" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="模块管理工具" class="sidebar-button-title" />
+                        <ui:Label text="一键生成和清理" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
         </ui:VisualElement>
         
         <!-- 右侧内容区域 -->

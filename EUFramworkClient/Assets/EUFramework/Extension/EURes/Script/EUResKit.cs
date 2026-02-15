@@ -3,13 +3,13 @@ using UnityEngine;
 using YooAsset;
 using Cysharp.Threading.Tasks;
 
-namespace {{ namespace }}
+namespace EUFramework.Extension.EURes
 {
     /// <summary>
     /// EUResKit 资源管理入口类
     /// 用户可编辑版本 - 包含初始化逻辑
     /// </summary>
-    public static partial class {{ class_name }}
+    public static partial class EUResKit
     {
         #region 私有字段
         
@@ -249,7 +249,7 @@ namespace {{ namespace }}
             
             // 使用反射动态查找 EUResKitUserOpePopUp 类型（避免编译时依赖）
             var component = instance.GetComponent<MonoBehaviour>();
-            var popupTypeName = "{{ namespace }}.EUResKitUserOpePopUp";
+            var popupTypeName = "EUFramework.Extension.EURes.EUResKitUserOpePopUp";
             var popupType = System.Type.GetType(popupTypeName);
             
             if (popupType != null)

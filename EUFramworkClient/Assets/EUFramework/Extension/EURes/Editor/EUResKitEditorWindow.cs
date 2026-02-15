@@ -929,6 +929,7 @@ namespace EUFramework.Extension.EURes.Editor
         {
             var btnConfigFiles = rootVisualElement.Q<Button>("btn-config-files");
             var btnResFacade = rootVisualElement.Q<Button>("btn-res-facade");
+            var btnModuleManager = rootVisualElement.Q<Button>("btn-module-manager");
 
             if (btnConfigFiles != null)
             {
@@ -945,6 +946,15 @@ namespace EUFramework.Extension.EURes.Editor
                 {
                     SetSelectedButton(btnResFacade);
                     ShowResFacadePanel();
+                };
+            }
+            
+            if (btnModuleManager != null)
+            {
+                btnModuleManager.clicked += () =>
+                {
+                    SetSelectedButton(btnModuleManager);
+                    ShowModuleManagerPanel();
                 };
             }
         }
@@ -1193,9 +1203,91 @@ namespace EUFramework.Extension.EURes.Editor
                 RefreshAssemblyReferences();
             }
             
+            GUILayout.Space(10);
+            
+            // 提示用户使用模块管理工具面板
+            EditorGUILayout.HelpBox(
+                "💡 提示：一键生成、删除文件、刷新命名空间等功能已移至【模块管理工具】面板",
+                MessageType.Info);
+            
+            GUILayout.EndVertical();
+            GUILayout.EndScrollView();
+        }
+        
+        private void ShowModuleManagerPanel()
+        {
+            var contentArea = rootVisualElement.Q<VisualElement>("content-area");
+            if (contentArea == null) return;
+            
+            contentArea.Clear();
+            
+            // 设置 contentArea 从左上角开始对齐
+            contentArea.style.alignItems = Align.FlexStart;
+            contentArea.style.justifyContent = Justify.FlexStart;
+            
+            // 添加标题
+            var header = CreateContentHeader("模块管理工具", "一键生成和清理所有配置");
+            contentArea.Add(header);
+            
+            // 创建 IMGUIContainer 来显示模块管理功能
+            var imguiContainer = new IMGUIContainer(() =>
+            {
+                DrawModuleManagerPanel();
+            });
+            
+            // 设置 IMGUIContainer 占满整个区域且从左上角开始
+            imguiContainer.style.width = Length.Percent(100);
+            imguiContainer.style.flexGrow = 1;
+            
+            contentArea.Add(imguiContainer);
+        }
+        
+        private Vector2 _moduleManagerScrollPos;
+        
+        private void DrawModuleManagerPanel()
+        {
+            _moduleManagerScrollPos = GUILayout.BeginScrollView(_moduleManagerScrollPos);
+            GUILayout.BeginVertical();
+            GUILayout.Space(5);
+            
+            // ===== 一键生成所有配置 =====
+            GUILayout.Label("快速初始化", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            EditorGUILayout.HelpBox(
+                "🚀 一键生成所有配置\n\n" +
+                "将创建以下内容：\n" +
+                "• AssetBundleCollectorSetting（资源收集配置）\n" +
+                "• EUResServerConfig（服务器配置）\n" +
+                "• YooAssetSettings（YooAsset 全局设置）\n" +
+                "• EUResKitPackageConfig（包配置）\n" +
+                "• Assets/EUResources/Builtin（内置资源目录）\n" +
+                "• Assets/EUResources/Excluded（排除资源目录）\n" +
+                "• Assets/EUResources/Remote（远程资源目录）\n" +
+                "• YooAsset Collector Packages（Builtin/Remote）\n" +
+                "• EUResKit.cs + EUResKit.Generated.cs（代码文件）\n" +
+                "• EUResKitUserOpePopUp.cs + Prefab（UI 文件）\n\n" +
+                "⚠️ 已存在的文件将被保留，不会覆盖", 
+                MessageType.Info);
+            
+            GUI.backgroundColor = new Color(0.3f, 0.8f, 0.3f); // 绿色
+            if (GUILayout.Button("🚀 一键生成所有配置和代码", GUILayout.Height(60)))
+            {
+                GenerateAllConfigsAndCode();
+            }
+            GUI.backgroundColor = Color.white;
+            
             GUILayout.Space(20);
             
-            // 模块管理工具区域
+            // ===== 模块状态 =====
+            GUILayout.Label("模块状态", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            DrawModuleStatus();
+            
+            GUILayout.Space(20);
+            
+            // ===== 模块管理工具 =====
             GUILayout.Label("模块管理工具", EditorStyles.boldLabel);
             GUILayout.Space(5);
             
@@ -1228,6 +1320,85 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.EndVertical();
             GUILayout.EndScrollView();
+        }
+        
+        private void DrawModuleStatus()
+        {
+            GUILayout.BeginVertical("box");
+            
+            // 检查配置文件
+            string collectorPath = Path.Combine(SETTINGS_PATH, "AssetBundleCollectorSetting.asset");
+            string resServerPath = Path.Combine(SETTINGS_PATH, "EUResServerConfig.asset");
+            string yooSettingsPath = Path.Combine(SETTINGS_PATH, "YooAssetSettings.asset");
+            string packageConfigPath = Path.Combine(SETTINGS_PATH, "EUResKitPackageConfig.asset");
+            
+            bool collectorExists = File.Exists(collectorPath);
+            bool resServerExists = File.Exists(resServerPath);
+            bool yooSettingsExists = File.Exists(yooSettingsPath);
+            bool packageConfigExists = File.Exists(packageConfigPath);
+            
+            // 检查资源目录
+            string resRootPath = "Assets/EUResources";
+            bool resExists = Directory.Exists(resRootPath);
+            bool builtinExists = Directory.Exists(Path.Combine(resRootPath, "Builtin"));
+            bool excludedExists = Directory.Exists(Path.Combine(resRootPath, "Excluded"));
+            bool remoteExists = Directory.Exists(Path.Combine(resRootPath, "Remote"));
+            
+            // 检查代码文件
+            string codeGeneratedPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "Generated/EUResKit.Generated.cs");
+            string codeUserPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKit.cs");
+            string scriptPath = Path.Combine(EUResKitPathHelper.GetScriptPath(), "EUResKitUserOpePopUp.cs");
+            string prefabPath = Path.Combine(EUResKitPathHelper.GetResourcesPath(), "EUResKitUI/EUResKitUserOpePopUp.prefab");
+            
+            bool codeGeneratedExists = File.Exists(codeGeneratedPath);
+            bool codeUserExists = File.Exists(codeUserPath);
+            bool scriptExists = File.Exists(scriptPath);
+            bool prefabExists = File.Exists(prefabPath);
+            
+            // 配置文件状态
+            GUILayout.Label("配置文件:", EditorStyles.boldLabel);
+            DrawStatusLine("AssetBundleCollectorSetting", collectorExists);
+            DrawStatusLine("EUResServerConfig", resServerExists);
+            DrawStatusLine("YooAssetSettings", yooSettingsExists);
+            DrawStatusLine("EUResKitPackageConfig", packageConfigExists);
+            
+            GUILayout.Space(5);
+            
+            // 资源目录状态
+            GUILayout.Label("资源目录:", EditorStyles.boldLabel);
+            DrawStatusLine("Assets/EUResources", resExists);
+            DrawStatusLine("  ├─ Builtin", builtinExists);
+            DrawStatusLine("  ├─ Excluded", excludedExists);
+            DrawStatusLine("  └─ Remote", remoteExists);
+            
+            GUILayout.Space(5);
+            
+            // 代码文件状态
+            GUILayout.Label("代码文件:", EditorStyles.boldLabel);
+            DrawStatusLine("EUResKit.Generated.cs", codeGeneratedExists);
+            DrawStatusLine("EUResKit.cs", codeUserExists);
+            DrawStatusLine("EUResKitUserOpePopUp.cs", scriptExists);
+            DrawStatusLine("EUResKitUserOpePopUp.prefab", prefabExists);
+            
+            GUILayout.EndVertical();
+        }
+        
+        private void DrawStatusLine(string name, bool exists)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, GUILayout.Width(280));
+            if (exists)
+            {
+                GUI.color = Color.green;
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+            }
+            else
+            {
+                GUI.color = Color.red;
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+            }
+            GUI.color = Color.white;
+            GUILayout.EndHorizontal();
         }
 
         #region 生成操作
@@ -2089,6 +2260,118 @@ namespace EUFramework.Extension.EURes.Editor
                 Debug.LogError($"[EUResKit] 创建资源结构失败: {ex.Message}\n{ex.StackTrace}");
                 EditorUtility.DisplayDialog("错误", 
                     $"❌ 创建失败\n\n{ex.Message}", 
+                    "确定");
+            }
+        }
+        
+        /// <summary>
+        /// 一键生成所有配置和代码
+        /// </summary>
+        private void GenerateAllConfigsAndCode()
+        {
+            if (!EditorUtility.DisplayDialog("确认", 
+                "🚀 一键生成所有配置和代码\n\n" +
+                "将创建以下内容：\n\n" +
+                "📁 配置文件：\n" +
+                "• AssetBundleCollectorSetting\n" +
+                "• EUResServerConfig\n" +
+                "• YooAssetSettings\n" +
+                "• EUResKitPackageConfig\n\n" +
+                "📁 资源目录：\n" +
+                "• Assets/EUResources/Builtin\n" +
+                "• Assets/EUResources/Excluded\n" +
+                "• Assets/EUResources/Remote\n\n" +
+                "📁 YooAsset Collector：\n" +
+                "• Builtin Package\n" +
+                "• Remote Package\n\n" +
+                "📁 代码文件：\n" +
+                "• EUResKit.cs\n" +
+                "• EUResKit.Generated.cs\n" +
+                "• EUResKitUserOpePopUp.cs\n" +
+                "• EUResKitUserOpePopUp.prefab\n\n" +
+                "⚠️ 已存在的文件将被保留，不会覆盖\n\n" +
+                "是否继续？", 
+                "继续", "取消"))
+            {
+                return;
+            }
+            
+            try
+            {
+                Debug.Log("[EUResKit] ========================================");
+                Debug.Log("[EUResKit] 开始一键生成所有配置和代码");
+                Debug.Log("[EUResKit] ========================================");
+                
+                // Step 1: 创建所有配置文件
+                Debug.Log("[EUResKit] [1/6] 创建配置文件...");
+                CreateAssetBundleCollectorSetting(SETTINGS_PATH);
+                CreateEUResServerConfig(SETTINGS_PATH);
+                CreateYooAssetSettings(SETTINGS_PATH);
+                CreateEUResKitPackageConfig(SETTINGS_PATH);
+                Debug.Log("[EUResKit] ✓ 配置文件创建完成");
+                
+                // Step 2: 创建资源目录结构
+                Debug.Log("[EUResKit] [2/6] 创建资源目录...");
+                CreateResDirectoryStructure();
+                Debug.Log("[EUResKit] ✓ 资源目录创建完成");
+                
+                // Step 3: 创建 Collector Packages
+                Debug.Log("[EUResKit] [3/6] 配置 YooAsset Collector...");
+                CreateCollectorPackages();
+                Debug.Log("[EUResKit] ✓ Collector 配置完成");
+                
+                // Step 4: 同步到 EUResKitPackageConfig
+                Debug.Log("[EUResKit] [4/6] 同步 Package 配置...");
+                SyncPackagesFromCollector();
+                Debug.Log("[EUResKit] ✓ Package 同步完成");
+                
+                // Step 5: 生成 UI Prefab 和脚本
+                Debug.Log("[EUResKit] [5/6] 生成 UI Prefab 和脚本...");
+                OnCreatePrefabClicked();
+                Debug.Log("[EUResKit] ✓ UI 生成完成");
+                
+                // Step 6: 生成 EUResKit 分部类
+                Debug.Log("[EUResKit] [6/6] 生成 EUResKit 分部类...");
+                OnGenerateBothResKitFiles();
+                Debug.Log("[EUResKit] ✓ 代码生成完成");
+                
+                // 重新加载配置
+                LoadConfigs();
+                
+                // 刷新资源数据库
+                AssetDatabase.Refresh();
+                
+                Debug.Log("[EUResKit] ========================================");
+                Debug.Log("[EUResKit] 所有配置和代码生成完成！");
+                Debug.Log("[EUResKit] ========================================");
+                
+                EditorUtility.DisplayDialog("完成", 
+                    "✅ 所有配置和代码已生成完成！\n\n" +
+                    "已创建：\n" +
+                    "• 4 个配置文件\n" +
+                    "• 3 个资源目录（Builtin/Excluded/Remote）\n" +
+                    "• 2 个 YooAsset Package\n" +
+                    "• 4 个代码文件（含 UI）\n\n" +
+                    "下一步：\n" +
+                    "1. 在【资源配置】面板调整各项设置\n" +
+                    "2. 在 YooAsset Collector 中为 Package 添加具体资源\n" +
+                    "3. 开始使用 EUResKit.InitializeAllPackagesAsync()\n\n" +
+                    "详细信息请查看控制台日志", 
+                    "确定");
+                
+                // 选中并高亮显示模块根目录
+                var moduleRoot = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(EUResKitPathHelper.GetModuleRoot());
+                if (moduleRoot != null)
+                {
+                    EditorGUIUtility.PingObject(moduleRoot);
+                    Selection.activeObject = moduleRoot;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[EUResKit] 生成失败: {ex.Message}\n{ex.StackTrace}");
+                EditorUtility.DisplayDialog("错误", 
+                    $"❌ 生成失败\n\n{ex.Message}\n\n请查看控制台错误信息", 
                     "确定");
             }
         }
