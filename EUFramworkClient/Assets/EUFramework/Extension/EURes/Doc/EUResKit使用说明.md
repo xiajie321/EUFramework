@@ -1,18 +1,18 @@
 # EUResKit 使用说明
 
-## 📖 简介
+## 简介
 
 **EUResKit** 是基于 YooAsset 构建的资源管理模块，提供资源加载和热更新功能。
 
-### 🔌 插拔式设计
+### 插拔式设计
 
 EUResKit 采用独立的插拔式设计，真正做到"复制即用"：
-- ✅ **零模块耦合**: 不依赖其他业务模块
-- ✅ **路径自适应**: 可放置在项目任意位置
-- ✅ **命名空间自动**: 根据文件夹路径自动生成命名空间
-- ✅ **易集成易移除**: 复制文件夹到项目即可使用，删除不影响其他系统
+- **零模块耦合**: 不依赖其他业务模块
+- **路径自适应**: 可放置在项目任意位置
+- **命名空间自动**: 根据文件夹路径自动生成命名空间
+- **易集成易移除**: 复制文件夹到项目即可使用，删除不影响其他系统
 
-### 📦 依赖说明
+### 依赖说明
 
 **必需依赖**（需要自行安装）：
 - Unity 2021.3 或更高版本
@@ -21,35 +21,47 @@ EUResKit 采用独立的插拔式设计，真正做到"复制即用"：
 
 **文件结构**：
 ```
-EURes/                    # 模块可以放在任意位置
+EURes/                   # 模块根目录（可以放在任意位置）
 ├── Editor/              # 编辑器工具
 ├── Script/              # 运行时代码
 ├── Resources/           # 配置文件和 UI 资源
 └── Doc/                 # 文档
+
+EUResources/             # 资源根目录（固定在 Assets/EUResources）
+├── Builtin/             # 内置资源
+├── Excluded/            # 不打包资源
+└── Remote/              # 热更新资源
 ```
 
-## 🔧 EUResKit 编辑器工具
+## EUResKit 编辑器工具
 
 打开方式：`菜单栏 → EUFramework → 拓展 → EUResKit 配置工具`
 
-### 1. 配置文件面板
+### 1. 资源配置面板
 
-**作用**：管理资源相关的配置文件
+**作用**：管理资源目录结构和配置文件
 
-- **AssetBundleCollectorSetting**: 配置哪些资源需要打包
-- **EUResKitPackageConfig**: 配置资源包的运行模式（编辑器模拟/离线/联机/WebGL）
-- **EUResServerConfig**: 配置资源服务器地址（用于热更新）
-- **YooAssetSettings**: YooAsset 的全局设置
+#### 资源目录管理
+- **一键生成目录结构**：自动创建标准的 `Builtin`、`Excluded`、`Remote` 三层目录
+- **自动创建 Package**：在 YooAsset Collector 中创建 Builtin 和 Remote 两个 Package
+- **实时状态显示**：显示目录和 Package 的创建状态
 
-**使用步骤**：
-1. 点击 "创建配置文件" 创建所需配置
-2. 点击 "配置资源收集" 添加要打包的资源
-3. 点击 "同步 Packages" 同步包配置
-4. 选择每个包的运行模式并保存
+#### 配置文件管理
+- **AssetBundleCollectorSetting**：配置哪些资源需要打包
+- **EUResKitPackageConfig**：配置资源包的运行模式（编辑器模拟/离线/联机/WebGL）
+- **EUResServerConfig**：配置资源服务器地址（用于热更新）
+- **YooAssetSettings**：YooAsset 的全局设置
 
-### 2. EUResFacade 面板
+**首次使用步骤**：
+1. 点击 "一键生成目录结构与配置" 创建标准目录和 Package
+2. 点击 "创建配置文件" 创建所需的 ScriptableObject 配置
+3. 打开 YooAsset Collector 窗口，为 Package 添加 Group 和 Collector
+4. 点击 "同步 Packages" 同步包配置到 EUResKitPackageConfig
+5. 选择每个包的运行模式并保存
 
-**作用**：生成资源管理所需的代码和 UI
+### 2. 代码生成面板
+
+**作用**：生成资源管理代码和开发工具
 
 #### UI Prefab 和脚本
 - **生成 UI Prefab**: 生成下载进度和用户交互界面
@@ -63,19 +75,17 @@ EURes/                    # 模块可以放在任意位置
 - **刷新程序集引用**: 解决 YooAsset 和 UniTask 引用丢失问题
 
 #### 模块管理工具（新功能）
-- **🔄 刷新命名空间**: 当模块位置改变时，自动更新命名空间和 asmdef
-- **🗑️ 删除所有生成的文件**: 清理所有生成的代码和资源文件
+- **刷新命名空间**: 当模块位置改变时，自动更新命名空间和 asmdef
+- **删除所有生成的文件**: 清理所有生成的代码和资源文件
 
 **首次使用步骤**：
 1. 点击 "生成 UI Prefab 和脚本"
 2. 点击 "生成 EUResKit 分部类（同时生成两个文件）"
 3. 查看底部显示的当前模块位置和命名空间
 
-## 💻 代码使用
+## 代码使用
 
-> **注意**：示例代码中的命名空间 `EUFramework.Extension.EURes` 仅为示例。
-> 实际命名空间根据您的模块位置自动生成（排除 Assets 后的文件夹路径）。
-> 例如：`Assets/Plugins/EUResKit/` → `Plugins.EUResKit`
+**注意**：示例代码中的命名空间 `EUFramework.Extension.EURes` 仅为示例。实际命名空间根据您的模块位置自动生成（排除 Assets 后的文件夹路径）。例如：`Assets/Plugins/EUResKit/` → `Plugins.EUResKit`
 
 ### 初始化资源系统
 
@@ -198,7 +208,7 @@ Instantiate(player);
 handle.Release();
 ```
 
-## 🎮 运行模式说明
+## 运行模式说明
 
 在 EUResKit 配置工具中可以为每个包选择运行模式：
 
@@ -209,9 +219,9 @@ handle.Release();
 | **HostPlayMode** | 联机模式，支持热更新 | 线上游戏 |
 | **WebPlayMode** | WebGL 模式 | 网页游戏 |
 
-> 💡 使用 **HostPlayMode** 或 **WebPlayMode** 时，需要在 EUResServerConfig 中配置 CDN 地址。
+**注意**：使用 **HostPlayMode** 或 **WebPlayMode** 时，需要在 EUResServerConfig 中配置 CDN 地址。
 
-## 🚀 迁移和部署指南
+## 迁移和部署指南
 
 ### 将 EUResKit 迁移到新项目
 
@@ -221,8 +231,8 @@ handle.Release();
 
 2. **刷新命名空间**
    - 打开 EUResKit 配置工具
-   - 进入 "EUResFacade" 面板
-   - 点击 "🔄 刷新命名空间"
+   - 进入 "代码生成" 面板
+   - 点击 "刷新命名空间"
    - 选择是否重新生成代码文件
 
 3. **安装依赖**
@@ -236,18 +246,18 @@ handle.Release();
 
 如果需要清理所有生成的文件：
 
-1. 打开 EUResKit 配置工具 → EUResFacade 面板
-2. 点击 "🗑️ 删除所有生成的文件"
+1. 打开 EUResKit 配置工具 → 代码生成面板
+2. 点击 "删除所有生成的文件"
 3. 选择删除范围：
    - **仅删除代码和UI**：保留配置文件（推荐）
    - **完全清理**：删除包括配置在内的所有生成内容
 4. 确认删除
 
-## ❓ 常见问题
+## 常见问题
 
 ### Q: 编译错误找不到 YooAsset 或 UniTask？
 
-**A**: 在 EUResKit 配置工具的 "EUResFacade" 面板，点击 "刷新程序集引用"
+**A**: 在 EUResKit 配置工具的 "代码生成" 面板，点击 "刷新程序集引用"
 
 ### Q: 如何添加新的资源包？
 
@@ -267,15 +277,15 @@ handle.Release();
 
 **A**: 
 1. 打开 EUResKit 配置工具
-2. 进入 "EUResFacade" 面板
-3. 点击 "🔄 刷新命名空间"，会自动更新 asmdef 和重新生成代码
+2. 进入 "代码生成" 面板
+3. 点击 "刷新命名空间"，会自动更新 asmdef 和重新生成代码
 4. 等待编译完成
 
 ### Q: 当前使用的命名空间是什么？
 
 **A**: 
-- 打开 EUResKit 配置工具 → EUResFacade 面板
-- 查看底部的"📦 当前命名空间"信息
+- 打开 EUResKit 配置工具 → 代码生成面板
+- 查看底部的"当前命名空间"信息
 - 命名空间根据模块路径自动生成（排除 Assets 的文件夹路径）
 
 ### Q: 如何自定义弹窗 UI？
@@ -287,7 +297,7 @@ handle.Release();
 
 ---
 
-## 📚 更多资源
+## 更多资源
 
 - YooAsset 官方文档：https://www.yooasset.com/
 - UniTask 文档：https://github.com/Cysharp/UniTask

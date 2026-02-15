@@ -25,6 +25,7 @@ namespace EUFramework.Extension.EURes.Editor
         private bool _showEUResServerConfig = false;
         private bool _showYooAssetSettings = false;
         private bool _showPackageConfig = false;
+        private bool _showResourceDirectory = false;
         
         // 当前选中的按钮
         private Button _selectedButton;
@@ -144,7 +145,7 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.justifyContent = Justify.FlexStart;
             
             // 添加标题
-            var header = CreateContentHeader("配置文件管理", "管理 EUResKit 所需的各项配置文件");
+            var header = CreateContentHeader("资源配置", "管理资源目录结构和配置文件");
             contentArea.Add(header);
             
             // 创建 IMGUIContainer 来显示文件状态和配置编辑
@@ -168,7 +169,7 @@ namespace EUFramework.Extension.EURes.Editor
             DrawFileStatusPanel();
             
             // 如果有展开的配置，在下方绘制
-            if (_showEUResServerConfig || _showYooAssetSettings || _showPackageConfig)
+            if (_showEUResServerConfig || _showYooAssetSettings || _showPackageConfig || _showResourceDirectory)
             {
                 GUILayout.Space(20);
                 DrawConfigEditPanel();
@@ -298,6 +299,63 @@ namespace EUFramework.Extension.EURes.Editor
             }
             GUILayout.EndHorizontal();
             
+            GUILayout.Space(5);
+            
+            // 检查资源目录关联
+            string resRootPath = "Assets/EUResources";
+            string builtinPath = Path.Combine(resRootPath, "Builtin");
+            string excludedPath = Path.Combine(resRootPath, "Excluded");
+            string remotePath = Path.Combine(resRootPath, "Remote");
+            
+            bool resExists = Directory.Exists(resRootPath);
+            bool builtinExists = Directory.Exists(builtinPath);
+            bool excludedExists = Directory.Exists(excludedPath);
+            bool remoteExists = Directory.Exists(remotePath);
+            bool allDirsExist = resExists && builtinExists && excludedExists && remoteExists;
+            
+            // 检查 Collector 中是否有对应的 Package
+            bool hasBuiltinPackage = false;
+            bool hasRemotePackage = false;
+            int totalPackages = 0;
+            
+            if (_collectorSetting != null && _collectorSetting.Packages != null)
+            {
+                totalPackages = _collectorSetting.Packages.Count;
+                hasBuiltinPackage = _collectorSetting.Packages.Any(p => p.PackageName == "Builtin");
+                hasRemotePackage = _collectorSetting.Packages.Any(p => p.PackageName == "Remote");
+            }
+            
+            bool allPackagesExist = hasBuiltinPackage && hasRemotePackage;
+            bool resourceDirComplete = allDirsExist && allPackagesExist;
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("资源目录关联:", GUILayout.Width(250));
+            if (resourceDirComplete)
+            {
+                GUILayout.Label("✓ 已创建", EditorStyles.boldLabel);
+                string buttonText = _showResourceDirectory ? "收起配置" : "查看目录状态";
+                if (GUILayout.Button(buttonText, GUILayout.Width(150)))
+                {
+                    _showResourceDirectory = !_showResourceDirectory;
+                    _showEUResServerConfig = false;
+                    _showYooAssetSettings = false;
+                    _showPackageConfig = false;
+                }
+            }
+            else
+            {
+                GUILayout.Label("✗ 未创建", EditorStyles.boldLabel);
+                if (GUILayout.Button("创建资源目录结构", GUILayout.Width(150)))
+                {
+                    CreateCompleteResStructure();
+                    _showResourceDirectory = true;
+                    _showEUResServerConfig = false;
+                    _showYooAssetSettings = false;
+                    _showPackageConfig = false;
+                }
+            }
+            GUILayout.EndHorizontal();
+            
             GUILayout.EndVertical();
         }
 
@@ -321,6 +379,12 @@ namespace EUFramework.Extension.EURes.Editor
             if (_showPackageConfig && _packageConfig != null)
             {
                 DrawPackageConfigPanel();
+            }
+            
+            // 资源目录状态展示
+            if (_showResourceDirectory)
+            {
+                DrawResourceDirectoryPanel();
             }
             
             GUILayout.EndVertical();
@@ -518,6 +582,95 @@ namespace EUFramework.Extension.EURes.Editor
                 MessageType.Info);
         }
         
+        private void DrawResourceDirectoryPanel()
+        {
+            GUILayout.Label("资源目录状态", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+            
+            // 获取目录状态
+            string resRootPath = "Assets/EUResources";
+            string builtinPath = Path.Combine(resRootPath, "Builtin");
+            string excludedPath = Path.Combine(resRootPath, "Excluded");
+            string remotePath = Path.Combine(resRootPath, "Remote");
+            
+            bool resExists = Directory.Exists(resRootPath);
+            bool builtinExists = Directory.Exists(builtinPath);
+            bool excludedExists = Directory.Exists(excludedPath);
+            bool remoteExists = Directory.Exists(remotePath);
+            bool allDirsExist = resExists && builtinExists && excludedExists && remoteExists;
+            
+            // 检查 Collector 中的 Package
+            bool hasBuiltinPackage = false;
+            bool hasRemotePackage = false;
+            int totalPackages = 0;
+            
+            if (_collectorSetting != null && _collectorSetting.Packages != null)
+            {
+                totalPackages = _collectorSetting.Packages.Count;
+                hasBuiltinPackage = _collectorSetting.Packages.Any(p => p.PackageName == "Builtin");
+                hasRemotePackage = _collectorSetting.Packages.Any(p => p.PackageName == "Remote");
+            }
+            
+            bool allPackagesExist = hasBuiltinPackage && hasRemotePackage;
+            
+            // 目录状态显示
+            GUILayout.Label("📁 目录结构", EditorStyles.boldLabel);
+            GUILayout.BeginVertical("box");
+            GUILayout.Label($"  • EUResources/Builtin/   {(builtinExists ? "✓" : "✗")}", EditorStyles.miniLabel);
+            GUILayout.Label($"  • EUResources/Excluded/  {(excludedExists ? "✓" : "✗")} (不打包)", EditorStyles.miniLabel);
+            GUILayout.Label($"  • EUResources/Remote/    {(remoteExists ? "✓" : "✗")}", EditorStyles.miniLabel);
+            GUILayout.EndVertical();
+            
+            GUILayout.Space(10);
+            
+            // Package 状态显示
+            GUILayout.Label("📦 Collector Packages", EditorStyles.boldLabel);
+            GUILayout.BeginVertical("box");
+            GUILayout.Label($"  • Builtin   {(hasBuiltinPackage ? "✓" : "✗")}", EditorStyles.miniLabel);
+            GUILayout.Label($"  • Remote    {(hasRemotePackage ? "✓" : "✗")}", EditorStyles.miniLabel);
+            GUILayout.Label($"  • Excluded  (不需要配置)", EditorStyles.miniLabel);
+            GUILayout.EndVertical();
+            
+            GUILayout.Space(10);
+            
+            EditorGUILayout.HelpBox(
+                "🎯 说明：\n" +
+                "• 创建标准目录结构：Builtin / Excluded / Remote\n" +
+                "• 在 YooAsset Collector 中创建 Builtin 和 Remote 两个 Package\n" +
+                "• Excluded 仅作为本地目录，不参与打包\n" +
+                "• Package 创建后，请在 YooAsset Collector 中手动添加 Group 和 Collector", 
+                MessageType.Info);
+            
+            GUILayout.Space(10);
+            
+            // 操作按钮
+            bool allComplete = allDirsExist && allPackagesExist;
+            if (!allComplete)
+            {
+                EditorGUILayout.HelpBox("⚠️ 资源目录结构未完整创建", MessageType.Warning);
+                if (GUILayout.Button("🚀 一键生成目录结构与配置", GUILayout.Height(40)))
+                {
+                    CreateCompleteResStructure();
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("✓ 资源目录结构已完整创建", MessageType.Info);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("🔍 打开 EUResources 目录", GUILayout.Height(35)))
+                {
+                    var resFolder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(resRootPath);
+                    EditorGUIUtility.PingObject(resFolder);
+                    Selection.activeObject = resFolder;
+                }
+                if (GUILayout.Button("🔄 重新同步配置", GUILayout.Height(35)))
+                {
+                    SyncPackagesFromCollector();
+                }
+                GUILayout.EndHorizontal();
+            }
+        }
+        
         private void CleanDuplicatePackages()
         {
             if (_packageConfig == null)
@@ -551,8 +704,16 @@ namespace EUFramework.Extension.EURes.Editor
         {
             if (_collectorSetting == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 AssetBundleCollectorSetting，请先创建", "确定");
-                return;
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 不存在，正在自动创建...");
+                CreateAssetBundleCollectorSetting(SETTINGS_PATH);
+                
+                if (_collectorSetting == null)
+                {
+                    EditorUtility.DisplayDialog("错误", "AssetBundleCollectorSetting 创建失败，请检查控制台错误信息", "确定");
+                    return;
+                }
+                
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 自动创建成功");
             }
             
             if (_packageConfig == null)
@@ -659,8 +820,16 @@ namespace EUFramework.Extension.EURes.Editor
         {
             if (_collectorSetting == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 AssetBundleCollectorSetting，请先创建", "确定");
-                return;
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 不存在，正在自动创建...");
+                CreateAssetBundleCollectorSetting(SETTINGS_PATH);
+                
+                if (_collectorSetting == null)
+                {
+                    EditorUtility.DisplayDialog("错误", "AssetBundleCollectorSetting 创建失败，请检查控制台错误信息", "确定");
+                    return;
+                }
+                
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 自动创建成功");
             }
             
             if (_packageConfig == null)
@@ -805,7 +974,7 @@ namespace EUFramework.Extension.EURes.Editor
             contentArea.style.justifyContent = Justify.FlexStart;
             
             // 添加标题
-            var header = CreateContentHeader("EUResFacade 生成工具", "生成资源管理相关的代码和 UI 预制体");
+            var header = CreateContentHeader("代码生成", "生成资源管理代码和开发工具");
             contentArea.Add(header);
             
             // 创建 IMGUIContainer 来显示 EUResFacade 功能
@@ -1323,6 +1492,7 @@ namespace EUFramework.Extension.EURes.Editor
             }
 
             var setting = ScriptableObject.CreateInstance<AssetBundleCollectorSetting>();
+            setting.ShowPackageView = true; // 默认显示 Package 视图
             AssetDatabase.CreateAsset(setting, path);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -1869,6 +2039,316 @@ namespace EUFramework.Extension.EURes.Editor
                 {
                     Debug.LogError($"[EUResKit] 删除目录失败 {path}: {e.Message}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// 一键创建完整的资源目录结构和配置
+        /// </summary>
+        private void CreateCompleteResStructure()
+        {
+            try
+            {
+                // Step 1: 创建目录结构
+                Debug.Log("[EUResKit] === 开始创建资源目录结构 ===");
+                CreateResDirectoryStructure();
+                
+                // Step 2: 创建 Collector Packages
+                Debug.Log("[EUResKit] === 开始配置 YooAsset Collector ===");
+                CreateCollectorPackages();
+                
+                // Step 3: 同步到 EUResKitPackageConfig
+                Debug.Log("[EUResKit] === 开始同步 Package 配置 ===");
+                SyncPackagesFromCollector();
+                
+                // 刷新资源数据库
+                AssetDatabase.Refresh();
+                
+                EditorUtility.DisplayDialog("完成", 
+                    "✅ 资源结构创建完成！\n\n" +
+                    "已完成：\n" +
+                    "• 创建目录：Builtin / Excluded / Remote\n" +
+                    "• 配置 YooAsset Collector（2个 Package）\n" +
+                    "  - Builtin（离线模式）\n" +
+                    "  - Remote（热更新模式）\n" +
+                    "• Excluded 目录已创建（不参与打包）\n" +
+                    "• 同步到 EUResKitPackageConfig\n\n" +
+                    "下一步：\n" +
+                    "请在 YooAsset Collector 窗口中为 Package 添加 Group 和 Collector", 
+                    "确定");
+                
+                Debug.Log("[EUResKit] === 资源结构创建完成 ===");
+                
+                // 选中并高亮显示 EUResources 目录
+                var resFolder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Assets/EUResources");
+                EditorGUIUtility.PingObject(resFolder);
+                Selection.activeObject = resFolder;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[EUResKit] 创建资源结构失败: {ex.Message}\n{ex.StackTrace}");
+                EditorUtility.DisplayDialog("错误", 
+                    $"❌ 创建失败\n\n{ex.Message}", 
+                    "确定");
+            }
+        }
+
+        /// <summary>
+        /// 创建资源目录结构
+        /// </summary>
+        private void CreateResDirectoryStructure()
+        {
+            string resRootPath = "Assets/EUResources";
+            
+            // 确保 EUResources 根目录存在
+            if (!Directory.Exists(resRootPath))
+            {
+                Directory.CreateDirectory(resRootPath);
+                Debug.Log($"[EUResKit] 创建目录: {resRootPath}");
+            }
+            
+            // 创建子目录及说明文件
+            var directoryConfigs = new[]
+            {
+                new { Name = "Builtin", Desc = "内置资源", Detail = GetDirectoryDescription("Builtin") },
+                new { Name = "Excluded", Desc = "不打包资源", Detail = GetDirectoryDescription("Excluded") },
+                new { Name = "Remote", Desc = "热更新资源", Detail = GetDirectoryDescription("Remote") }
+            };
+            
+            int createdCount = 0;
+            foreach (var config in directoryConfigs)
+            {
+                string fullPath = Path.Combine(resRootPath, config.Name);
+                if (!Directory.Exists(fullPath))
+                {
+                    Directory.CreateDirectory(fullPath);
+                    Debug.Log($"[EUResKit] 创建目录: {fullPath}");
+                    createdCount++;
+                }
+                
+                // 创建 README 文件
+                string readmePath = Path.Combine(fullPath, "README.md");
+                if (!File.Exists(readmePath))
+                {
+                    File.WriteAllText(readmePath, config.Detail);
+                    Debug.Log($"[EUResKit] 创建说明文档: {readmePath}");
+                }
+                
+                // 创建 .gitkeep 确保空目录被 Git 追踪
+                string gitkeepPath = Path.Combine(fullPath, ".gitkeep");
+                if (!File.Exists(gitkeepPath))
+                {
+                    File.WriteAllText(gitkeepPath, "");
+                }
+            }
+            
+            if (createdCount > 0)
+            {
+                Debug.Log($"[EUResKit] 目录创建完成，共创建 {createdCount} 个新目录");
+            }
+            else
+            {
+                Debug.Log("[EUResKit] 所有目录已存在");
+            }
+        }
+
+        /// <summary>
+        /// 创建 YooAsset Collector 的 Package 配置
+        /// </summary>
+        private void CreateCollectorPackages()
+        {
+            if (_collectorSetting == null)
+            {
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 不存在，正在自动创建...");
+                
+                // 自动创建 AssetBundleCollectorSetting
+                CreateAssetBundleCollectorSetting(SETTINGS_PATH);
+                
+                // 如果创建后仍然为空，说明创建失败
+                if (_collectorSetting == null)
+                {
+                    Debug.LogError("[EUResKit] AssetBundleCollectorSetting 自动创建失败");
+                    EditorUtility.DisplayDialog("错误", 
+                        "AssetBundleCollectorSetting 创建失败！\n\n请检查控制台错误信息。", 
+                        "确定");
+                    return;
+                }
+                
+                Debug.Log("[EUResKit] AssetBundleCollectorSetting 自动创建成功");
+            }
+            
+            // 只为 Builtin 和 Remote 创建 Package（Excluded 不参与打包，无需配置）
+            var packageConfigs = new[]
+            {
+                new
+                {
+                    Name = "Builtin",
+                    Desc = "内置资源包（打入应用内，离线可用）",
+                    AutoCollectShaders = false
+                },
+                new
+                {
+                    Name = "Remote",
+                    Desc = "远程热更新资源包（从服务器下载，支持热更新）",
+                    AutoCollectShaders = true
+                }
+            };
+            
+            int createdCount = 0;
+            foreach (var config in packageConfigs)
+            {
+                // 检查是否已存在
+                bool exists = _collectorSetting.Packages.Any(p => p.PackageName == config.Name);
+                if (exists)
+                {
+                    Debug.Log($"[EUResKit] Package 已存在: {config.Name}");
+                    continue;
+                }
+                
+                // 创建 Package（只创建 Package，不创建 Group 和 Collector）
+                Undo.RecordObject(_collectorSetting, "EUResKit Create Package");
+                var package = AssetBundleCollectorSettingData.CreatePackage(config.Name);
+                package.PackageDesc = config.Desc;
+                package.EnableAddressable = true;
+                package.SupportExtensionless = true;
+                package.LocationToLower = false;
+                package.IncludeAssetGUID = false;
+                package.AutoCollectShaders = config.AutoCollectShaders;
+                
+                Debug.Log($"[EUResKit] 创建 Package: {config.Name} (AutoCollectShaders: {config.AutoCollectShaders})");
+                
+                createdCount++;
+            }
+            
+            if (createdCount > 0)
+            {
+                // 确保 ShowPackageView 被启用
+                _collectorSetting.ShowPackageView = true;
+                
+                // 保存配置
+                EditorUtility.SetDirty(_collectorSetting);
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[EUResKit] Collector 配置完成，共创建 {createdCount} 个 Package");
+                Debug.Log("[EUResKit] 提示：Package 创建完成，请在 YooAsset Collector 窗口中根据需要添加 Group 和 Collector");
+            }
+            else
+            {
+                Debug.Log("[EUResKit] 所有 Package 已存在");
+            }
+        }
+
+        /// <summary>
+        /// 获取目录说明文档内容
+        /// </summary>
+        private string GetDirectoryDescription(string dirName)
+        {
+            switch (dirName)
+            {
+                case "Builtin":
+                    return @"# Builtin 目录
+
+## 📦 用途
+存放**内置资源**，这些资源会直接打包到应用程序中。
+
+## 🎯 适用场景
+- **编辑器模拟模式** (EditorSimulateMode)
+- **离线模式** (OfflinePlayMode)
+- **必须随应用一起发布的核心资源**
+
+## 📋 推荐内容
+- 启动 Logo、Splash 界面
+- 核心 UI 框架和基础界面
+- 必需的配置文件
+- 启动流程所需的关键资源
+
+## ⚠️ 注意事项
+- 内置资源会**增加应用包体大小**
+- 一旦发布，**无法通过热更新修改**
+- 建议只放置启动必需的最小资源集
+- 资源更新需要重新发布应用
+
+## 🔧 YooAsset 设置
+- **Package Name**: Builtin
+- **Play Mode**: OfflinePlayMode / EditorSimulateMode
+- **Directory**: Assets/EUResources/Builtin
+";
+
+                case "Excluded":
+                    return @"# Excluded 目录
+
+## 📦 用途
+存放**不参与打包的资源**，仅在编辑器开发阶段使用。
+
+## 🎯 适用场景
+- 临时测试资源
+- 开发阶段的占位资源
+- 原始设计稿和参考图
+- 不需要发布的辅助资源
+- 编辑器工具所需的资源
+
+## 📋 推荐内容
+- 测试用的临时资源
+- UI 设计稿 PSD/Sketch 源文件
+- 资源制作的中间文件
+- 开发文档和说明
+- 编辑器扩展所需的资源
+
+## ⚠️ 注意事项
+- 这些资源**不会被 YooAsset 打包**
+- **仅在 Unity 编辑器中可用**
+- 不占用应用包体大小
+- 运行时无法访问这些资源
+- **不会在 YooAsset Collector 中创建 Package**
+
+## 🔧 目录说明
+- **Directory**: Assets/EUResources/Excluded
+- **用途**: 仅作为本地开发目录
+- 建议添加到 `.gitignore`（根据项目需求）
+";
+
+                case "Remote":
+                    return @"# Remote 目录
+
+## 📦 用途
+存放**远程热更新资源**，可以通过服务器动态下载和更新。
+
+## 🎯 适用场景
+- **主机模式** (HostPlayMode)
+- **Web 模式** (WebPlayMode)
+- 需要热更新的游戏内容
+- 频繁变化的运营资源
+
+## 📋 推荐内容
+- 游戏关卡、场景资源
+- UI 界面（非核心框架）
+- 角色、特效、音效资源
+- 配置表和数据文件
+- 运营活动相关资源
+- 所有 Shader（启用 AutoCollectShaders）
+
+## ⚠️ 注意事项
+- 资源会**上传到资源服务器**
+- 可以**不更新应用**的情况下更新内容
+- 首次运行需要**联网下载**
+- 建议资源按功能模块划分，便于按需下载
+- 大文件建议分包管理
+
+## 🔧 YooAsset 设置
+- **Package Name**: Remote
+- **Play Mode**: HostPlayMode / WebPlayMode
+- **Auto Collect Shaders**: true（收集所有 Shader）
+- **Enable Addressable**: true（支持资源寻址）
+- **Directory**: Assets/EUResources/Remote
+
+## 🌐 热更新流程
+1. 检查资源版本
+2. 下载更新的资源
+3. 验证资源完整性
+4. 应用新资源
+";
+
+                default:
+                    return $"# {dirName}\n\nYooAsset 资源目录";
             }
         }
 

@@ -15,7 +15,7 @@ namespace {{ namespace }}
         
         private static EUResKitPackageConfig _packageConfig;
         private static GameObject _cachedPopupPrefab;
-        private static EUResKitUserOpePopUp _popupInstance;
+        private static MonoBehaviour _popupInstance; // 使用 MonoBehaviour 避免编译时依赖
         private static Canvas _popupCanvas;
         private static Action<string, int, int, long, long> _onDownloadProgressChanged;
         private static bool _isYooAssetInitialized = false;
@@ -224,7 +224,7 @@ namespace {{ namespace }}
         /// <summary>
         /// 获取或创建用户操作弹窗实例（单例）
         /// </summary>
-        private static EUResKitUserOpePopUp GetOrCreatePopupInstance()
+        private static MonoBehaviour GetOrCreatePopupInstance()
         {
             if (_popupInstance != null)
             {
@@ -247,11 +247,22 @@ namespace {{ namespace }}
             // 实例化并挂载到 Canvas 下
             var instance = UnityEngine.Object.Instantiate(prefab, canvas.transform);
             
-            // 检查并确保组件存在
-            var component = instance.GetComponent<EUResKitUserOpePopUp>();
-            if (component == null)
+            // 使用反射动态查找 EUResKitUserOpePopUp 类型（避免编译时依赖）
+            var component = instance.GetComponent<MonoBehaviour>();
+            var popupTypeName = "{{ namespace }}.EUResKitUserOpePopUp";
+            var popupType = System.Type.GetType(popupTypeName);
+            
+            if (popupType != null)
             {
-                component = instance.AddComponent<EUResKitUserOpePopUp>();
+                component = instance.GetComponent(popupType) as MonoBehaviour;
+                if (component == null)
+                {
+                    component = (MonoBehaviour)instance.AddComponent(popupType);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[EUResKit] 未找到类型 {popupTypeName}，使用默认 MonoBehaviour");
             }
             
             // 跨场景保持
@@ -278,8 +289,8 @@ namespace {{ namespace }}
                 return;
             }
             
-            // 懒加载 Popup 实例
-            Func<EUResKitUserOpePopUp> GetPopup = () =>
+            // 懒加载 Popup 实例（使用反射动态调用方法）
+            Func<MonoBehaviour> GetPopup = () =>
             {
                 var popup = GetOrCreatePopupInstance();
                 if (popup == null)
@@ -295,12 +306,18 @@ namespace {{ namespace }}
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    popup.Show(
-                        title: "初始化失败",
-                        content: $"资源包 [{packageName}] 初始化失败\n是否重试？",
-                        onConfirm: () => patchOperation.UserRetryInitialize(),
-                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消初始化资源包: {packageName}")
-                    );
+                    // 使用反射调用 Show 方法
+                    var showMethod = popup.GetType().GetMethod("Show", 
+                        new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
+                    if (showMethod != null)
+                    {
+                        showMethod.Invoke(popup, new object[] {
+                            "初始化失败",
+                            $"资源包 [{packageName}] 初始化失败\n是否重试？",
+                            (Action)(() => patchOperation.UserRetryInitialize()),
+                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消初始化资源包: {packageName}"))
+                        });
+                    }
                 }
             };
             
@@ -310,12 +327,17 @@ namespace {{ namespace }}
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    popup.Show(
-                        title: "版本检查失败",
-                        content: $"无法获取资源包 [{packageName}] 的版本信息\n请检查网络连接后重试",
-                        onConfirm: () => patchOperation.UserRetryRequestVersion(),
-                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消版本检查: {packageName}")
-                    );
+                    var showMethod = popup.GetType().GetMethod("Show", 
+                        new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
+                    if (showMethod != null)
+                    {
+                        showMethod.Invoke(popup, new object[] {
+                            "版本检查失败",
+                            $"无法获取资源包 [{packageName}] 的版本信息\n请检查网络连接后重试",
+                            (Action)(() => patchOperation.UserRetryRequestVersion()),
+                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消版本检查: {packageName}"))
+                        });
+                    }
                 }
             };
             
@@ -325,12 +347,17 @@ namespace {{ namespace }}
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    popup.Show(
-                        title: "更新失败",
-                        content: $"资源包 [{packageName}] 清单更新失败\n是否重试？",
-                        onConfirm: () => patchOperation.UserRetryUpdateManifest(),
-                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消清单更新: {packageName}")
-                    );
+                    var showMethod = popup.GetType().GetMethod("Show", 
+                        new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
+                    if (showMethod != null)
+                    {
+                        showMethod.Invoke(popup, new object[] {
+                            "更新失败",
+                            $"资源包 [{packageName}] 清单更新失败\n是否重试？",
+                            (Action)(() => patchOperation.UserRetryUpdateManifest()),
+                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消清单更新: {packageName}"))
+                        });
+                    }
                 }
             };
             
@@ -341,12 +368,17 @@ namespace {{ namespace }}
                 if (popup != null)
                 {
                     float sizeMB = totalBytes / (1024f * 1024f);
-                    popup.Show(
-                        title: "发现新版本",
-                        content: $"需要下载 {totalCount} 个文件\n大小: {sizeMB:F2} MB\n是否开始下载？",
-                        onConfirm: () => patchOperation.UserBeginDownloadWebFiles(),
-                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消下载: {packageName}")
-                    );
+                    var showMethod = popup.GetType().GetMethod("Show", 
+                        new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
+                    if (showMethod != null)
+                    {
+                        showMethod.Invoke(popup, new object[] {
+                            "发现新版本",
+                            $"需要下载 {totalCount} 个文件\n大小: {sizeMB:F2} MB\n是否开始下载？",
+                            (Action)(() => patchOperation.UserBeginDownloadWebFiles()),
+                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消下载: {packageName}"))
+                        });
+                    }
                 }
             };
             
@@ -356,12 +388,17 @@ namespace {{ namespace }}
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    popup.Show(
-                        title: "下载失败",
-                        content: $"文件下载失败\n文件: {fileName}\n错误: {errorInfo}\n是否重试？",
-                        onConfirm: () => patchOperation.UserBeginDownloadWebFiles(),
-                        onCancel: () => Debug.LogError($"[EUResKit] 用户取消下载重试: {packageName}")
-                    );
+                    var showMethod = popup.GetType().GetMethod("Show", 
+                        new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
+                    if (showMethod != null)
+                    {
+                        showMethod.Invoke(popup, new object[] {
+                            "下载失败",
+                            $"文件下载失败\n文件: {fileName}\n错误: {errorInfo}\n是否重试？",
+                            (Action)(() => patchOperation.UserBeginDownloadWebFiles()),
+                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消下载重试: {packageName}"))
+                        });
+                    }
                 }
             };
             

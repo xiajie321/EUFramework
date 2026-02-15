@@ -5,24 +5,24 @@
         <ui:VisualElement name="sidebar" class="sidebar">
             <ui:Label text="EUResKit 工具" class="sidebar-title" />
             
-            <!-- 配置文件按钮 -->
+            <!-- 资源配置按钮 -->
             <ui:VisualElement name="btn-config-files-container" class="sidebar-button-container">
                 <ui:Button name="btn-config-files" class="sidebar-button">
-                    <ui:Label text="C" class="sidebar-button-icon" />
+                    <ui:Label text="S" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="配置文件" class="sidebar-button-title" />
-                        <ui:Label text="Package 和服务器配置" class="sidebar-button-subtitle" />
+                        <ui:Label text="资源配置" class="sidebar-button-title" />
+                        <ui:Label text="目录结构和配置文件" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
             
-            <!-- EUResFacade 按钮 -->
+            <!-- 代码生成按钮 -->
             <ui:VisualElement name="btn-res-facade-container" class="sidebar-button-container">
                 <ui:Button name="btn-res-facade" class="sidebar-button">
-                    <ui:Label text="R" class="sidebar-button-icon" />
+                    <ui:Label text="C" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="EUResFacade" class="sidebar-button-title" />
-                        <ui:Label text="代码生成和工具" class="sidebar-button-subtitle" />
+                        <ui:Label text="代码生成" class="sidebar-button-title" />
+                        <ui:Label text="生成代码和开发工具" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>

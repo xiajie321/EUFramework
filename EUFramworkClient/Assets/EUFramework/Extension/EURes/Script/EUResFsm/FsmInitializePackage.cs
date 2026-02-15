@@ -16,7 +16,7 @@ namespace EUFramework.Extension.EURes
         {
             InitializeAsync().Forget();
         }
-        
+
         private async UniTask InitializeAsync()
         {
             var playMode = (EPlayMode)_machine.GetBlackboardValue("PlayMode");
