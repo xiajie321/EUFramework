@@ -1,0 +1,141 @@
+/* ========== 全局样式 ========== */
+#root {
+    flex-direction: row;
+    flex-grow: 1;
+    background-color: rgb(35, 35, 35);
+}
+
+/* ========== 左侧侧边栏 ========== */
+.sidebar {
+    width: 220px;
+    min-width: 220px;
+    background-color: rgb(40, 40, 40);
+    border-right-width: 1px;
+    border-right-color: rgb(25, 25, 25);
+    padding: 15px 10px;
+}
+
+.sidebar-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    margin-bottom: 20px;
+    margin-top: 5px;
+    -unity-text-align: middle-left;
+    padding-left: 10px;
+    letter-spacing: 1px;
+}
+
+.sidebar-button-container {
+    margin-bottom: 8px;
+}
+
+.sidebar-button {
+    height: 50px;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 8px;
+    flex-direction: row;
+    align-items: center;
+    transition-duration: 0.15s;
+}
+
+.sidebar-button:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-button:active {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-button-selected {
+    background-color: rgba(100, 150, 200, 0.2) !important;
+}
+
+.sidebar-button-selected:hover {
+    background-color: rgba(100, 150, 200, 0.25) !important;
+}
+
+.sidebar-button-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 18px;
+    background-color: rgb(90, 150, 110);
+    margin-left: 8px;
+    margin-right: 12px;
+    -unity-text-align: middle-center;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+}
+
+.sidebar-button-selected .sidebar-button-icon {
+    background-color: rgb(100, 160, 220);
+}
+
+.sidebar-button-text-container {
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.sidebar-button-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar-button-subtitle {
+    font-size: 11px;
+    color: rgb(140, 140, 140);
+    margin: 0;
+    padding: 0;
+    margin-top: 2px;
+}
+
+.sidebar-button-selected .sidebar-button-title {
+    color: rgb(240, 240, 240);
+}
+
+.sidebar-button-selected .sidebar-button-subtitle {
+    color: rgb(180, 180, 180);
+}
+
+/* ========== 右侧内容区域 ========== */
+.content-area {
+    flex-grow: 1;
+    background-color: rgb(50, 50, 50);
+    padding: 25px;
+}
+
+.content-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(70, 70, 70);
+}
+
+.content-title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(230, 230, 230);
+    margin-bottom: 5px;
+}
+
+.content-subtitle {
+    font-size: 13px;
+    color: rgb(150, 150, 150);
+}
+
+.content-label {
+    font-size: 16px;
+    color: rgb(140, 140, 140);
+    -unity-text-align: middle-center;
+    -unity-font-style: italic;
+}

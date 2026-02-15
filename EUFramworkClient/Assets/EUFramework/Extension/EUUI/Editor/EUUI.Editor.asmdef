@@ -14,7 +14,7 @@
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
-    "precompiledReferences": [],
+    "precompiledReferences": ["Scriban"],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
