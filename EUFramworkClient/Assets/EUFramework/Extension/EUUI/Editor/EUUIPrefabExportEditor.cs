@@ -343,6 +343,10 @@ namespace EUFramework.Extension.EUUI.Editor
                 scriptDir = Path.GetDirectoryName(scriptPath).Replace("\\", "/");
             }
 
+            // 确保 Generate 文件夹存在
+            string generateDir = Path.Combine(scriptDir, "Generate").Replace("\\", "/");
+            EnsureDirectory(generateDir);
+
             try
             {
                 // 1. 生成 EUUIPanelBase.EURes 扩展
@@ -353,7 +357,7 @@ namespace EUFramework.Extension.EUUI.Editor
                     var template = Scriban.Template.Parse(templateStr);
                     string result = template.Render(new { });
                     
-                    string outputPath = Path.Combine(scriptDir, "EUUIPanelBaseEUResExtensions.Generated.cs").Replace("\\", "/");
+                    string outputPath = Path.Combine(generateDir, "EUUIPanelBaseEUResExtensions.Generated.cs").Replace("\\", "/");
                     File.WriteAllText(outputPath, result, System.Text.Encoding.UTF8);
                     Debug.Log($"[EUUI] EUUIPanelBase.EURes 扩展已生成: {outputPath}");
                 }
@@ -366,7 +370,7 @@ namespace EUFramework.Extension.EUUI.Editor
                     var template = Scriban.Template.Parse(templateStr);
                     string result = template.Render(new { });
                     
-                    string outputPath = Path.Combine(scriptDir, "EUUIKit.EURes.Generated.cs").Replace("\\", "/");
+                    string outputPath = Path.Combine(generateDir, "EUUIKit.EURes.Generated.cs").Replace("\\", "/");
                     File.WriteAllText(outputPath, result, System.Text.Encoding.UTF8);
                     Debug.Log($"[EUUI] EUUIKit.EURes 扩展已生成: {outputPath}");
                 }

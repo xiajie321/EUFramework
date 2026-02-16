@@ -107,6 +107,24 @@
     color: rgb(180, 180, 180);
 }
 
+/* ========== 分组样式 ========== */
+.group-title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 18px 10px 10px 10px;
+    padding-left: 8px;
+    border-left-width: 3px;
+    border-left-color: rgb(100, 160, 220);
+    letter-spacing: 0.5px;
+}
+
+.group-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    margin: 15px 10px;
+}
+
 /* ========== 右侧内容区域 ========== */
 .content-area {
     flex-grow: 1;
