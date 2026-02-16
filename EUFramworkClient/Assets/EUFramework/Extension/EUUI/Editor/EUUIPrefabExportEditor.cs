@@ -8,7 +8,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using Framework;
+using EUFramework.Extension.EUUI;
 
 namespace EUFramework.Extension.EUUI.Editor
 {
@@ -32,10 +32,10 @@ namespace EUFramework.Extension.EUUI.Editor
                 if (path != null && path.EndsWith("EUUIEditorConfig.asset", StringComparison.OrdinalIgnoreCase))
                     return path;
             }
-            return EUUISceneEditor.EditorConfigPath;
+            return EUUISceneEditor.GetEditorConfigPath();
         }
 
-        private static EUUIEditorConfig GetConfig()
+        internal static EUUIEditorConfig GetConfig()
         {
             return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetEditorConfigAssetPath());
         }
@@ -58,6 +58,53 @@ namespace EUFramework.Extension.EUUI.Editor
                 string scriptPath = AssetDatabase.GUIDToAssetPath(scriptGuid[0]);
                 string scriptDir = Path.GetDirectoryName(scriptPath).Replace("\\", "/");
                 string relativeTemplate = scriptDir + "/Templates/EUUIPanel.Generated.sbn";
+                return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), relativeTemplate));
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 解析 MVC 模板文件路径
+        /// </summary>
+        private static string GetMVCTemplateFullPath()
+        {
+            return GetTemplateFullPathByName("EUUI.MVC");
+        }
+
+        /// <summary>
+        /// 解析 EUUIPanelBase.EURes 模板文件路径
+        /// </summary>
+        private static string GetPanelBaseEUResTemplateFullPath()
+        {
+            return GetTemplateFullPathByName("EUUIPanelBase.EURes");
+        }
+
+        /// <summary>
+        /// 解析 EUUIKit.EURes 模板文件路径
+        /// </summary>
+        private static string GetKitEUResTemplateFullPath()
+        {
+            return GetTemplateFullPathByName("EUUIKit.EURes");
+        }
+
+        /// <summary>
+        /// 通用模板路径解析方法
+        /// </summary>
+        private static string GetTemplateFullPathByName(string templateNameWithoutExt)
+        {
+            string[] guids = AssetDatabase.FindAssets(templateNameWithoutExt);
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path != null && path.EndsWith($"{templateNameWithoutExt}.sbn", StringComparison.OrdinalIgnoreCase))
+                    return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), path));
+            }
+            var scriptGuid = AssetDatabase.FindAssets("EUUIPrefabExportEditor t:MonoScript");
+            if (scriptGuid != null && scriptGuid.Length > 0)
+            {
+                string scriptPath = AssetDatabase.GUIDToAssetPath(scriptGuid[0]);
+                string scriptDir = Path.GetDirectoryName(scriptPath).Replace("\\", "/");
+                string relativeTemplate = scriptDir + $"/Templates/{templateNameWithoutExt}.sbn";
                 return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), relativeTemplate));
             }
             return null;
@@ -165,7 +212,7 @@ namespace EUFramework.Extension.EUUI.Editor
         /// <summary>
         /// 导出当前场景的 UIRoot 为 Prefab：保存到配置路径，并移除 Prefab 内的 EUUINodeBind 组件
         /// </summary>
-        [MenuItem("EUFramework/拓展/EUUI/导出 Prefab", false, 105)]
+        // [MenuItem("EUFramework/拓展/EUUI/导出 Prefab", false, 105)]
         public static void ExportCurrentPanelToPrefab()
         {
             var config = GetConfig();
@@ -213,7 +260,7 @@ namespace EUFramework.Extension.EUUI.Editor
         /// <summary>
         /// 开始自动绑定流程：校验命名 → 生成 Generated/逻辑代码 → 刷新后编译，编译完成后自动执行绑定并导出 Prefab
         /// </summary>
-        [MenuItem("EUFramework/拓展/EUUI/自动绑定并导出 Prefab", false, 106)]
+        // [MenuItem("EUFramework/拓展/EUUI/自动绑定并导出 Prefab", false, 106)]
         public static void StartExportProcess()
         {
             var config = GetConfig();
@@ -275,8 +322,109 @@ namespace EUFramework.Extension.EUUI.Editor
                 OnScriptsReloaded();
         }
 
+        /// <summary>
+        /// 生成 EURes 扩展代码（一次性生成，位于 Script 目录）
+        /// </summary>
+        public static void GenerateEUResExtensions()
+        {
+            var config = GetConfig();
+            if (config == null || !config.enableEUResExtension)
+            {
+                Debug.Log("[EUUI] EURes 扩展未启用，跳过生成。");
+                return;
+            }
+
+            // 获取 Script 目录（与 EUUIPanelBase.cs 同级）
+            var scriptGuids = AssetDatabase.FindAssets("EUUIPanelBase t:MonoScript");
+            string scriptDir = "Assets/EUFramework/Extension/EUUI/Script"; // 兜底
+            if (scriptGuids != null && scriptGuids.Length > 0)
+            {
+                string scriptPath = AssetDatabase.GUIDToAssetPath(scriptGuids[0]);
+                scriptDir = Path.GetDirectoryName(scriptPath).Replace("\\", "/");
+            }
+
+            try
+            {
+                // 1. 生成 EUUIPanelBase.EURes 扩展
+                string panelBaseTemplatePath = GetPanelBaseEUResTemplateFullPath();
+                if (!string.IsNullOrEmpty(panelBaseTemplatePath) && File.Exists(panelBaseTemplatePath))
+                {
+                    string templateStr = File.ReadAllText(panelBaseTemplatePath);
+                    var template = Scriban.Template.Parse(templateStr);
+                    string result = template.Render(new { });
+                    
+                    string outputPath = Path.Combine(scriptDir, "EUUIPanelBaseEUResExtensions.Generated.cs").Replace("\\", "/");
+                    File.WriteAllText(outputPath, result, System.Text.Encoding.UTF8);
+                    Debug.Log($"[EUUI] EUUIPanelBase.EURes 扩展已生成: {outputPath}");
+                }
+
+                // 2. 生成 EUUIKit.EURes 分部类
+                string kitTemplatePath = GetKitEUResTemplateFullPath();
+                if (!string.IsNullOrEmpty(kitTemplatePath) && File.Exists(kitTemplatePath))
+                {
+                    string templateStr = File.ReadAllText(kitTemplatePath);
+                    var template = Scriban.Template.Parse(templateStr);
+                    string result = template.Render(new { });
+                    
+                    string outputPath = Path.Combine(scriptDir, "EUUIKit.EURes.Generated.cs").Replace("\\", "/");
+                    File.WriteAllText(outputPath, result, System.Text.Encoding.UTF8);
+                    Debug.Log($"[EUUI] EUUIKit.EURes 扩展已生成: {outputPath}");
+                }
+
+                AssetDatabase.Refresh();
+                EditorUtility.DisplayDialog("完成", "EURes 扩展代码生成成功！", "确定");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[EUUI] EURes 扩展生成失败: {e.Message}");
+                EditorUtility.DisplayDialog("错误", $"EURes 扩展生成失败:\n{e.Message}", "确定");
+            }
+        }
+
+        /// <summary>
+        /// 生成 MVC 架构集成代码（为面板生成 IController 分部类）
+        /// </summary>
+        private static void GenerateMVCIntegration(EUUIEditorConfig config, string ns, string className, string bindDir)
+        {
+            string mvcTemplatePath = GetMVCTemplateFullPath();
+            if (string.IsNullOrEmpty(mvcTemplatePath) || !File.Exists(mvcTemplatePath))
+            {
+                Debug.LogWarning($"[EUUI] 未找到 EUUI.MVC.sbn 模板，跳过 MVC 集成代码生成。");
+                return;
+            }
+
+            try
+            {
+                string mvcTemplateStr = File.ReadAllText(mvcTemplatePath);
+                var mvcTemplate = Scriban.Template.Parse(mvcTemplateStr);
+                bool needGetArchitecture = !string.IsNullOrWhiteSpace(config.architectureName);
+
+                // 为每个面板生成 IController partial
+                string controllerPath = Path.Combine(bindDir, className + ".IController.Generated.cs").Replace("\\", "/");
+                if (!File.Exists(controllerPath))
+                {
+                    var controllerContext = new
+                    {
+                        namespace_name = ns,
+                        class_name = className,
+                        need_get_architecture = needGetArchitecture,
+                        architecture_name = config.architectureName?.Trim(),
+                        architecture_namespace = config.architectureNamespace?.Trim()
+                    };
+                    string controllerResult = mvcTemplate.Render(controllerContext);
+                    File.WriteAllText(controllerPath, controllerResult, System.Text.Encoding.UTF8);
+                    Debug.Log($"[EUUI] IController partial 已生成: {controllerPath}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[EUUI] MVC 集成代码生成失败: {e.Message}");
+            }
+        }
+
         private static bool GenerateCode(string className, List<object> members, EUUIPanelDescription desc, EUUIEditorConfig config)
         {
+            // 根据面板类型确定基类
             string baseClassName = desc.PanelType switch
             {
                 EUUIType.Popup => "EUUIPopupPanelBase",
@@ -302,21 +450,43 @@ namespace EUFramework.Extension.EUUI.Editor
                 string bindDir = string.IsNullOrEmpty(config.uiBindScriptsPath) ? "Assets/Script/Generate/UI" : config.uiBindScriptsPath;
                 string logicDirBase = string.IsNullOrEmpty(config.uiLogicScriptsPath) ? "Assets/Script/Game/UI" : config.uiLogicScriptsPath;
 
-                // 1. 生成 .Generated.cs
-                var genContext = new { is_gen = true, namespace_name = ns, class_name = className, members = members };
+                // 1. 生成 .Generated.cs（带绑定的 partial）
+                var genContext = new 
+                { 
+                    is_gen = true, 
+                    namespace_name = ns, 
+                    class_name = className, 
+                    members = members 
+                };
                 string genResult = template.Render(genContext);
                 EnsureDirectory(bindDir);
                 string genPath = Path.Combine(bindDir, className + ".Generated.cs").Replace("\\", "/");
                 File.WriteAllText(genPath, genResult, System.Text.Encoding.UTF8);
                 Debug.Log($"[EUUI] 代码生成: {className}.Generated.cs");
 
-                // 2. 若不存在则生成业务逻辑 .cs
+                // 2. 若启用架构，生成 MVC 集成代码
+                // - 有中间层：生成中间层基类（一次性）
+                // - 无中间层：为每个面板生成 IController partial
+                if (config.useArchitecture)
+                {
+                    GenerateMVCIntegration(config, ns, className, bindDir);
+                }
+
+                // 3. 若不存在则生成业务逻辑 .cs
                 string logicDir = Path.Combine(logicDirBase, desc.PackageName).Replace("\\", "/");
                 EnsureDirectory(logicDir);
                 string logicPath = Path.Combine(logicDir, className + ".cs").Replace("\\", "/");
                 if (!File.Exists(logicPath))
                 {
-                    var logicContext = new { is_gen = false, namespace_name = ns, class_name = className, base_class = fullBaseClass, package_name = desc.PackageName };
+                    var logicContext = new 
+                    { 
+                        is_gen = false, 
+                        namespace_name = ns, 
+                        class_name = className, 
+                        base_class = fullBaseClass, 
+                        package_name = desc.PackageName,
+                        use_architecture = config.useArchitecture
+                    };
                     string logicResult = template.Render(logicContext);
                     File.WriteAllText(logicPath, logicResult, System.Text.Encoding.UTF8);
                     Debug.Log($"[EUUI] 初始业务逻辑已生成: {logicPath}");

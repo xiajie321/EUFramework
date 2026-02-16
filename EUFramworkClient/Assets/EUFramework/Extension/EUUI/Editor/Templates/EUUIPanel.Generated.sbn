@@ -25,7 +25,7 @@ namespace {{ namespace_name }}
 //------------------------------------------------------------------------------
 using UnityEngine;
 using Cysharp.Threading.Tasks;
-using Framework;
+using EUFramework.Extension.EUUI;
 
 namespace {{ namespace_name }}
 {

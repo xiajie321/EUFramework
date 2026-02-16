@@ -1,4 +1,4 @@
-namespace Framework
+namespace EUFramework.Extension.EUUI
 {
     /// <summary>
     /// EUUI 使用的层级枚举

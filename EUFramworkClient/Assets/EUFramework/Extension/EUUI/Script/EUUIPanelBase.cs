@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace Framework
+namespace EUFramework.Extension.EUUI
 {
     /// <summary>
     /// EUUI 面板基类（参考 Doc/UIPanelBase.cs.txt）
@@ -139,12 +139,8 @@ namespace Framework
             if (isSetNativeSize && image != null) image.SetNativeSize();
         }
 
-        /// <summary>设置图片（从 url 加载需在派生类中实现或接入 ResKit）</summary>
-        protected virtual void SetImage(Image image, string url, bool isRemote = true, bool isSetNativeSize = true)
-        {
-            if (image == null || string.IsNullOrEmpty(url)) return;
-            // 派生类可重写并接入 ResKit/YooAsset 等
-        }
+        // SetImage(Image, string url) 已移至 EUUIPanelBase 扩展模板中（如 EUUIPanelBaseEUResExtensions）
+        // 若需使用请在 EUUIEditorConfig 中启用对应的扩展模块并生成扩展代码
 
         protected void AddClick(Button button, Action action)
         {

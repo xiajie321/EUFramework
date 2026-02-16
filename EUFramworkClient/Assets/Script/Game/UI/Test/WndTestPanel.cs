@@ -1,9 +1,10 @@
-﻿//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // 业务逻辑部分 - 仅在初始创建时生成，请在此编写你的 UI 逻辑
 //------------------------------------------------------------------------------
 using UnityEngine;
 using Cysharp.Threading.Tasks;
-using Framework;
+using EUFramework.Extension.EUUI;
+using EUFramework.Core.MVC.Interface;
 
 namespace Game.UI
 {

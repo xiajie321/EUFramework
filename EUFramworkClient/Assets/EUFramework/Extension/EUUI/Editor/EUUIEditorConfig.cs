@@ -1,6 +1,7 @@
 using UnityEngine;
+using EUFramework.Extension.EUUI;
 
-namespace Framework
+namespace EUFramework.Extension.EUUI.Editor
 {
     /// <summary>
     /// EUUI 编辑器配置（ScriptableObject）
@@ -31,8 +32,26 @@ namespace Framework
         public string notExportTopName = "Excluded_Top";
 
         [Header("命名空间")]
-        [Tooltip("UI 命名空间")]
+        [Tooltip("UI 命名空间（生成代码的 namespace，与业务程序集一致）")]
         public string namespaceName = "Game.UI";
+
+        [Header("代码生成-架构集成")]
+        [Tooltip("是否使用 MVC 架构（启用后生成代码会实现 IController）")]
+        public bool useArchitecture = true;
+
+        [Tooltip("架构名称（如 GameApp）：\n" +
+                 "- 留空：使用 CoreExtension 全局静态架构（框架内部方式）\n" +
+                 "- 填写：生成 GetArchitecture() 返回指定架构（QF 重构方式）")]
+        public string architectureName = "";
+
+        [Tooltip("架构命名空间（如 Game.Architecture）：\n" +
+                 "- 仅当填写了 architectureName 时需要填写\n" +
+                 "- 用于生成正确的 using 语句")]
+        public string architectureNamespace = "";
+
+        [Header("扩展模块")]
+        [Tooltip("启用 EURes 资源加载扩展（生成 EUUIPanelBase 和 EUUIKit 的 EURes 扩展方法）")]
+        public bool enableEUResExtension = true;
 
         [Header("UI 资源路径")]
         [Tooltip("UI 源场景保存路径，不参与资源导出")]

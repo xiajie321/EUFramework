@@ -24,6 +24,56 @@
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-locate-container" class="sidebar-button-container">
+                <ui:Button name="btn-locate" class="sidebar-button">
+                    <ui:Label text="L" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="定位 UIRoot" class="sidebar-button-title" />
+                        <ui:Label text="快速定位当前场景 UIRoot" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-bind-container" class="sidebar-button-container">
+                <ui:Button name="btn-bind" class="sidebar-button">
+                    <ui:Label text="B" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="节点绑定" class="sidebar-button-title" />
+                        <ui:Label text="为选中节点添加 NodeBind" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-export-container" class="sidebar-button-container">
+                <ui:Button name="btn-export" class="sidebar-button">
+                    <ui:Label text="E" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="导出 Prefab" class="sidebar-button-title" />
+                        <ui:Label text="仅导出 Prefab（不绑定）" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-auto-container" class="sidebar-button-container">
+                <ui:Button name="btn-auto" class="sidebar-button">
+                    <ui:Label text="A" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="自动绑定并导出" class="sidebar-button-title" />
+                        <ui:Label text="完整工作流：代码生成+绑定+导出" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-extensions-container" class="sidebar-button-container">
+                <ui:Button name="btn-extensions" class="sidebar-button">
+                    <ui:Label text="X" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="生成扩展代码" class="sidebar-button-title" />
+                        <ui:Label text="根据配置生成 EURes/MVC 等扩展" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
         </ui:VisualElement>
         
         <!-- 右侧内容区域 -->

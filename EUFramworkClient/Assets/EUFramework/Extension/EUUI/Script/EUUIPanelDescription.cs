@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Framework
+namespace EUFramework.Extension.EUUI
 {
     /// <summary>
     /// EUUI 面板描述（挂在场景根节点，用于编辑期配置；导出 Prefab 时导出的是 UIRoot，不包含此节点）

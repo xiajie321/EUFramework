@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using UnityEngine;
 
-namespace EUFramework.Extension.EUUI.Editor
+namespace EUFramework.Extension.EUUI
 {
     /// <summary>
     /// 节点绑定组件类型（仅编辑期使用）

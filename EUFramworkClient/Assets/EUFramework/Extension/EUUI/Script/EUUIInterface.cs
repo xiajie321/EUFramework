@@ -1,6 +1,6 @@
 using Cysharp.Threading.Tasks;
 
-namespace Framework
+namespace EUFramework.Extension.EUUI
 {
     public interface IEUUIPanelData
     {

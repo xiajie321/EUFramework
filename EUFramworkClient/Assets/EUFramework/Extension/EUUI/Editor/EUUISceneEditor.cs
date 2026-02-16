@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
-using Framework;
+using EUFramework.Extension.EUUI;
 
 namespace EUFramework.Extension.EUUI.Editor
 {
@@ -14,11 +14,24 @@ namespace EUFramework.Extension.EUUI.Editor
     /// </summary>
     public static class EUUISceneEditor
     {
-        internal const string EditorConfigPath = "Assets/EUFramework/Extension/EUUI/Editor/EUUIEditorConfig.asset";
+        /// <summary>
+        /// 动态查找 EUUIEditorConfig 资源路径
+        /// </summary>
+        internal static string GetEditorConfigPath()
+        {
+            string[] guids = AssetDatabase.FindAssets("EUUIEditorConfig t:EUUIEditorConfig");
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path != null && path.EndsWith("EUUIEditorConfig.asset", StringComparison.OrdinalIgnoreCase))
+                    return path;
+            }
+            return "Assets/EUFramework/Extension/EUUI/Editor/EUUIEditorConfig.asset"; // 兜底路径
+        }
 
         private static EUUIEditorConfig GetConfig()
         {
-            return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EditorConfigPath);
+            return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetEditorConfigPath());
         }
 
         private static void EnsureDirectory(string path)
@@ -119,7 +132,7 @@ namespace EUFramework.Extension.EUUI.Editor
             rt.anchoredPosition = Vector2.zero;
         }
 
-        [MenuItem("EUFramework/拓展/EUUI/创建 UI 场景 &u", false, 102)]
+        // [MenuItem("EUFramework/拓展/EUUI/创建 UI 场景 &u", false, 102)]
         public static void ShowCreateSceneWindow()
         {
             EUUISceneCreateWindow.ShowWindow((name, template) => ExecuteCreateUIScene(name, template));
@@ -128,7 +141,7 @@ namespace EUFramework.Extension.EUUI.Editor
         /// <summary>
         /// 定位到当前场景的 UIRoot 节点（聚焦并展开 Hierarchy）
         /// </summary>
-        [MenuItem("EUFramework/拓展/EUUI/定位 UIRoot &f", false, 103)]
+        // [MenuItem("EUFramework/拓展/EUUI/定位 UIRoot &f", false, 103)]
         public static void LocateUIRoot()
         {
             var config = GetConfig();
@@ -220,7 +233,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 Debug.LogError("[EUUI] 无法添加 EUUIPanelDescription，请确保该脚本位于非 Editor 程序集中以便挂载。");
                 return;
             }
-            var config = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.EditorConfigPath);
+            var config = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.GetEditorConfigPath());
             if (config != null && !string.IsNullOrEmpty(config.namespaceName))
             {
                 _tempDesc.Namespace = config.namespaceName;

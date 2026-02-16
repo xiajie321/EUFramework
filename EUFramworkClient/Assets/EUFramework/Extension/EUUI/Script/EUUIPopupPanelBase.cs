@@ -2,7 +2,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Framework
+namespace EUFramework.Extension.EUUI
 {
     /// <summary>
     /// EUUI 弹窗面板基类（参考 Doc/UIPopupPanelBase.cs.txt）
