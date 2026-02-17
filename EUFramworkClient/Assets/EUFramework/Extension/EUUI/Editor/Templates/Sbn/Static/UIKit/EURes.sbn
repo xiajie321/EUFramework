@@ -103,12 +103,11 @@ namespace EUFramework.Extension.EUUI
         /// </summary>
         public static void ReleaseUnusedAssets()
         {
-            var activePanelNames = _activePanels.Keys;
             var toRemove = new List<string>();
 
             foreach (var key in _assetHandles.Keys)
             {
-                if (!activePanelNames.Contains(key))
+                if (!_activePanels.ContainsKey(key))
                 {
                     toRemove.Add(key);
                 }

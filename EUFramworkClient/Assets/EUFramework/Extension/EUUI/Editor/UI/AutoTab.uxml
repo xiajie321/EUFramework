@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="auto-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="此功能将自动执行完整的 UI 导出流程：" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Label text="1. 校验场景节点（检查命名冲突、NodeBind 完整性）&#10;2. 生成绑定代码（.Generated.cs + 业务逻辑 .cs）&#10;3. 等待 Unity 编译完成&#10;4. 自动绑定字段到 Prefab&#10;5. 导出 Prefab 到配置路径" class="workflow-steps" style="-unity-text-align: upper-left; white-space: normal; background-color: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 4px; margin-bottom: 15px;" />
+                
+                <ui:Label text="⚠ 重要提示：" class="subsection-label" />
+                <ui:Label text="• 确保当前场景包含 EUUIPanelDescription 组件&#10;• 确保 UIRoot 节点下的所有需要绑定的节点已添加 EUUINodeBind&#10;• 导出过程中会触发脚本重新编译" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Button name="btn-auto-export" text="开始自动绑定并导出" class="primary-button large-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

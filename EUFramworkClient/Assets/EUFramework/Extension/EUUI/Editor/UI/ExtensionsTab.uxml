@@ -1,0 +1,30 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="extensions-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="EUUI 采用模块化扩展设计，通过 .sbn 模板生成可选功能：" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Label text="按模板生成/删除（与 .sbn 一一对应）" class="subsection-label" style="margin-top: 10px;" />
+                <ui:ScrollView name="generatable-items-list" class="tab-scroll-view" style="max-height: 280px; margin-bottom: 10px;" />
+                
+                <!-- 核心资源加载扩展 -->
+                <ui:Label text="核心资源加载扩展" class="subsection-label" />
+                <ui:VisualElement name="core-extension-status" class="extension-status-container" />
+                
+                <!-- 附加扩展模块 -->
+                <ui:Label text="附加扩展模块" class="subsection-label" />
+                <ui:VisualElement name="additional-extensions-status" class="extension-status-container" />
+                
+                <!-- 操作按钮 -->
+                <ui:VisualElement style="flex-direction: column; margin-top: 10px;">
+                    <ui:Button name="btn-generate" text="生成扩展代码" class="primary-button" style="width: 100%; margin-bottom: 5px;" />
+                    <ui:Button name="btn-delete" text="删除生成文件" class="action-button" style="width: 100%;" />
+                </ui:VisualElement>
+                
+                <ui:HelpBox name="manual-hint" message-type="Info" class="form-helpbox" style="display: none;" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

@@ -28,6 +28,13 @@
 
 .sidebar-button-container {
     margin-bottom: 8px;
+    padding: 2px;
+    border-radius: 8px;
+    transition-duration: 0.15s;
+}
+
+.sidebar-button-container-selected {
+    background-color: rgba(100, 150, 200, 0.15);
 }
 
 .sidebar-button {
@@ -80,7 +87,10 @@
 .sidebar-button-text-container {
     flex-direction: column;
     flex-grow: 1;
+    flex-shrink: 1;
     justify-content: center;
+    min-width: 0;
+    padding-right: 8px;
 }
 
 .sidebar-button-title {
@@ -89,6 +99,9 @@
     color: rgb(220, 220, 220);
     margin: 0;
     padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sidebar-button-subtitle {
@@ -97,6 +110,9 @@
     margin: 0;
     padding: 0;
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sidebar-button-selected .sidebar-button-title {
@@ -157,3 +173,209 @@
     -unity-text-align: middle-center;
     -unity-font-style: italic;
 }
+
+/* ========== Tab 内容样式 ========== */
+.tab-content {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.tab-scroll-view {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.tab-scroll-view > .unity-scroll-view__content-viewport {
+    min-height: 0;
+}
+
+.form-container {
+    padding: 20px;
+    min-height: 0;
+}
+
+/* ========== 表单元素样式 ========== */
+.section-title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+    margin-bottom: 15px;
+    align-self: stretch;
+}
+
+.section-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(200, 200, 200);
+    margin-top: 15px;
+    margin-bottom: 5px;
+    align-self: stretch;
+}
+
+.subsection-label {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(180, 180, 180);
+    margin-top: 20px;
+    margin-bottom: 8px;
+    align-self: stretch;
+}
+
+.section-description {
+    font-size: 12px;
+    color: rgb(160, 160, 160);
+    margin-bottom: 10px;
+    white-space: normal;
+    align-self: stretch;
+}
+
+.form-field {
+    margin-bottom: 5px;
+    min-height: 22px;
+    align-self: stretch;
+}
+
+.form-field > Label {
+    min-width: 120px;
+}
+
+.form-helpbox {
+    margin-bottom: 10px;
+    margin-top: 5px;
+    align-self: stretch;
+}
+
+.form-toggle {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    align-self: stretch;
+}
+
+.preview-field {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ========== 按钮样式 ========== */
+.primary-button {
+    height: 40px;
+    margin-top: 20px;
+    background-color: rgb(70, 130, 180);
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 0;
+    align-self: stretch;
+}
+
+.primary-button:hover {
+    background-color: rgb(80, 145, 200);
+}
+
+.primary-button:active {
+    background-color: rgb(60, 115, 160);
+}
+
+.primary-button:disabled {
+    background-color: rgb(80, 80, 80);
+    color: rgb(120, 120, 120);
+}
+
+.large-button {
+    height: 50px;
+    font-size: 14px;
+}
+
+.action-button {
+    height: 36px;
+    margin-top: 10px;
+    background-color: rgb(80, 80, 80);
+    color: rgb(220, 220, 220);
+    border-radius: 4px;
+    border-width: 0;
+    align-self: stretch;
+}
+
+.action-button:hover {
+    background-color: rgb(90, 90, 90);
+}
+
+.browse-button {
+    width: 80px;
+    min-width: 80px;
+    margin-left: 5px;
+    height: 22px;
+    background-color: rgb(80, 80, 80);
+    color: rgb(220, 220, 220);
+    border-radius: 4px;
+    border-width: 0;
+}
+
+/* ========== 布局辅助 ========== */
+.horizontal-group {
+    flex-direction: row;
+    align-items: center;
+    min-height: 22px;
+}
+
+.flex-grow {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* ========== 扩展列表样式 ========== */
+.extensions-list-container {
+    border-width: 1px;
+    border-color: rgb(70, 70, 70);
+    border-radius: 4px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    margin-bottom: 15px;
+    align-self: stretch;
+}
+
+.extension-status-container {
+    align-self: stretch;
+    margin-bottom: 15px;
+}
+
+.extension-item {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border-left-width: 3px;
+    border-left-color: rgb(100, 160, 220);
+}
+
+.extension-item-disabled {
+    border-left-color: rgb(100, 100, 100);
+    opacity: 0.6;
+}
+
+.extension-name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(220, 220, 220);
+}
+
+.extension-path {
+    font-size: 11px;
+    color: rgb(140, 140, 140);
+    margin-top: 4px;
+}
+
+.status-container {
+    border-width: 1px;
+    border-color: rgb(70, 70, 70);
+    border-radius: 4px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    margin-bottom: 15px;
+}
+
+.workflow-steps {
+    font-size: 12px;
+    color: rgb(200, 200, 200);
+}
+

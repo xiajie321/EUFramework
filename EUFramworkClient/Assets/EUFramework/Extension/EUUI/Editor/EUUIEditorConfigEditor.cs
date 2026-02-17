@@ -121,16 +121,25 @@ namespace EUFramework.Extension.EUUI.Editor
 
             if (GUILayout.Button("同步到 EUUIKitConfig", GUILayout.Height(30)))
             {
-                SyncToKitConfig();
+                var editorConfig = target as EUUIEditorConfig;
+                if (editorConfig != null)
+                    EUUIEditorConfigEditorSync.SyncEditorConfigToKitConfig(editorConfig);
             }
         }
+    }
 
-        private void SyncToKitConfig()
+    /// <summary>
+    /// 供 EUUI 配置工具等调用的静态同步方法
+    /// </summary>
+    public static class EUUIEditorConfigEditorSync
+    {
+        /// <summary>
+        /// 将 EUUIEditorConfig 同步到 EUUIKitConfig（运行时配置）
+        /// </summary>
+        public static void SyncEditorConfigToKitConfig(EUUIEditorConfig editorConfig)
         {
-            var editorConfig = target as EUUIEditorConfig;
             if (editorConfig == null) return;
 
-            // 查找或创建 Resources 目录
             string resourcesPath = EUUIEditorConfigEditor.GetResourcesPath();
             if (!Directory.Exists(resourcesPath))
             {
@@ -138,7 +147,6 @@ namespace EUFramework.Extension.EUUI.Editor
                 AssetDatabase.Refresh();
             }
 
-            // 查找或创建 KitConfig
             string kitConfigPath = Path.Combine(resourcesPath, "EUUIKitConfig.asset").Replace("\\", "/");
             var kitConfig = AssetDatabase.LoadAssetAtPath<EUUIKitConfig>(kitConfigPath);
 
@@ -149,11 +157,9 @@ namespace EUFramework.Extension.EUUI.Editor
                 Debug.Log($"[EUUI] 创建运行时配置: {kitConfigPath}");
             }
 
-            // 同步共享字段
             kitConfig.referenceResolution = editorConfig.referenceResolution;
             kitConfig.matchWidthOrHeight = editorConfig.matchWidthOrHeight;
             kitConfig.referencePixelsPerUnit = editorConfig.referencePixelsPerUnit;
-
             kitConfig.builtinPrefabPath = editorConfig.uiPrefabBuiltinPath;
             kitConfig.remotePrefabPath = editorConfig.uiPrefabRemotePath;
             kitConfig.builtinAtlasPath = editorConfig.atlasBuiltinPath;
@@ -162,9 +168,7 @@ namespace EUFramework.Extension.EUUI.Editor
             EditorUtility.SetDirty(kitConfig);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-
             Debug.Log("[EUUI] 配置已同步到 EUUIKitConfig");
-            EditorUtility.DisplayDialog("完成", $"运行时配置已更新至:\n{kitConfigPath}", "确定");
         }
     }
 }

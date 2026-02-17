@@ -19,6 +19,36 @@ MonoBehaviour:
   notExportBottomName: Excluded_Bottom
   notExportTopName: Excluded_Top
   namespaceName: Game.UI
+  useArchitecture: 1
+  architectureName: 
+  architectureNamespace: 
+  templateOverrides: []
+  resourceLoader: 0
+  customLoaderTemplate: 
+  autoDiscoverExtensions: 0
+  extensionsDirectory: Assets/Script/Game/UI/Extensions
+  manualExtensions:
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/WithData/EUUIPanel.Generated.sbn
+    exporterScript: EUUIPanelExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/WithData/MVC.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/Static/PanelBase/EURes.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/Static/UIKit/Addressables.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/Static/UIKit/Custom.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/Static/UIKit/EURes.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
+  - templatePath: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn/Static/UIKit/Resources.sbn
+    exporterScript: EUUIStaticExporter
+    enabled: 1
   uiSceneSavePath: Assets/EUResources/Excluded/CreateUIScenes
   uiPrefabBuiltinPath: Assets/EUResources/Builtin/UI/Prefabs
   uiPrefabRemotePath: Assets/EUResources/Remote/UI/Prefabs

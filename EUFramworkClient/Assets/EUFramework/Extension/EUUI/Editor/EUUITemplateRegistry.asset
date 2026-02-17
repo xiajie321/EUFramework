@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 344a13fe9a3205744a3a6fef2b6a3ed0, type: 3}
+  m_Name: EUUITemplateRegistry
+  m_EditorClassIdentifier: 
+  version: 1.0.0
+  lastUpdated: 2026-02-18 06:22:32
+  templatesDirectory: Assets/EUFramework/Extension/EUUI/Editor/Templates/Sbn
+  templates:
+  - id: PanelBaseEURes
+    name: EURes
+    category: Static/PanelBase
+    path: Static/PanelBase/EURes
+    description: 
+    required: 0
+  - id: Addressables
+    name: Addressables
+    category: Static/UIKit
+    path: Static/UIKit/Addressables
+    description: 
+    required: 0
+  - id: KitCustom
+    name: Custom
+    category: Static/UIKit
+    path: Static/UIKit/Custom
+    description: 
+    required: 0
+  - id: KitEURes
+    name: EURes
+    category: Static/UIKit
+    path: Static/UIKit/EURes
+    description: 
+    required: 0
+  - id: Resources
+    name: Resources
+    category: Static/UIKit
+    path: Static/UIKit/Resources
+    description: 
+    required: 0
+  - id: PanelGenerated
+    name: EUUIPanel.Generated
+    category: WithData
+    path: WithData/EUUIPanel.Generated
+    description: 
+    required: 0
+  - id: MVCArchitecture
+    name: MVC
+    category: WithData
+    path: WithData/MVC
+    description: 
+    required: 0

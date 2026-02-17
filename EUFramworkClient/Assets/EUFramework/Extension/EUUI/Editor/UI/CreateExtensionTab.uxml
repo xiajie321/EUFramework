@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="create-extension-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view" mode="Vertical">
+            <ui:VisualElement class="form-container">
+                
+                <!-- 扩展类型 -->
+                <ui:Label text="扩展类型" class="section-label" />
+                <uie:EnumField name="extension-type" class="form-field" />
+                <ui:HelpBox name="type-hint" message-type="Info" class="form-helpbox" />
+                
+                <!-- 扩展名称 -->
+                <ui:Label text="扩展名称" class="section-label" />
+                <ui:TextField name="extension-name" class="form-field" />
+                <ui:HelpBox name="name-validation" message-type="None" class="form-helpbox" style="display: none;" />
+                
+                <!-- 模板预设 -->
+                <ui:Label text="模板预设" class="section-label" />
+                <uie:EnumField name="template-preset" class="form-field" />
+                <ui:HelpBox name="preset-hint" message-type="Info" class="form-helpbox" />
+                
+                <!-- 保存位置 -->
+                <ui:Label text="保存位置" class="section-label" />
+                <ui:VisualElement class="horizontal-group">
+                    <ui:TextField name="save-path" class="flex-grow" style="min-height: 22px;" />
+                    <ui:Button name="btn-browse" text="浏览..." class="browse-button" />
+                </ui:VisualElement>
+                <ui:HelpBox name="path-hint" message-type="None" class="form-helpbox" style="display: none;" />
+                
+                <!-- 自动添加到配置 -->
+                <ui:Toggle name="auto-add-config" label="自动添加到配置" class="form-toggle" />
+                <ui:HelpBox text="将自动添加到 EUUIEditorConfig 的 manualExtensions 列表" message-type="Info" class="form-helpbox" />
+                
+                <!-- 预览生成的文件 -->
+                <ui:Label text="将生成文件" class="section-label" style="display: none;" name="preview-label" />
+                <ui:TextField name="preview-filename" readonly="true" class="preview-field" style="display: none; min-height: 22px;" />
+                
+                <!-- 创建按钮 -->
+                <ui:Button name="btn-create" text="创建扩展模板" class="primary-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

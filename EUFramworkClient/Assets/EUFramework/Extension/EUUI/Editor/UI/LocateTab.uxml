@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="locate-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="快速定位当前场景中的 UIRoot 节点。" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Button name="btn-locate-root" text="定位 UIRoot" class="primary-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

@@ -535,18 +535,16 @@ namespace EUFramework.Extension.EUUI
 
 #if !EUUI_EXTENSIONS_GENERATED
         /// <summary>
-        /// 加载面板 Prefab - 占位方法
-        /// 实际实现由扩展模板提供（如 EUUIKit.EURes.Generated.cs）
-        /// 请在 EUUI 配置工具中启用扩展并生成代码
+        /// 加载面板 Prefab - 占位方法（未生成扩展时编译）
+        /// 生成扩展代码后，项目会定义 EUUI_EXTENSIONS_GENERATED，此方法不再编译，由生成文件提供实现
         /// </summary>
         private static async UniTask<GameObject> LoadPanelPrefabAsync<T>() where T : EUUIPanelBase<T>
         {
             Debug.LogError("[EUUIKit] 资源加载扩展未生成！\n" +
                           "请执行以下步骤：\n" +
-                          "1. 打开 EUUI 配置工具（菜单：Tools/EUFramework/EUUI）\n" +
-                          "2. 在 EUUIEditorConfig 中启用 'enableEUResExtension'\n" +
-                          "3. 点击'生成扩展代码'按钮\n" +
-                          "或者：实现自己的资源加载扩展");
+                          "1. 打开 EUUI 配置工具（菜单：EUFramework/拓展/EUUI 配置工具）\n" +
+                          "2. 在「拓展」→「生成绑定模板」中选择资源加载器类型\n" +
+                          "3. 点击「生成扩展代码」按钮");
             await UniTask.Yield();
             return null;
         }

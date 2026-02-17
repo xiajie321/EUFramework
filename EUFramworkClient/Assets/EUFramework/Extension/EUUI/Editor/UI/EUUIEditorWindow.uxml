@@ -3,24 +3,34 @@
         
         <!-- 左侧侧边栏 -->
         <ui:VisualElement name="sidebar" class="sidebar">
-            <ui:Label text="EUUI 工具" class="sidebar-title" />
+            <ui:Label text="EUUI 配置工具" class="sidebar-title" />
             
-            <ui:VisualElement name="btn-config-group-container" class="sidebar-button-container">
-                <ui:Button name="btn-config-group" class="sidebar-button">
-                    <ui:Label text="⚙" class="sidebar-button-icon" />
+            <ui:VisualElement name="btn-so-config-container" class="sidebar-button-container">
+                <ui:Button name="btn-so-config" class="sidebar-button">
+                    <ui:Label text="S" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="配置管理" class="sidebar-button-title" />
-                        <ui:Label text="SO配置、扩展代码生成" class="sidebar-button-subtitle" />
+                        <ui:Label text="SO 配置管理" class="sidebar-button-title" />
+                        <ui:Label text="EUUI所有SO配置" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
             
-            <ui:VisualElement name="btn-workflow-group-container" class="sidebar-button-container">
-                <ui:Button name="btn-workflow-group" class="sidebar-button">
-                    <ui:Label text="🛠" class="sidebar-button-icon" />
+            <ui:VisualElement name="btn-extensions-container" class="sidebar-button-container">
+                <ui:Button name="btn-extensions" class="sidebar-button">
+                    <ui:Label text="E" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="UI 制作" class="sidebar-button-title" />
-                        <ui:Label text="场景、绑定、导出流程" class="sidebar-button-subtitle" />
+                        <ui:Label text="拓展" class="sidebar-button-title" />
+                        <ui:Label text="模板和导出器管理" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-resource-creation-container" class="sidebar-button-container">
+                <ui:Button name="btn-resource-creation" class="sidebar-button">
+                    <ui:Label text="R" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="资源制作" class="sidebar-button-title" />
+                        <ui:Label text="UI场景、绑定、导出" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>

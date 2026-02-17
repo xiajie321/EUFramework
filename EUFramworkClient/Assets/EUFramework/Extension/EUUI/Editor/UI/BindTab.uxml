@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="bind-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="为当前选中的节点添加 EUUINodeBind 组件，用于代码生成和字段绑定。" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Button name="btn-add-bind" text="为选中节点添加 NodeBind" class="primary-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

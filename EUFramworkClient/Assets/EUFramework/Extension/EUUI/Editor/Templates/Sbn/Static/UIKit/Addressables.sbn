@@ -1,0 +1,108 @@
+// Unity Addressables 实现示例
+// 适用场景：Unity 官方推荐方案，支持热更新
+// 依赖：需要安装 Addressables 包（Package Manager）
+
+#define EUUI_EXTENSIONS_GENERATED
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using Cysharp.Threading.Tasks;
+
+namespace EUFramework.Extension.EUUI
+{
+    /// <summary>
+    /// 基于 Unity Addressables 的资源加载实现
+    /// 资源配置：在 Addressables Groups 中为 UI Prefab 设置地址（如 UI_XXXPanel）
+    /// </summary>
+    public static partial class EUUIKit
+    {
+        private static Dictionary<string, AsyncOperationHandle<GameObject>> _addressableHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>();
+        
+        /// <summary>
+        /// 从 Addressables 加载面板 Prefab
+        /// </summary>
+        private static async UniTask<GameObject> LoadPanelPrefabAsync<T>() where T : EUUIPanelBase<T>
+        {
+            string panelName = typeof(T).Name;
+            string address = $"UI_{panelName}";  // Addressable 地址
+            
+            // 检查是否已加载
+            if (_addressableHandles.TryGetValue(panelName, out var cachedHandle))
+            {
+                if (cachedHandle.IsValid() && cachedHandle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    return cachedHandle.Result;
+                }
+                else
+                {
+                    _addressableHandles.Remove(panelName);
+                }
+            }
+            
+            // 加载资源
+            var handle = Addressables.LoadAssetAsync<GameObject>(address);
+            await handle.ToUniTask();
+            
+            if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
+                _addressableHandles[panelName] = handle;
+                return handle.Result;
+            }
+            
+            Debug.LogError($"[EUUIKit] Addressables 加载失败: {address}\n" +
+                          $"请确保在 Addressables Groups 中配置了该资源");
+            return null;
+        }
+        
+        /// <summary>
+        /// 释放 Addressables 资源
+        /// </summary>
+        static partial void OnPanelClosed(string panelName)
+        {
+            if (_addressableHandles.TryGetValue(panelName, out var handle))
+            {
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+                _addressableHandles.Remove(panelName);
+                Debug.Log($"[EUUIKit] 释放 Addressables 资源: {panelName}");
+            }
+        }
+        
+        /// <summary>
+        /// 释放所有未使用的面板资源
+        /// </summary>
+        public static void ReleaseUnusedPanelAssets()
+        {
+            var activePanelNames = new HashSet<string>(_activePanels.Keys);
+            var toRemove = new List<string>();
+            
+            foreach (var key in _addressableHandles.Keys)
+            {
+                if (!activePanelNames.Contains(key))
+                {
+                    toRemove.Add(key);
+                }
+            }
+            
+            foreach (var key in toRemove)
+            {
+                if (_addressableHandles.TryGetValue(key, out var handle))
+                {
+                    if (handle.IsValid())
+                    {
+                        Addressables.Release(handle);
+                    }
+                    _addressableHandles.Remove(key);
+                }
+            }
+            
+            if (toRemove.Count > 0)
+            {
+                Debug.Log($"[EUUIKit] 释放了 {toRemove.Count} 个未使用的 Addressables 资源");
+            }
+        }
+    }
+}

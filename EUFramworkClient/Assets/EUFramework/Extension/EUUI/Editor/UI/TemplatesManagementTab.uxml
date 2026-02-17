@@ -1,0 +1,26 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="templates-management-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="扩展模板管理" class="section-title" />
+                
+                <!-- 已配置的扩展模板列表 -->
+                <ui:Label text="已配置的扩展模板" class="subsection-label" />
+                <ui:VisualElement name="extensions-list" class="extensions-list-container" />
+                
+                <!-- 自动发现状态 -->
+                <ui:Label text="自动发现" class="subsection-label" />
+                <ui:VisualElement name="auto-discover-status" class="status-container" />
+                
+                <!-- 快捷操作 -->
+                <ui:Label text="快捷操作" class="subsection-label" />
+                <ui:VisualElement class="horizontal-group">
+                    <ui:Button name="btn-open-config" text="打开配置文件" class="action-button flex-grow" />
+                    <ui:Button name="btn-refresh" text="刷新扩展列表" class="action-button flex-grow" />
+                </ui:VisualElement>
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

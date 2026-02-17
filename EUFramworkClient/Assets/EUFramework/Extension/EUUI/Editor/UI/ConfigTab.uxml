@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="config-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="EUUIEditorConfig 配置文件管理" class="section-title" />
+                
+                <ui:HelpBox name="config-status" message-type="Info" class="form-helpbox" />
+                
+                <ui:Button name="btn-open-config" text="打开 UI 配置" class="action-button" style="display: none;" />
+                <ui:Button name="btn-create-config" text="创建 UI 配置" class="action-button" style="display: none;" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

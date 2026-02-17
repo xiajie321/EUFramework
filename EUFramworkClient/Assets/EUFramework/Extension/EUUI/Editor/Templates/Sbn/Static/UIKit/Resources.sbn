@@ -1,0 +1,47 @@
+// Unity Resources 实现示例
+// 适用场景：小项目、原型开发、不需要热更新
+// 使用方式：复制到项目中，修改资源路径后使用
+
+#define EUUI_EXTENSIONS_GENERATED
+using UnityEngine;
+using Cysharp.Threading.Tasks;
+
+namespace EUFramework.Extension.EUUI
+{
+    /// <summary>
+    /// 基于 Unity Resources 的资源加载实现
+    /// 资源放置：Resources/UI/Panels/XXXPanel.prefab
+    /// </summary>
+    public static partial class EUUIKit
+    {
+        /// <summary>
+        /// 从 Resources 加载面板 Prefab
+        /// </summary>
+        private static async UniTask<GameObject> LoadPanelPrefabAsync<T>() where T : EUUIPanelBase<T>
+        {
+            string panelName = typeof(T).Name;
+            string path = $"UI/Panels/{panelName}";  // 对应 Resources/UI/Panels/
+            
+            var prefab = Resources.Load<GameObject>(path);
+            await UniTask.Yield(); // Resources.Load 是同步的，这里模拟异步
+            
+            if (prefab == null)
+            {
+                Debug.LogError($"[EUUIKit] Resources 加载失败: {path}\n" +
+                              $"请确保 Prefab 位于: Resources/{path}.prefab");
+            }
+            
+            return prefab;
+        }
+        
+        /// <summary>
+        /// Resources 资源由 Unity 自动管理，通常无需手动释放
+        /// </summary>
+        static partial void OnPanelClosed(string panelName)
+        {
+            // Resources 资源由 Unity 自动管理，无需手动释放
+            // 如需强制卸载未使用资源，可以调用：
+            // Resources.UnloadUnusedAssets();
+        }
+    }
+}

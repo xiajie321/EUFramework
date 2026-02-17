@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="export-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="将当前编辑的 UI 节点导出为 Prefab，保存到配置的 prefabSavePath。" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Button name="btn-export" text="导出 Prefab" class="primary-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

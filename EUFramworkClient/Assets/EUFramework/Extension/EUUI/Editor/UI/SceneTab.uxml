@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="scene-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view">
+            <ui:VisualElement class="form-container">
+                
+                <ui:Label text="场景将保存到配置中的 uiSceneSavePath（或默认 Excluded/CreateUIScenes）。" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                <ui:Label text="层级结构：Excluded_Bottom、UIRoot、Excluded_Top。" class="section-description" style="-unity-text-align: upper-left; white-space: normal;" />
+                
+                <ui:Button name="btn-create-scene" text="创建 UI 场景" class="primary-button" />
+                
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
