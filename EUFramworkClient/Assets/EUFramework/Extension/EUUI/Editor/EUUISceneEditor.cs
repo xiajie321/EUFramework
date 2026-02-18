@@ -26,7 +26,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 if (path != null && path.EndsWith("EUUIEditorConfig.asset", StringComparison.OrdinalIgnoreCase))
                     return path;
             }
-            return "Assets/EUFramework/Extension/EUUI/Editor/EUUIEditorConfig.asset"; // 兜底路径
+            return "Assets/EUFramework/Extension/EUUI/Editor/EditorSO/EUUIEditorConfig.asset"; // 兜底路径
         }
 
         private static EUUIEditorConfig GetConfig()
@@ -233,10 +233,10 @@ namespace EUFramework.Extension.EUUI.Editor
                 Debug.LogError("[EUUI] 无法添加 EUUIPanelDescription，请确保该脚本位于非 Editor 程序集中以便挂载。");
                 return;
             }
-            var config = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.GetEditorConfigPath());
-            if (config != null && !string.IsNullOrEmpty(config.namespaceName))
+            var templateConfig = EUUITemplateLocator.GetTemplateConfig();
+            if (templateConfig != null && !string.IsNullOrEmpty(templateConfig.namespaceName))
             {
-                _tempDesc.Namespace = config.namespaceName;
+                _tempDesc.Namespace = templateConfig.namespaceName;
             }
             _serializedObject = new SerializedObject(_tempDesc);
         }

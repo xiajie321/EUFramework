@@ -13,17 +13,11 @@ MonoBehaviour:
   m_Name: EUUITemplateRegistry
   m_EditorClassIdentifier: 
   templates:
-  - id: Addressables
-    path: Static/UIKit/Addressables
-  - id: KitCustom
-    path: Static/UIKit/KitCustom
-  - id: KitEURes
-    path: Static/UIKit/KitEURes
+  - id: EUUIKitEURes
+    path: Static/UIKit/EUUIKit.EURes
+  - id: EUUIPanelBaseEURes
+    path: Static/PanelBase/EUUIPanelBase.EURes
   - id: MVCArchitecture
     path: WithData/MVCArchitecture
-  - id: PanelBaseEURes
-    path: Static/PanelBase/PanelBaseEURes
   - id: PanelGenerated
     path: WithData/PanelGenerated
-  - id: Resources
-    path: Static/UIKit/Resources

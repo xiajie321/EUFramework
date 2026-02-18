@@ -5,7 +5,6 @@
 //------------------------------------------------------------------------------
 using UnityEngine;
 using UnityEngine.UI;
-using EUFramework.Core.MVC.Interface;
 
 namespace Game.UI
 {
@@ -13,10 +12,5 @@ namespace Game.UI
     {
         [Header("Auto Generated Bindings")]
         [SerializeField] public UnityEngine.UI.Image Image;
-    }
-
-    public partial class WndTestPanel : IController
-    {
-
     }
 }

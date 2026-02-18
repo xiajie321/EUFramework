@@ -23,26 +23,19 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         private const string k_PendingSceneKey = "EUUI_Pending_Scene";
         
         /// <summary>
-        /// 通过 AssetDatabase 解析配置资源路径（不写死 EUUI 目录），便于扩展移动
+        /// 获取模板与代码生成配置（公开方法，供其他编辑器类使用）
         /// </summary>
-        private static string GetEditorConfigAssetPath()
+        public static EUUITemplateConfig GetConfig()
         {
-            string[] guids = AssetDatabase.FindAssets("EUUIEditorConfig");
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path != null && path.EndsWith("EUUIEditorConfig.asset", StringComparison.OrdinalIgnoreCase))
-                    return path;
-            }
-            return EUUISceneEditor.GetEditorConfigPath();
+            return EUUITemplateLocator.GetTemplateConfig();
         }
 
         /// <summary>
-        /// 获取配置文件（公开方法，供其他编辑器类使用）
+        /// 获取场景/资源制作配置（Prefab 路径、UIRoot 名称等）
         /// </summary>
-        public static EUUIEditorConfig GetConfig()
+        private static EUUIEditorConfig GetEditorConfig()
         {
-            return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetEditorConfigAssetPath());
+            return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.GetEditorConfigPath());
         }
         
         /// <summary>
@@ -155,8 +148,8 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         // [MenuItem("EUFramework/拓展/EUUI/导出 Prefab", false, 105)]
         public static void ExportCurrentPanelToPrefab()
         {
-            var config = GetConfig();
-            if (config == null)
+            var editorConfig = GetEditorConfig();
+            if (editorConfig == null)
             {
                 EditorUtility.DisplayDialog("错误", "未找到 EUUIEditorConfig，请先创建 UI 配置。", "确定");
                 return;
@@ -169,14 +162,14 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 return;
             }
 
-            GameObject exportRoot = GameObject.Find(config.exportRootName);
+            GameObject exportRoot = GameObject.Find(editorConfig.exportRootName);
             if (exportRoot == null)
             {
-                EditorUtility.DisplayDialog("错误", $"场景中未找到 [{config.exportRootName}] 节点，请先创建 UI 场景。", "确定");
+                EditorUtility.DisplayDialog("错误", $"场景中未找到 [{editorConfig.exportRootName}] 节点，请先创建 UI 场景。", "确定");
                 return;
             }
 
-            string folderPath = config.GetUIPrefabDir(desc.PackageType);
+            string folderPath = editorConfig.GetUIPrefabDir(desc.PackageType);
             EnsureDirectory(folderPath);
 
             string panelName = EditorSceneManager.GetActiveScene().name;
@@ -204,9 +197,10 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         public static void StartExportProcess()
         {
             var config = GetConfig();
-            if (config == null)
+            var editorConfig = GetEditorConfig();
+            if (config == null || editorConfig == null)
             {
-                EditorUtility.DisplayDialog("错误", "未找到 EUUIEditorConfig，请先创建 UI 配置。", "确定");
+                EditorUtility.DisplayDialog("错误", "未找到配置文件，请先创建 EUUITemplateConfig 与 EUUIEditorConfig。", "确定");
                 return;
             }
 
@@ -217,11 +211,11 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 return;
             }
 
-            GameObject exportRoot = GameObject.Find(config.exportRootName);
+            GameObject exportRoot = GameObject.Find(editorConfig.exportRootName);
             if (exportRoot == null)
             {
-                Debug.LogError($"[EUUI] 未找到 [{config.exportRootName}]，请先创建模板。");
-                EditorUtility.DisplayDialog("错误", $"未找到 [{config.exportRootName}]，请先创建 UI 场景。", "确定");
+                Debug.LogError($"[EUUI] 未找到 [{editorConfig.exportRootName}]，请先创建模板。");
+                EditorUtility.DisplayDialog("错误", $"未找到 [{editorConfig.exportRootName}]，请先创建 UI 场景。", "确定");
                 return;
             }
 
@@ -265,37 +259,33 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         /// <summary>
         /// 生成 MVC 架构集成代码（为面板生成 IController 分部类）
         /// </summary>
-        private static void GenerateMVCIntegration(EUUIEditorConfig config, string ns, string className, string bindDir)
+        private static void GenerateMVCIntegration(EUUITemplateConfig config, string ns, string className, string bindDir)
         {
             try
             {
-                string mvcTemplatePath = EUUITemplateManager.GetTemplatePath(
-                    EUUITemplateManager.TemplateType.MVCArchitecture, config);
-                
-                string mvcTemplateStr = File.ReadAllText(mvcTemplatePath);
-                var mvcTemplate = Scriban.Template.Parse(mvcTemplateStr);
                 bool needGetArchitecture = !string.IsNullOrWhiteSpace(config.architectureName);
+                bool hasArchitectureNamespace = !string.IsNullOrWhiteSpace(config.architectureNamespace);
+                var controllerContext = new
+                {
+                    namespace_name = ns,
+                    class_name = className,
+                    need_get_architecture = needGetArchitecture,
+                    architecture_name = config.architectureName?.Trim(),
+                    has_architecture_namespace = hasArchitectureNamespace,
+                    architecture_namespace = config.architectureNamespace?.Trim()
+                };
 
-                // 为每个面板生成 IController partial
                 string controllerPath = Path.Combine(bindDir, className + ".IController.Generated.cs").Replace("\\", "/");
                 if (!File.Exists(controllerPath))
                 {
-                    var controllerContext = new
-                    {
-                        namespace_name = ns,
-                        class_name = className,
-                        need_get_architecture = needGetArchitecture,
-                        architecture_name = config.architectureName?.Trim(),
-                        architecture_namespace = config.architectureNamespace?.Trim()
-                    };
-                    string controllerResult = mvcTemplate.Render(controllerContext);
-                    File.WriteAllText(controllerPath, controllerResult, System.Text.Encoding.UTF8);
+                    string result = EUUIBaseExporter.RenderTemplate("MVCArchitecture", controllerContext);
+                    File.WriteAllText(controllerPath, result, System.Text.Encoding.UTF8);
                     Debug.Log($"[EUUI] IController partial 已生成: {controllerPath}");
                 }
             }
-            catch (FileNotFoundException)
+            catch (System.Collections.Generic.KeyNotFoundException)
             {
-                Debug.LogWarning($"[EUUI] 未找到 EUUI.MVC.sbn 模板，跳过 MVC 集成代码生成。");
+                Debug.LogWarning("[EUUI] 注册表中未找到 MVCArchitecture 模板，跳过 MVC 集成代码生成。");
             }
             catch (Exception e)
             {
@@ -303,9 +293,8 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             }
         }
 
-        private static bool GenerateCode(string className, List<object> members, EUUIPanelDescription desc, EUUIEditorConfig config)
+        private static bool GenerateCode(string className, List<object> members, EUUIPanelDescription desc, EUUITemplateConfig config)
         {
-            // 根据面板类型确定基类
             string baseClassName = desc.PanelType switch
             {
                 EUUIType.Popup => "EUUIPopupPanelBase",
@@ -316,36 +305,26 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
 
             try
             {
-                string templatePath = EUUITemplateManager.GetTemplatePath(
-                    EUUITemplateManager.TemplateType.PanelGenerated, config);
-                string templateStr = File.ReadAllText(templatePath);
-                var template = Scriban.Template.Parse(templateStr);
-
                 string ns = string.IsNullOrEmpty(desc.Namespace) ? config.namespaceName : desc.Namespace;
                 string bindDir = string.IsNullOrEmpty(config.uiBindScriptsPath) ? "Assets/Script/Generate/UI" : config.uiBindScriptsPath;
                 string logicDirBase = string.IsNullOrEmpty(config.uiLogicScriptsPath) ? "Assets/Script/Game/UI" : config.uiLogicScriptsPath;
 
                 // 1. 生成 .Generated.cs（带绑定的 partial）
-                var genContext = new 
-                { 
-                    is_gen = true, 
-                    namespace_name = ns, 
-                    class_name = className, 
-                    members = members 
-                };
-                string genResult = template.Render(genContext);
+                string genResult = EUUIBaseExporter.RenderTemplate("PanelGenerated", new
+                {
+                    is_gen = true,
+                    namespace_name = ns,
+                    class_name = className,
+                    members = members
+                });
                 EnsureDirectory(bindDir);
                 string genPath = Path.Combine(bindDir, className + ".Generated.cs").Replace("\\", "/");
                 File.WriteAllText(genPath, genResult, System.Text.Encoding.UTF8);
                 Debug.Log($"[EUUI] 代码生成: {className}.Generated.cs");
 
                 // 2. 若启用架构，生成 MVC 集成代码
-                // - 有中间层：生成中间层基类（一次性）
-                // - 无中间层：为每个面板生成 IController partial
                 if (config.useArchitecture)
-                {
                     GenerateMVCIntegration(config, ns, className, bindDir);
-                }
 
                 // 3. 若不存在则生成业务逻辑 .cs
                 string logicDir = Path.Combine(logicDirBase, desc.PackageName).Replace("\\", "/");
@@ -353,16 +332,15 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 string logicPath = Path.Combine(logicDir, className + ".cs").Replace("\\", "/");
                 if (!File.Exists(logicPath))
                 {
-                    var logicContext = new 
-                    { 
-                        is_gen = false, 
-                        namespace_name = ns, 
-                        class_name = className, 
-                        base_class = fullBaseClass, 
+                    string logicResult = EUUIBaseExporter.RenderTemplate("PanelGenerated", new
+                    {
+                        is_gen = false,
+                        namespace_name = ns,
+                        class_name = className,
+                        base_class = fullBaseClass,
                         package_name = desc.PackageName,
                         use_architecture = config.useArchitecture
-                    };
-                    string logicResult = template.Render(logicContext);
+                    });
                     File.WriteAllText(logicPath, logicResult, System.Text.Encoding.UTF8);
                     Debug.Log($"[EUUI] 初始业务逻辑已生成: {logicPath}");
                 }
@@ -390,16 +368,17 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         private static void PerformBinding(string panelName)
         {
             var config = GetConfig();
-            if (config == null)
+            var editorConfig = GetEditorConfig();
+            if (config == null || editorConfig == null)
             {
-                Debug.LogError("[EUUI] 绑定失败：未找到 EUUIEditorConfig");
+                Debug.LogError("[EUUI] 绑定失败：未找到配置文件（EUUITemplateConfig / EUUIEditorConfig）");
                 return;
             }
 
-            GameObject exportRoot = GameObject.Find(config.exportRootName);
+            GameObject exportRoot = GameObject.Find(editorConfig.exportRootName);
             if (exportRoot == null)
             {
-                Debug.LogError($"[EUUI] 绑定失败：场景中找不到 [{config.exportRootName}]");
+                Debug.LogError($"[EUUI] 绑定失败：场景中找不到 [{editorConfig.exportRootName}]");
                 return;
             }
 
@@ -437,7 +416,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 }
             }
 
-            FinalizePrefab(exportRoot, panelName, config);
+            FinalizePrefab(exportRoot, panelName, editorConfig);
         }
 
         private static void FinalizePrefab(GameObject exportRoot, string panelName, EUUIEditorConfig config)
