@@ -12,8 +12,10 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
     /// </summary>
     public class EUAudioConfigWindow : EditorWindow
     {
+        private const string CONFIG_PATH = "Assets/Resources/EUAudio/EUAudioConfig.asset";
+        private const string CONFIG_FOLDER = "Assets/Resources/EUAudio";
+        
         private EUAudioConfig _currentConfig;
-        private ObjectField _configField;
         private Slider _soundVolumeSlider;
         private Slider _bgmVolumeSlider;
         private Slider _voiceVolumeSlider;
@@ -68,7 +70,6 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             }
             
             // 获取UI元素引用
-            _configField = rootVisualElement.Q<ObjectField>("config-field");
             _soundVolumeSlider = rootVisualElement.Q<Slider>("sound-volume");
             _bgmVolumeSlider = rootVisualElement.Q<Slider>("bgm-volume");
             _voiceVolumeSlider = rootVisualElement.Q<Slider>("voice-volume");
@@ -79,45 +80,27 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             _statusLabel = rootVisualElement.Q<Label>("status-label");
             
             // 绑定按钮事件
-            var createBtn = rootVisualElement.Q<Button>("create-config-btn");
-            var loadBtn = rootVisualElement.Q<Button>("load-config-btn");
-            var applyBtn = rootVisualElement.Q<Button>("apply-btn");
             var saveBtn = rootVisualElement.Q<Button>("save-btn");
-            
-            createBtn.clicked += OnCreateConfig;
-            loadBtn.clicked += OnLoadConfig;
-            applyBtn.clicked += OnApplyConfig;
             saveBtn.clicked += OnSaveConfig;
             
-            // 绑定配置字段变化事件
-            _configField.RegisterValueChangedCallback(OnConfigChanged);
+            // 加载或创建配置
+            LoadOrCreateConfig();
+        }
+        
+        private void LoadOrCreateConfig()
+        {
+            // 尝试加载现有配置
+            _currentConfig = AssetDatabase.LoadAssetAtPath<EUAudioConfig>(CONFIG_PATH);
             
-            // 尝试加载默认配置
-            TryLoadDefaultConfig();
-        }
-        
-        private void TryLoadDefaultConfig()
-        {
-            var guids = AssetDatabase.FindAssets("t:EUAudioConfig");
-            if (guids.Length > 0)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                var config = AssetDatabase.LoadAssetAtPath<EUAudioConfig>(path);
-                if (config != null)
-                {
-                    _configField.value = config;
-                    LoadConfigToUI(config);
-                }
-            }
-        }
-        
-        private void OnConfigChanged(ChangeEvent<Object> evt)
-        {
-            _currentConfig = evt.newValue as EUAudioConfig;
             if (_currentConfig != null)
             {
                 LoadConfigToUI(_currentConfig);
                 ShowStatus("配置已加载", false);
+            }
+            else
+            {
+                // 配置不存在，使用默认值
+                ShowStatus("配置文件不存在，将在保存时自动创建", false);
             }
         }
         
@@ -145,65 +128,40 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             _currentConfig.soundDelayFrame = _delayFrameField.value;
         }
         
-        private void OnCreateConfig()
-        {
-            var path = EditorUtility.SaveFilePanelInProject(
-                "创建EUAudio配置",
-                "EUAudioConfig",
-                "asset",
-                "选择保存位置");
-            
-            if (string.IsNullOrEmpty(path)) return;
-            
-            var config = CreateInstance<EUAudioConfig>();
-            AssetDatabase.CreateAsset(config, path);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            
-            _configField.value = config;
-            _currentConfig = config;
-            LoadConfigToUI(config);
-            ShowStatus($"配置已创建: {path}", false);
-        }
-        
-        private void OnLoadConfig()
-        {
-            if (_currentConfig != null)
-            {
-                LoadConfigToUI(_currentConfig);
-                ShowStatus("配置已重新加载", false);
-            }
-            else
-            {
-                ShowStatus("请先选择一个配置文件", true);
-            }
-        }
-        
-        private void OnApplyConfig()
-        {
-            if (_currentConfig == null)
-            {
-                ShowStatus("请先选择一个配置文件", true);
-                return;
-            }
-            
-            SaveUIToConfig();
-            _currentConfig.ApplyConfig();
-            ShowStatus("配置已应用到运行时", false);
-        }
-        
         private void OnSaveConfig()
         {
+            // 如果配置不存在，先创建
             if (_currentConfig == null)
             {
-                ShowStatus("请先选择一个配置文件", true);
-                return;
+                // 确保目录存在
+                if (!AssetDatabase.IsValidFolder(CONFIG_FOLDER))
+                {
+                    string[] folders = CONFIG_FOLDER.Split('/');
+                    string currentPath = folders[0];
+                    
+                    for (int i = 1; i < folders.Length; i++)
+                    {
+                        string newPath = currentPath + "/" + folders[i];
+                        if (!AssetDatabase.IsValidFolder(newPath))
+                        {
+                            AssetDatabase.CreateFolder(currentPath, folders[i]);
+                        }
+                        currentPath = newPath;
+                    }
+                }
+                
+                // 创建配置文件
+                _currentConfig = CreateInstance<EUAudioConfig>();
+                AssetDatabase.CreateAsset(_currentConfig, CONFIG_PATH);
             }
             
+            // 保存UI数据到配置
             SaveUIToConfig();
             EditorUtility.SetDirty(_currentConfig);
             AssetDatabase.SaveAssets();
-            ShowStatus("配置已保存", false);
+            AssetDatabase.Refresh();
+            
+            ShowStatus($"配置已保存到: {CONFIG_PATH}", false);
         }
         
         private void ShowStatus(string message, bool isError)

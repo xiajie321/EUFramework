@@ -142,15 +142,48 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <summary>
         /// 初始化音频系统
         /// 系统会在首次使用时自动初始化,也可以手动调用以控制初始化时机
+        /// 如果存在配置文件,会自动加载配置
         /// </summary>
         public static void Init()
         {
             if (_init) return;
             _init = true;
+            
+            // 尝试加载默认配置
+            LoadDefaultConfig();
+            
             _root = new GameObject("[EUAudio]");
             Object.DontDestroyOnLoad(_root);
             NativeInit();
             EUAudioSourceInit();
+        }
+        
+        /// <summary>
+        /// 加载默认配置文件
+        /// 会在Resources/EUAudio目录下查找名为"EUAudioConfig"的配置文件
+        /// </summary>
+        private static void LoadDefaultConfig()
+        {
+            var config = Resources.Load<EUAudioConfig>("EUAudio/EUAudioConfig");
+            if (config != null)
+            {
+                config.ApplyConfig();
+#if UNITY_EDITOR
+                Debug.Log($"[EUAudio] 已加载默认配置: {config.name}");
+#endif
+            }
+        }
+        
+        /// <summary>
+        /// 手动加载指定的配置文件
+        /// </summary>
+        /// <param name="config">要加载的配置文件</param>
+        public static void LoadConfig(EUAudioConfig config)
+        {
+            if (config != null)
+            {
+                config.ApplyConfig();
+            }
         }
 
         private static void NativeInit()
