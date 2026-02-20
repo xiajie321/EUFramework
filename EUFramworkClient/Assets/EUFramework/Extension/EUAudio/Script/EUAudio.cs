@@ -23,6 +23,20 @@ namespace EUFramwork.Extension.EUAudioKit
         private static float _bgmVolume = 1.0f;
         private static float _voiceVolume = 1.0f;
         private static float _globalVolume = 1.0f;
+        
+        // AudioSource参数
+        private static float _soundPitch = 1.0f;
+        private static float _soundSpatialBlend = 0f;
+        private static int _soundPriority = 128;
+        
+        private static float _bgmPitch = 1.0f;
+        private static float _bgmSpatialBlend = 0f;
+        private static int _bgmPriority = 128;
+        
+        private static float _voicePitch = 1.0f;
+        private static float _voiceSpatialBlend = 0f;
+        private static int _voicePriority = 128;
+        
         private static GameObject _root;
         private static EUAudioSource _bgm; //背景音乐
         private static EUAudioSource _bgmGd; //背景音乐(用于过渡)
@@ -138,6 +152,117 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _maxSound;
             set => _maxSound = value;
         }
+        
+        /// <summary>
+        /// 音效音高
+        /// </summary>
+        public static float SoundPitch
+        {
+            get => _soundPitch;
+            set => _soundPitch = value;
+        }
+        
+        /// <summary>
+        /// 音效空间混合 (0=2D, 1=3D)
+        /// </summary>
+        public static float SoundSpatialBlend
+        {
+            get => _soundSpatialBlend;
+            set => _soundSpatialBlend = value;
+        }
+        
+        /// <summary>
+        /// 音效优先级 (0最高, 256最低)
+        /// </summary>
+        public static int SoundPriority
+        {
+            get => _soundPriority;
+            set => _soundPriority = value;
+        }
+        
+        /// <summary>
+        /// BGM音高
+        /// </summary>
+        public static float BgmPitch
+        {
+            get => _bgmPitch;
+            set
+            {
+                if (!_init) Init();
+                _bgmPitch = value;
+                _bgm.Source.pitch = _bgmPitch;
+            }
+        }
+        
+        /// <summary>
+        /// BGM空间混合 (0=2D, 1=3D)
+        /// </summary>
+        public static float BgmSpatialBlend
+        {
+            get => _bgmSpatialBlend;
+            set
+            {
+                if (!_init) Init();
+                _bgmSpatialBlend = value;
+                _bgm.Source.spatialBlend = _bgmSpatialBlend;
+            }
+        }
+        
+        /// <summary>
+        /// BGM优先级 (0最高, 256最低)
+        /// </summary>
+        public static int BgmPriority
+        {
+            get => _bgmPriority;
+            set
+            {
+                if (!_init) Init();
+                _bgmPriority = value;
+                _bgm.Source.priority = _bgmPriority;
+            }
+        }
+        
+        /// <summary>
+        /// 语音音高
+        /// </summary>
+        public static float VoicePitch
+        {
+            get => _voicePitch;
+            set
+            {
+                if (!_init) Init();
+                _voicePitch = value;
+                _voice.Source.pitch = _voicePitch;
+            }
+        }
+        
+        /// <summary>
+        /// 语音空间混合 (0=2D, 1=3D)
+        /// </summary>
+        public static float VoiceSpatialBlend
+        {
+            get => _voiceSpatialBlend;
+            set
+            {
+                if (!_init) Init();
+                _voiceSpatialBlend = value;
+                _voice.Source.spatialBlend = _voiceSpatialBlend;
+            }
+        }
+        
+        /// <summary>
+        /// 语音优先级 (0最高, 256最低)
+        /// </summary>
+        public static int VoicePriority
+        {
+            get => _voicePriority;
+            set
+            {
+                if (!_init) Init();
+                _voicePriority = value;
+                _voice.Source.priority = _voicePriority;
+            }
+        }
 
         /// <summary>
         /// 初始化音频系统
@@ -178,7 +303,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// 手动加载指定的配置文件
         /// </summary>
         /// <param name="config">要加载的配置文件</param>
-        public static void LoadConfig(EUAudioConfig config)
+        private static void LoadConfig(EUAudioConfig config)
         {
             if (config != null)
             {
@@ -198,6 +323,16 @@ namespace EUFramwork.Extension.EUAudioKit
             _voice = new GameObject($"EUVoice").AddComponent<EUAudioSource>();
             _bgm.transform.SetParent(_root.transform);
             _voice.transform.SetParent(_root.transform);
+            
+            // 应用BGM的AudioSource参数
+            _bgm.Source.pitch = _bgmPitch;
+            _bgm.Source.spatialBlend = _bgmSpatialBlend;
+            _bgm.Source.priority = _bgmPriority;
+            
+            // 应用Voice的AudioSource参数
+            _voice.Source.pitch = _voicePitch;
+            _voice.Source.spatialBlend = _voiceSpatialBlend;
+            _voice.Source.priority = _voicePriority;
             
             // 设置 BGM 和 Voice 的结束监听
             _bgm.SetAudioEndListener((clip) => _onBgmEnd?.Invoke(clip));
@@ -310,6 +445,12 @@ namespace EUFramwork.Extension.EUAudioKit
             ls.DelayFrame = _soundDelayFrame;
             ls.transform.position = position;
             if(onAudioEnd != null) ls.SetAudioEndListener(onAudioEnd);
+            
+            // 应用Sound的AudioSource参数
+            lsSource.pitch = _soundPitch;
+            lsSource.spatialBlend = _soundSpatialBlend;
+            lsSource.priority = _soundPriority;
+            
             lsSource.clip = clip;
             ls.Play();
         }

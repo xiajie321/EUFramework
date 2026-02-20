@@ -19,6 +19,27 @@
             <uie:IntegerField name="delay-frame" label="延迟帧数" value="10" />
         </ui:VisualElement>
         
+        <ui:VisualElement name="sound-params" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="Sound AudioSource参数" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
+            <ui:Slider name="sound-pitch" label="音效音高" high-value="3" low-value="0.1" value="1" show-input-field="true" />
+            <ui:Slider name="sound-spatial-blend" label="音效空间混合" high-value="1" low-value="0" value="0" show-input-field="true" />
+            <uie:IntegerField name="sound-priority" label="音效优先级" value="128" />
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="bgm-params" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="BGM AudioSource参数" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
+            <ui:Slider name="bgm-pitch" label="BGM音高" high-value="3" low-value="0.1" value="1" show-input-field="true" />
+            <ui:Slider name="bgm-spatial-blend" label="BGM空间混合" high-value="1" low-value="0" value="0" show-input-field="true" />
+            <uie:IntegerField name="bgm-priority" label="BGM优先级" value="128" />
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="voice-params" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="Voice AudioSource参数" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
+            <ui:Slider name="voice-pitch" label="语音音高" high-value="3" low-value="0.1" value="1" show-input-field="true" />
+            <ui:Slider name="voice-spatial-blend" label="语音空间混合" high-value="1" low-value="0" value="0" show-input-field="true" />
+            <uie:IntegerField name="voice-priority" label="语音优先级" value="128" />
+        </ui:VisualElement>
+        
         <ui:Button name="save-btn" text="保存配置" style="height: 30px; margin-top: 10px;" />
         
         <ui:Label name="status-label" text="" style="margin-top: 10px; color: rgb(0, 200, 0); font-size: 12px;" />

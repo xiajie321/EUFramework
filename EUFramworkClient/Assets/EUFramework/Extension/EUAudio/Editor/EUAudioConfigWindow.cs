@@ -23,6 +23,20 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
         private IntegerField _startSoundField;
         private IntegerField _maxSoundField;
         private IntegerField _delayFrameField;
+        
+        // AudioSource参数UI控件
+        private Slider _soundPitchSlider;
+        private Slider _soundSpatialBlendSlider;
+        private IntegerField _soundPriorityField;
+        
+        private Slider _bgmPitchSlider;
+        private Slider _bgmSpatialBlendSlider;
+        private IntegerField _bgmPriorityField;
+        
+        private Slider _voicePitchSlider;
+        private Slider _voiceSpatialBlendSlider;
+        private IntegerField _voicePriorityField;
+        
         private Label _statusLabel;
         
         [MenuItem("EUFramework/拓展/EUAudio设置")]
@@ -30,7 +44,7 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
         {
             var window = GetWindow<EUAudioConfigWindow>();
             window.titleContent = new GUIContent("EUAudio配置");
-            window.minSize = new Vector2(400, 500);
+            window.minSize = new Vector2(450, 800);
         }
         
         public void CreateGUI()
@@ -77,6 +91,20 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             _startSoundField = rootVisualElement.Q<IntegerField>("start-sound");
             _maxSoundField = rootVisualElement.Q<IntegerField>("max-sound");
             _delayFrameField = rootVisualElement.Q<IntegerField>("delay-frame");
+            
+            // 获取AudioSource参数UI元素
+            _soundPitchSlider = rootVisualElement.Q<Slider>("sound-pitch");
+            _soundSpatialBlendSlider = rootVisualElement.Q<Slider>("sound-spatial-blend");
+            _soundPriorityField = rootVisualElement.Q<IntegerField>("sound-priority");
+            
+            _bgmPitchSlider = rootVisualElement.Q<Slider>("bgm-pitch");
+            _bgmSpatialBlendSlider = rootVisualElement.Q<Slider>("bgm-spatial-blend");
+            _bgmPriorityField = rootVisualElement.Q<IntegerField>("bgm-priority");
+            
+            _voicePitchSlider = rootVisualElement.Q<Slider>("voice-pitch");
+            _voiceSpatialBlendSlider = rootVisualElement.Q<Slider>("voice-spatial-blend");
+            _voicePriorityField = rootVisualElement.Q<IntegerField>("voice-priority");
+            
             _statusLabel = rootVisualElement.Q<Label>("status-label");
             
             // 绑定按钮事件
@@ -113,6 +141,19 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             _startSoundField.value = config.startSound;
             _maxSoundField.value = config.maxSound;
             _delayFrameField.value = config.soundDelayFrame;
+            
+            // 加载AudioSource参数
+            _soundPitchSlider.value = config.soundPitch;
+            _soundSpatialBlendSlider.value = config.soundSpatialBlend;
+            _soundPriorityField.value = config.soundPriority;
+            
+            _bgmPitchSlider.value = config.bgmPitch;
+            _bgmSpatialBlendSlider.value = config.bgmSpatialBlend;
+            _bgmPriorityField.value = config.bgmPriority;
+            
+            _voicePitchSlider.value = config.voicePitch;
+            _voiceSpatialBlendSlider.value = config.voiceSpatialBlend;
+            _voicePriorityField.value = config.voicePriority;
         }
         
         private void SaveUIToConfig()
@@ -126,6 +167,19 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             _currentConfig.startSound = _startSoundField.value;
             _currentConfig.maxSound = _maxSoundField.value;
             _currentConfig.soundDelayFrame = _delayFrameField.value;
+            
+            // 保存AudioSource参数
+            _currentConfig.soundPitch = _soundPitchSlider.value;
+            _currentConfig.soundSpatialBlend = _soundSpatialBlendSlider.value;
+            _currentConfig.soundPriority = _soundPriorityField.value;
+            
+            _currentConfig.bgmPitch = _bgmPitchSlider.value;
+            _currentConfig.bgmSpatialBlend = _bgmSpatialBlendSlider.value;
+            _currentConfig.bgmPriority = _bgmPriorityField.value;
+            
+            _currentConfig.voicePitch = _voicePitchSlider.value;
+            _currentConfig.voiceSpatialBlend = _voiceSpatialBlendSlider.value;
+            _currentConfig.voicePriority = _voicePriorityField.value;
         }
         
         private void OnSaveConfig()

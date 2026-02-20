@@ -6,7 +6,7 @@ namespace EUFramwork.Extension.EUAudioKit
     /// EUAudio配置ScriptableObject
     /// 用于保存音频系统的默认设置
     /// </summary>
-    [CreateAssetMenu(fileName = "EUAudioConfig", menuName = "EUFramework/Audio/Audio Config", order = 1)]
+    //[CreateAssetMenu(fileName = "EUAudioConfig", menuName = "EUFramework/Audio/Audio Config", order = 1)]
     public class EUAudioConfig : ScriptableObject
     {
         [Header("音量设置")]
@@ -39,6 +39,45 @@ namespace EUFramwork.Extension.EUAudioKit
         [Range(1, 60)]
         public int soundDelayFrame = 10;
         
+        [Header("Sound AudioSource参数")]
+        [Tooltip("音效音高")]
+        [Range(0.1f, 3f)]
+        public float soundPitch = 1.0f;
+        
+        [Tooltip("音效空间混合 (0=2D, 1=3D)")]
+        [Range(0f, 1f)]
+        public float soundSpatialBlend = 0f;
+        
+        [Tooltip("音效优先级 (0最高, 256最低)")]
+        [Range(0, 256)]
+        public int soundPriority = 128;
+        
+        [Header("BGM AudioSource参数")]
+        [Tooltip("BGM音高")]
+        [Range(0.1f, 3f)]
+        public float bgmPitch = 1.0f;
+        
+        [Tooltip("BGM空间混合 (0=2D, 1=3D)")]
+        [Range(0f, 1f)]
+        public float bgmSpatialBlend = 0f;
+        
+        [Tooltip("BGM优先级 (0最高, 256最低)")]
+        [Range(0, 256)]
+        public int bgmPriority = 128;
+        
+        [Header("Voice AudioSource参数")]
+        [Tooltip("语音音高")]
+        [Range(0.1f, 3f)]
+        public float voicePitch = 1.0f;
+        
+        [Tooltip("语音空间混合 (0=2D, 1=3D)")]
+        [Range(0f, 1f)]
+        public float voiceSpatialBlend = 0f;
+        
+        [Tooltip("语音优先级 (0最高, 256最低)")]
+        [Range(0, 256)]
+        public int voicePriority = 128;
+        
         /// <summary>
         /// 应用配置到EUAudio系统
         /// </summary>
@@ -51,6 +90,19 @@ namespace EUFramwork.Extension.EUAudioKit
             EUAudio.BgmVolume = bgmVolume;
             EUAudio.VoiceVolume = voiceVolume;
             EUAudio.GlobalVolume = globalVolume;
+            
+            // 应用AudioSource参数
+            EUAudio.SoundPitch = soundPitch;
+            EUAudio.SoundSpatialBlend = soundSpatialBlend;
+            EUAudio.SoundPriority = soundPriority;
+            
+            EUAudio.BgmPitch = bgmPitch;
+            EUAudio.BgmSpatialBlend = bgmSpatialBlend;
+            EUAudio.BgmPriority = bgmPriority;
+            
+            EUAudio.VoicePitch = voicePitch;
+            EUAudio.VoiceSpatialBlend = voiceSpatialBlend;
+            EUAudio.VoicePriority = voicePriority;
         }
         
         /// <summary>
@@ -65,6 +117,19 @@ namespace EUFramwork.Extension.EUAudioKit
             startSound = EUAudio.StartSound;
             maxSound = EUAudio.MaxSound;
             soundDelayFrame = EUAudio.SoundDelayFrame;
+            
+            // 读取AudioSource参数
+            soundPitch = EUAudio.SoundPitch;
+            soundSpatialBlend = EUAudio.SoundSpatialBlend;
+            soundPriority = EUAudio.SoundPriority;
+            
+            bgmPitch = EUAudio.BgmPitch;
+            bgmSpatialBlend = EUAudio.BgmSpatialBlend;
+            bgmPriority = EUAudio.BgmPriority;
+            
+            voicePitch = EUAudio.VoicePitch;
+            voiceSpatialBlend = EUAudio.VoiceSpatialBlend;
+            voicePriority = EUAudio.VoicePriority;
         }
     }
 }
