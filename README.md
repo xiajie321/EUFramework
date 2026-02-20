@@ -26,7 +26,7 @@
 
 - Unity编辑器中的工具管理器(使用UIToolKit可视化进行对工具包的管理<查看、删除>)。
 
-- 基本的拓展模块工具(UI、Audio、ObjectPool、Log、Singleton、MD文档查看器、资源管理)
+- 基本的拓展模块工具(UI、Audio、ObjectPool、Log、Singleton、FSM、MD文档查看器、资源管理)
 
 ## 正在进行的工作
 
