@@ -13,17 +13,21 @@ namespace EUFramwork.Extension.EUAudioKit
         private bool _isSound;
         private Action<AudioClip> _onAudioEnd;
         private Action<AudioClip,AudioClip> _onClipChange;
-        internal AudioSource Source => _source;// TODO 需要对其它参数也进行封装,避免直接对AudioSource的调用。
+        
+        internal AudioSource Source => _source;
+        
         internal int Index
         {
             get => _index;
             set => _index = value;
         }
+        
         internal bool IsSound
         {
             get => _isSound;
             set => _isSound = value;
         }
+        
         /// <summary>
         /// 用于音频播放结束的监听判断,为了通用优化默认为每10帧检查一次,对于音游这种对于音频精准度要求较高的场景建议将SoundDelayFrame修改为1
         /// </summary>
@@ -32,6 +36,169 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _delayFrame; 
             set => _delayFrame = value; 
         }
+        
+        /// <summary>
+        /// 获取或设置音频片段
+        /// </summary>
+        public AudioClip Clip
+        {
+            get => _source.clip;
+            set => SetClip(value);
+        }
+        
+        /// <summary>
+        /// 获取或设置音量
+        /// </summary>
+        public float Volume
+        {
+            get => _source.volume;
+            set => _source.volume = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置音高
+        /// </summary>
+        public float Pitch
+        {
+            get => _source.pitch;
+            set => _source.pitch = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置立体声声像（-1左，0中，1右）
+        /// </summary>
+        public float StereoPan
+        {
+            get => _source.panStereo;
+            set => _source.panStereo = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置空间混合（0为2D，1为3D）
+        /// </summary>
+        public float SpatialBlend
+        {
+            get => _source.spatialBlend;
+            set => _source.spatialBlend = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置混响区域混合
+        /// </summary>
+        public float ReverbZoneMix
+        {
+            get => _source.reverbZoneMix;
+            set => _source.reverbZoneMix = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置多普勒级别
+        /// </summary>
+        public float DopplerLevel
+        {
+            get => _source.dopplerLevel;
+            set => _source.dopplerLevel = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置扩散角度
+        /// </summary>
+        public float Spread
+        {
+            get => _source.spread;
+            set => _source.spread = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置最小距离
+        /// </summary>
+        public float MinDistance
+        {
+            get => _source.minDistance;
+            set => _source.minDistance = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置最大距离
+        /// </summary>
+        public float MaxDistance
+        {
+            get => _source.maxDistance;
+            set => _source.maxDistance = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置优先级（0最高，256最低）
+        /// </summary>
+        public int Priority
+        {
+            get => _source.priority;
+            set => _source.priority = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置是否静音
+        /// </summary>
+        public bool Mute
+        {
+            get => _source.mute;
+            set => _source.mute = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置是否绕过效果
+        /// </summary>
+        public bool BypassEffects
+        {
+            get => _source.bypassEffects;
+            set => _source.bypassEffects = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置是否绕过监听器效果
+        /// </summary>
+        public bool BypassListenerEffects
+        {
+            get => _source.bypassListenerEffects;
+            set => _source.bypassListenerEffects = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置是否绕过混响区域
+        /// </summary>
+        public bool BypassReverbZones
+        {
+            get => _source.bypassReverbZones;
+            set => _source.bypassReverbZones = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置播放时间（秒）
+        /// </summary>
+        public float Time
+        {
+            get => _source.time;
+            set => _source.time = value;
+        }
+        
+        /// <summary>
+        /// 获取或设置播放时间（采样）
+        /// </summary>
+        public int TimeSamples
+        {
+            get => _source.timeSamples;
+            set => _source.timeSamples = value;
+        }
+        
+        /// <summary>
+        /// 获取是否正在播放
+        /// </summary>
+        public bool IsPlaying => _source.isPlaying;
+        
+        /// <summary>
+        /// 获取是否循环播放
+        /// </summary>
+        public bool Loop => _source.loop;
         private void Awake()
         {
             Init();
