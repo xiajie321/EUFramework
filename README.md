@@ -24,17 +24,16 @@
 
 - 引入Scriban。
 
+- Unity编辑器中的工具管理器(使用UIToolKit可视化进行对工具包的管理<查看、删除>)。
+
+- 基本的拓展模块工具(UI、Audio、ObjectPool、Log、Singleton、MD文档查看器、资源管理)
+
 ## 正在进行的工作
 
-- 资源加载EURes
-- 状态机EUFSM
-- 音频播放EUAudio
 
 ## 计划
 
 - 将框架核心移植到Godot中。
-- Unity编辑器中的工具管理器(使用UIToolKit可视化进行对工具包的管理<查看、删除>)。
-- 引入Fantasy框架。
 
 ---
 
