@@ -1,0 +1,53 @@
+/* EUAudio配置面板样式 */
+
+#root {
+    background-color: rgba(50, 50, 50, 0.05);
+}
+
+.section-container {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+.section-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+.slider-field {
+    margin-bottom: 5px;
+}
+
+.button-primary {
+    height: 30px;
+    background-color: rgba(0, 120, 215, 0.8);
+    color: white;
+}
+
+.button-primary:hover {
+    background-color: rgba(0, 120, 215, 1);
+}
+
+.button-secondary {
+    height: 25px;
+    background-color: rgba(100, 100, 100, 0.5);
+}
+
+.button-secondary:hover {
+    background-color: rgba(100, 100, 100, 0.7);
+}
+
+.status-success {
+    color: rgb(0, 200, 0);
+}
+
+.status-error {
+    color: rgb(200, 0, 0);
+}
+
+.status-warning {
+    color: rgb(200, 150, 0);
+}

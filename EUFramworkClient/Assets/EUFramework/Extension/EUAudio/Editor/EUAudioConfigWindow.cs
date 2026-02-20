@@ -1,0 +1,217 @@
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
+using System.IO;
+
+namespace EUFramwork.Extension.EUAudioKit.Editor
+{
+    /// <summary>
+    /// EUAudio配置窗口
+    /// 提供可视化界面来配置音频系统参数
+    /// </summary>
+    public class EUAudioConfigWindow : EditorWindow
+    {
+        private EUAudioConfig _currentConfig;
+        private ObjectField _configField;
+        private Slider _soundVolumeSlider;
+        private Slider _bgmVolumeSlider;
+        private Slider _voiceVolumeSlider;
+        private Slider _globalVolumeSlider;
+        private IntegerField _startSoundField;
+        private IntegerField _maxSoundField;
+        private IntegerField _delayFrameField;
+        private Label _statusLabel;
+        
+        [MenuItem("EUFramework/拓展/EUAudio设置")]
+        public static void ShowWindow()
+        {
+            var window = GetWindow<EUAudioConfigWindow>();
+            window.titleContent = new GUIContent("EUAudio配置");
+            window.minSize = new Vector2(400, 500);
+        }
+        
+        public void CreateGUI()
+        {
+            // 获取当前脚本所在目录
+            var script = MonoScript.FromScriptableObject(this);
+            var scriptPath = AssetDatabase.GetAssetPath(script);
+            var scriptDirectory = Path.GetDirectoryName(scriptPath);
+            
+            // 构建相对路径
+            var uxmlPath = Path.Combine(scriptDirectory, "EUAudioConfigPanel.uxml");
+            var ussPath = Path.Combine(scriptDirectory, "EUAudioConfigPanel.uss");
+            
+            // 加载UXML
+            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
+            
+            if (visualTree != null)
+            {
+                visualTree.CloneTree(rootVisualElement);
+            }
+            else
+            {
+                Debug.LogError($"无法加载EUAudioConfigPanel.uxml，路径: {uxmlPath}");
+                return;
+            }
+            
+            // 加载USS
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
+            
+            if (styleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(styleSheet);
+            }
+            else
+            {
+                Debug.LogWarning($"无法加载EUAudioConfigPanel.uss，路径: {ussPath}");
+            }
+            
+            // 获取UI元素引用
+            _configField = rootVisualElement.Q<ObjectField>("config-field");
+            _soundVolumeSlider = rootVisualElement.Q<Slider>("sound-volume");
+            _bgmVolumeSlider = rootVisualElement.Q<Slider>("bgm-volume");
+            _voiceVolumeSlider = rootVisualElement.Q<Slider>("voice-volume");
+            _globalVolumeSlider = rootVisualElement.Q<Slider>("global-volume");
+            _startSoundField = rootVisualElement.Q<IntegerField>("start-sound");
+            _maxSoundField = rootVisualElement.Q<IntegerField>("max-sound");
+            _delayFrameField = rootVisualElement.Q<IntegerField>("delay-frame");
+            _statusLabel = rootVisualElement.Q<Label>("status-label");
+            
+            // 绑定按钮事件
+            var createBtn = rootVisualElement.Q<Button>("create-config-btn");
+            var loadBtn = rootVisualElement.Q<Button>("load-config-btn");
+            var applyBtn = rootVisualElement.Q<Button>("apply-btn");
+            var saveBtn = rootVisualElement.Q<Button>("save-btn");
+            
+            createBtn.clicked += OnCreateConfig;
+            loadBtn.clicked += OnLoadConfig;
+            applyBtn.clicked += OnApplyConfig;
+            saveBtn.clicked += OnSaveConfig;
+            
+            // 绑定配置字段变化事件
+            _configField.RegisterValueChangedCallback(OnConfigChanged);
+            
+            // 尝试加载默认配置
+            TryLoadDefaultConfig();
+        }
+        
+        private void TryLoadDefaultConfig()
+        {
+            var guids = AssetDatabase.FindAssets("t:EUAudioConfig");
+            if (guids.Length > 0)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                var config = AssetDatabase.LoadAssetAtPath<EUAudioConfig>(path);
+                if (config != null)
+                {
+                    _configField.value = config;
+                    LoadConfigToUI(config);
+                }
+            }
+        }
+        
+        private void OnConfigChanged(ChangeEvent<Object> evt)
+        {
+            _currentConfig = evt.newValue as EUAudioConfig;
+            if (_currentConfig != null)
+            {
+                LoadConfigToUI(_currentConfig);
+                ShowStatus("配置已加载", false);
+            }
+        }
+        
+        private void LoadConfigToUI(EUAudioConfig config)
+        {
+            _soundVolumeSlider.value = config.soundVolume;
+            _bgmVolumeSlider.value = config.bgmVolume;
+            _voiceVolumeSlider.value = config.voiceVolume;
+            _globalVolumeSlider.value = config.globalVolume;
+            _startSoundField.value = config.startSound;
+            _maxSoundField.value = config.maxSound;
+            _delayFrameField.value = config.soundDelayFrame;
+        }
+        
+        private void SaveUIToConfig()
+        {
+            if (_currentConfig == null) return;
+            
+            _currentConfig.soundVolume = _soundVolumeSlider.value;
+            _currentConfig.bgmVolume = _bgmVolumeSlider.value;
+            _currentConfig.voiceVolume = _voiceVolumeSlider.value;
+            _currentConfig.globalVolume = _globalVolumeSlider.value;
+            _currentConfig.startSound = _startSoundField.value;
+            _currentConfig.maxSound = _maxSoundField.value;
+            _currentConfig.soundDelayFrame = _delayFrameField.value;
+        }
+        
+        private void OnCreateConfig()
+        {
+            var path = EditorUtility.SaveFilePanelInProject(
+                "创建EUAudio配置",
+                "EUAudioConfig",
+                "asset",
+                "选择保存位置");
+            
+            if (string.IsNullOrEmpty(path)) return;
+            
+            var config = CreateInstance<EUAudioConfig>();
+            AssetDatabase.CreateAsset(config, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            
+            _configField.value = config;
+            _currentConfig = config;
+            LoadConfigToUI(config);
+            ShowStatus($"配置已创建: {path}", false);
+        }
+        
+        private void OnLoadConfig()
+        {
+            if (_currentConfig != null)
+            {
+                LoadConfigToUI(_currentConfig);
+                ShowStatus("配置已重新加载", false);
+            }
+            else
+            {
+                ShowStatus("请先选择一个配置文件", true);
+            }
+        }
+        
+        private void OnApplyConfig()
+        {
+            if (_currentConfig == null)
+            {
+                ShowStatus("请先选择一个配置文件", true);
+                return;
+            }
+            
+            SaveUIToConfig();
+            _currentConfig.ApplyConfig();
+            ShowStatus("配置已应用到运行时", false);
+        }
+        
+        private void OnSaveConfig()
+        {
+            if (_currentConfig == null)
+            {
+                ShowStatus("请先选择一个配置文件", true);
+                return;
+            }
+            
+            SaveUIToConfig();
+            EditorUtility.SetDirty(_currentConfig);
+            AssetDatabase.SaveAssets();
+            ShowStatus("配置已保存", false);
+        }
+        
+        private void ShowStatus(string message, bool isError)
+        {
+            _statusLabel.text = message;
+            _statusLabel.RemoveFromClassList("status-success");
+            _statusLabel.RemoveFromClassList("status-error");
+            _statusLabel.AddToClassList(isError ? "status-error" : "status-success");
+        }
+    }
+}

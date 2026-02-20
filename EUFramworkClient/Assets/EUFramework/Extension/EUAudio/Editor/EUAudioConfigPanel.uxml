@@ -1,0 +1,36 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="root" style="flex-grow: 1; padding: 10px;">
+        <ui:Label text="EUAudio 配置面板" style="font-size: 18px; -unity-font-style: bold; margin-bottom: 10px;" />
+        
+        <ui:VisualElement name="config-selector" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="配置文件" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 5px;" />
+            <uie:ObjectField name="config-field" label="当前配置" type="EUFramwork.Extension.EUAudioKit.EUAudioConfig, Assembly-CSharp" />
+            <ui:VisualElement name="button-row" style="flex-direction: row; margin-top: 5px;">
+                <ui:Button name="create-config-btn" text="创建新配置" style="flex-grow: 1; margin-right: 5px;" />
+                <ui:Button name="load-config-btn" text="加载配置" style="flex-grow: 1;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="volume-settings" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="音量设置" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
+            <ui:Slider name="sound-volume" label="音效音量" high-value="1" low-value="0" value="1" show-input-field="true" />
+            <ui:Slider name="bgm-volume" label="BGM音量" high-value="1" low-value="0" value="1" show-input-field="true" />
+            <ui:Slider name="voice-volume" label="语音音量" high-value="1" low-value="0" value="1" show-input-field="true" />
+            <ui:Slider name="global-volume" label="全局音量" high-value="1" low-value="0" value="1" show-input-field="true" />
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="player-settings" style="margin-bottom: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: 5px;">
+            <ui:Label text="播放器设置" style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
+            <uie:IntegerField name="start-sound" label="初始音效数量" value="10" />
+            <uie:IntegerField name="max-sound" label="最大音效数量" value="20" />
+            <uie:IntegerField name="delay-frame" label="延迟帧数" value="10" />
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="action-buttons" style="flex-direction: row; margin-top: 10px;">
+            <ui:Button name="apply-btn" text="应用到运行时" style="flex-grow: 1; margin-right: 5px; height: 30px;" />
+            <ui:Button name="save-btn" text="保存配置" style="flex-grow: 1; height: 30px;" />
+        </ui:VisualElement>
+        
+        <ui:Label name="status-label" text="" style="margin-top: 10px; color: rgb(0, 200, 0); font-size: 12px;" />
+    </ui:VisualElement>
+</ui:UXML>
