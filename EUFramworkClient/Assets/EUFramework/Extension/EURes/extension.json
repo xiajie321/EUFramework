@@ -1,7 +1,7 @@
 {
   "name": "com.eu.res",
   "displayName": "EU 资源加载器",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "基于YooAsset的资源管理系统",
   "author": "Cai_JH",
   "category": "工具"

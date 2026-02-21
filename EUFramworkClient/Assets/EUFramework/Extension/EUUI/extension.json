@@ -1,7 +1,7 @@
 {
   "name": "com.eu.ui",
   "displayName": "EU UI管理器",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "通过配置决定是否使用EURes进行资源加载和是否依赖核心",
   "author": "Cai_JH",
   "category": "工具"

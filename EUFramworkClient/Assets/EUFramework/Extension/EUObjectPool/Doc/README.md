@@ -1,5 +1,7 @@
 # EU 对象池 (EU Object Pool)
 
+## 概述
+
 一个轻量级、高性能的通用对象池系统，旨在简化 Unity 项目中的对象复用管理。支持纯 C# 对象和 Unity GameObject，并提供生命周期回调与自动代码生成功能。
 
 ## 功能特点
@@ -7,14 +9,14 @@
 - **双模式支持**：
   - `EUAbsObjectPoolBase<T>`: 用于纯 C# 对象 (Non-MonoBehaviour)。
   - `EUAbsGameObjectPoolBase<T>`: 用于 Unity GameObject (MonoBehaviour)。
-- **生命周期管理**：提供 `OnInit` (初始化), `OnCreate` (创建), `OnGet` (获取), `OnRelease` (回收) 四个关键生命周期回调。
+- **生命周期管理**：提供 `OnInit`, `OnCreate`, `OnGet`, `OnRelease` 四个关键生命周期回调。
 - **自动管理**：
   - GameObject 池自动处理 `SetActive` 状态。
   - 自动创建根节点并挂载 `DontDestroyOnLoad`。
-  - 支持设置初始容量 (`StartObjectQuantity`) 和最大容量 (`MaxObjectQuantity`)。
+  - 支持设置初始容量和最大容量。
 - **便捷集成**：通过 `[EUObjectPool]` 特性标记，配合代码生成器自动注册到 `EUObjectPoolManager`。
 
-## 使用方法
+## 快速开始
 
 ### 1. 纯 C# 对象池
 
@@ -51,7 +53,7 @@ public class MyEffectPool : EUAbsGameObjectPoolBase<MyEffectController>
     // 加载预制体的方法
     public override MyEffectController OnLoadObject()
     {
-        // 示例：从 Resources 加载，也可以使用 Addressables 或其他方式
+        // 示例：从 Resources 加载
         var prefab = Resources.Load<GameObject>("Prefabs/MyEffect");
         return prefab.GetComponent<MyEffectController>();
     }
@@ -78,8 +80,6 @@ public class MyEffectPool : EUAbsGameObjectPoolBase<MyEffectController>
 
 ### 4. 调用方式
 
-使用 `EUObjectPoolManager` 进行调用：
-
 ```csharp
 // 获取对象
 var data = EUObjectPoolManager.MyDataPool.Get();
@@ -90,15 +90,7 @@ EUObjectPoolManager.MyDataPool.Release(data);
 EUObjectPoolManager.MyEffectPool.Release(effect);
 ```
 
-## 核心 API
+## 文档说明
 
-- `Get()`: 从池中获取一个对象。如果池为空，会自动创建新对象。
-- `Release(T obj)`: 将对象归还给池。如果池已满，可能会销毁对象（对于 GameObject）。
-- `Clear()`: 清空对象池。
-- `Pool`: 获取内部 Stack 容器。
-
-## 注意事项
-
-- 请确保 GameObject 池的预制体上挂载了对应的 MonoBehaviour 脚本。
-- `MaxObjectQuantity` 设置为负数时表示不限制容量。
-- 自动生成的代码位于 `EUObjectPoolManager` 中，请勿手动修改该文件的生成部分。
+- **API文档**：请查阅 [API.md](API.md) 获取详细的接口说明。
+- **更新日志**：请查阅 [Update.md](Update.md) 获取版本更新历史。

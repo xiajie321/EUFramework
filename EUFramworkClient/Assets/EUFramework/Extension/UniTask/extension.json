@@ -1,7 +1,7 @@
 {
   "name": "com.eu.UniTask",
   "displayName": "UniTask",
-  "version": "2.5.10",
+  "version": "2.5.11",
   "description": "为Unity提供了高效的无分配/异步/等待集成。基于结构和自定义的 AsyncMethodBuilder 实现零分配UniTask<T>使所有Unity异步作和协程都可期待基于 PlayerLoop 的任务（、、等），能够替换所有协程作UniTask.YieldUniTask.DelayUniTask.DelayFrameMonoBehaviour 消息事件和 uGUI 事件作为等待/异步枚举它完全运行在Unity的PlayerLoop上，不用线程，运行在WebGL、wasm等平台上。异步LINQ，带有通道和异步ReactiveProperty。防止内存泄漏的任务追踪器窗口与 Task/ValueTask/IValueTaskSource 高度兼容的行为 [GitHub仓库链接] https://github.com/Cysharp/UniTask",
   "author": "Cysharp, Inc.",
   "category": "工具"

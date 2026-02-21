@@ -1,7 +1,7 @@
 {
   "name": "com.eu.audio",
   "displayName": "EU 音频管理器",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一个高性能的音频管理系统，支持音效、背景音乐和语音播放，提供对象池管理、音量控制、淡入淡出效果以及完整的生命周期管理功能。",
   "author": "没有名字的丑兔子",
   "category": "工具"

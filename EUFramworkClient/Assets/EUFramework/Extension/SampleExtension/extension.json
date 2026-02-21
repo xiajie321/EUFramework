@@ -1,7 +1,7 @@
 {
     "name": "com.eu.sample-extension",
     "displayName": "示例拓展工具",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "这是一个用于验证 EU 拓展管理器功能的测试插件示例。",
     "author": "没有名字的丑兔子",
     "category": "测试",

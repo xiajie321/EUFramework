@@ -1,7 +1,7 @@
 {
   "name": "com.eu.objectpool",
   "displayName": "EU 对象池",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一个轻量级、高性能的通用对象池系统，支持纯 C# 对象和 Unity GameObject，提供自动代码生成和生命周期管理功能。",
   "author": "没有名字的丑兔子",
   "category": "工具"

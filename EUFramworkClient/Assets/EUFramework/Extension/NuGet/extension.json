@@ -1,7 +1,7 @@
 {
   "name": "com.eu.NuGetForUnity",
   "displayName": "NuGetForUnity",
-  "version": "4.5.0",
+  "version": "4.5.1",
   "description": "NuGetForUnity 提供了一个可视化编辑器窗口，可查看服务器上的可用包、已安装的包以及可用的包更新。还提供了一个可视化界面，用于创建和编辑 .nuspec 文件，以便在 Unity 内部定义并发布您自己的 NuGet 包。[GitHub仓库链接] https://github.com/GlitchEnzo/NuGetForUnity",
   "author": "GlitchEnzo",
   "category": "工具"

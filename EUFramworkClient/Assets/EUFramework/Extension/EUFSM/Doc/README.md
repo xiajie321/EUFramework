@@ -1,6 +1,8 @@
-# EU 有限状态机 (EU FSM)
+# EU FSM 有限状态机
 
-一个轻量级、高性能的通用有限状态机 (FSM) 系统，专为 Unity 开发设计。它使用泛型枚举作为状态标识，避免了字符串比较的开销，并提供了完整的状态生命周期管理。
+## 概述
+
+EU FSM 是一个轻量级、高性能的通用有限状态机 (FSM) 系统，专为 Unity 开发设计。它使用泛型枚举作为状态标识，避免了字符串比较的开销，并提供了完整的状态生命周期管理。
 
 ## 功能特点
 
@@ -10,7 +12,7 @@
 - **状态基类**：提供 `EUAbsStateBase<TStateId, TOwner>`，方便状态类直接访问状态机和所有者 (`Owner`)。
 - **状态所有者**：通过泛型绑定所有者类型，方便在状态中操作角色或对象。
 
-## 使用方法
+## 快速开始
 
 ### 1. 定义状态枚举
 
@@ -56,7 +58,7 @@ public class PlayerIdleState : EUAbsStateBase<PlayerState, PlayerController>
             // 切换到跑步状态
             // 注意：这里需要通过 Owner 或其他方式访问 FSM 进行切换
             // 或者在构造函数中保存 FSM 引用（基类已保存 _fsm 但为私有，通常通过 Owner 暴露方法切换）
-            Owner.Fsm.ChangeState(PlayerState.Run);
+            _fsm.ChangeState(PlayerState.Run);
         }
     }
 
@@ -115,34 +117,10 @@ public class PlayerController : MonoBehaviour
 }
 ```
 
-## 核心 API
+## 文档说明
 
-### `EUFSM<TKey>`
-
-状态机核心类。
-
-- `StartState(TKey id)`: 启动状态机并进入初始状态。
-- `ChangeState(TKey id)`: 切换到指定状态（触发旧状态 `OnExit` 和新状态 `OnEnter`）。
-- `AddState(TKey id, IState state)`: 注册状态。
-- `RemoveState(TKey id)`: 移除状态。
-- `Update()`: 轮询当前状态的 `OnUpdate`，需在 `MonoBehaviour.Update` 中调用。
-- `FixedUpdate()`: 轮询当前状态的 `OnFixedUpdate`，需在 `MonoBehaviour.FixedUpdate` 中调用。
-- `CurrentState`: 获取当前状态对象。
-- `CurrentId`: 获取当前状态 ID。
-- `PreviousState`: 获取上一个状态对象。
-- `PreviousId`: 获取上一个状态 ID。
-- `Clear()`: 清空所有状态并重置状态机。
-
-### `EUAbsStateBase<TStateId, TOwner>`
-
-推荐继承的基类。
-
-- `Owner`: 获取状态的所有者对象（通常是 MonoBehaviour）。
-- `OnEnter()`: 进入状态时调用。
-- `OnExit()`: 退出状态时调用。
-- `OnUpdate()`: 每帧调用。
-- `OnFixedUpdate()`: 每物理帧调用。
-- `OnCondition()`: (可选) 状态跳转条件检查。
+- **API文档**：请查阅 [API.md](API.md) 获取详细的接口说明。
+- **更新日志**：请查阅 [Update.md](Update.md) 获取版本更新历史。
 
 ## 注意事项
 

@@ -1,7 +1,7 @@
 {
   "name": "com.eu.fsm",
   "displayName": "EU 有限状态机",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一个轻量级、高性能的有限状态机 (FSM) 系统，支持泛型枚举状态ID，提供状态切换、生命周期管理以及状态所有者绑定功能。",
   "author": "没有名字的丑兔子",
   "category": "工具"
