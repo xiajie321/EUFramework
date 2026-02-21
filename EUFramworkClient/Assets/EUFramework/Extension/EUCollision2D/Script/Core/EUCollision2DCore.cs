@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
+using EUFramework.Extension.EUCollision2D.Script.Core;
 using EUFramwork.Extension.EUCollision2DKit.Collision;
 using EUFramwork.Extension.EUCollision2DKit.CollisionAlgorithm;
-using EUFramwork.Extension.EUCollision2DKit.Core;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Jobs;
 using Object = UnityEngine.Object;
 
-namespace EUFarmworker.Extension.EUCollision2DKit.Core
+namespace EUFramwork.Extension.EUCollision2DKit.Core
 {
     #region 数据结构定义
 
@@ -117,6 +118,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
     /// </summary>
     public static class EUCollision2DCore
     {
+        private static EUCollision2DSOConfig _config;
         /// <summary> 运行时驱动脚本实例 </summary>
         private static EUCollision2DRunTime _core;
         /// <summary> 当前使用的碰撞算法实现 </summary>
@@ -136,7 +138,14 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         private static int _maxObjectSum = 10000;
         /// <summary> 分帧处理的数量（0或1表示不分帧） </summary>
         private static int _frameSplittingSum = 0;
-        //备忘：无限地图大小与有限地图大小
+        /// <summary>
+        /// 地图中心位置(游戏场景世界坐标)
+        /// </summary>
+        private static float2 _mapCenter = new int2(0, 0);
+        /// <summary>
+        /// 地图大小(x为或者y为负数表示某一个方向上是不限制地图大小的;如果两个值都为负数则表示地图大小不被限制此时_mapCenter固定为0,0)
+        /// </summary>
+        private static int2 _mapSize = new int2(100,100);
         #endregion
 
         /// <summary> 管理所有碰撞对象组件的列表，用于触发回调事件 </summary>
@@ -182,7 +191,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         private static bool _collisionAlgorithmChange = false;
         
         /// <summary>
-        /// 碰撞算法更换
+        /// 碰撞算法更换(更换的时候会把原先的游戏对象信息保留)
         /// </summary>
         public static CollisionAlgorithmMode CollisionAlgorithm
         {
@@ -255,6 +264,16 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// </summary>
         public static int PerFrameMaxObjectSum => _entityCount / _frameSplittingSum + 1;
 
+        /// <summary>
+        /// 地图中心(用于计算碰撞检测)
+        /// </summary>
+        public static float2 MapCenter => _mapCenter;
+        
+        /// <summary>
+        /// 地图大小(计算碰撞检测的边界范围,超出这个边界就不会进行检测)
+        /// </summary>
+        public static int2 MapSize => _mapSize;
+
         #endregion
 
         #region 初始化
@@ -277,6 +296,16 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// </summary>
         private static void ConfigDataInit()
         {
+            _config ??= Resources.Load<EUCollision2DSOConfig>("EUCollision2D/EUCollision2DConfig");
+            _config ??= ScriptableObject.CreateInstance<EUCollision2DSOConfig>();
+            _runMode = _config.RunMode;
+            _frameSplittingSum = _config.FrameSplittingSum;
+            _maxObjectSum = _config.MaxObjectSum;
+            _collisionAlgorithm = _config.CollisionAlgorithm;
+            _direction = _config.Direction;
+            _mapCenter = _config.MapCenter;
+            _mapSize = _config.MapSize;
+            
             FrameSplittingSum = _frameSplittingSum;
             CollisionAlgorithmUpdate(_collisionAlgorithm);
             _collisionAlgorithmInit = true;
@@ -328,7 +357,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// </summary>
         public static void AddObjectCommand(EUAbsCollision2D collision2D)
         {
-            Init();
+            if (!_init) Init();
             _commandQueue.Enqueue(new()
             {
                 Collision2D = collision2D,
@@ -341,7 +370,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// </summary>
         public static void RemoveObjectCommand(EUAbsCollision2D collision2D)
         {
-            Init();
+            if (!_init) Init();
             _commandQueue.Enqueue(new()
             {
                 Collision2D = collision2D,
@@ -354,7 +383,7 @@ namespace EUFarmworker.Extension.EUCollision2DKit.Core
         /// </summary>
         public static void UpdateObjectDataCommand(EUAbsCollision2D collision2D)
         {
-            Init();
+            if (!_init) Init();
             _commandQueue.Enqueue(new()
             {
                 Collision2D = collision2D,

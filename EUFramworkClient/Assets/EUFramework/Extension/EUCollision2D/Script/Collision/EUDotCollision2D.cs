@@ -1,5 +1,4 @@
-﻿using EUFarmworker.Extension.EUCollision2DKit.Core;
-using EUFramwork.Extension.EUCollision2DKit.Core;
+﻿using EUFramwork.Extension.EUCollision2DKit.Core;
 using Unity.Mathematics;
 using UnityEngine;
 

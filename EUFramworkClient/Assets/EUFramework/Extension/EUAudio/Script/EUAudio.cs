@@ -23,20 +23,20 @@ namespace EUFramwork.Extension.EUAudioKit
         private static float _bgmVolume = 1.0f;
         private static float _voiceVolume = 1.0f;
         private static float _globalVolume = 1.0f;
-        
+
         // AudioSource参数
         private static float _soundPitch = 1.0f;
         private static float _soundSpatialBlend = 0f;
         private static int _soundPriority = 128;
-        
+
         private static float _bgmPitch = 1.0f;
         private static float _bgmSpatialBlend = 0f;
         private static int _bgmPriority = 128;
-        
+
         private static float _voicePitch = 1.0f;
         private static float _voiceSpatialBlend = 0f;
         private static int _voicePriority = 128;
-        
+
         private static GameObject _root;
         private static EUAudioSource _bgm; //背景音乐
         private static EUAudioSource _bgmGd; //背景音乐(用于过渡)
@@ -81,6 +81,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 {
                     _sound[_useSound[i]].Source.volume = ls;
                 }
+
                 _onSoundVolumeChange?.Invoke(_soundVolume);
             }
         }
@@ -152,7 +153,7 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _maxSound;
             set => _maxSound = value;
         }
-        
+
         /// <summary>
         /// 音效音高
         /// </summary>
@@ -161,7 +162,7 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _soundPitch;
             set => _soundPitch = value;
         }
-        
+
         /// <summary>
         /// 音效空间混合 (0=2D, 1=3D)
         /// </summary>
@@ -170,7 +171,7 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _soundSpatialBlend;
             set => _soundSpatialBlend = value;
         }
-        
+
         /// <summary>
         /// 音效优先级 (0最高, 256最低)
         /// </summary>
@@ -179,7 +180,7 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _soundPriority;
             set => _soundPriority = value;
         }
-        
+
         /// <summary>
         /// BGM音高
         /// </summary>
@@ -193,7 +194,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.pitch = _bgmPitch;
             }
         }
-        
+
         /// <summary>
         /// BGM空间混合 (0=2D, 1=3D)
         /// </summary>
@@ -207,7 +208,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.spatialBlend = _bgmSpatialBlend;
             }
         }
-        
+
         /// <summary>
         /// BGM优先级 (0最高, 256最低)
         /// </summary>
@@ -221,7 +222,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.priority = _bgmPriority;
             }
         }
-        
+
         /// <summary>
         /// 语音音高
         /// </summary>
@@ -235,7 +236,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _voice.Source.pitch = _voicePitch;
             }
         }
-        
+
         /// <summary>
         /// 语音空间混合 (0=2D, 1=3D)
         /// </summary>
@@ -249,7 +250,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 _voice.Source.spatialBlend = _voiceSpatialBlend;
             }
         }
-        
+
         /// <summary>
         /// 语音优先级 (0最高, 256最低)
         /// </summary>
@@ -273,16 +274,16 @@ namespace EUFramwork.Extension.EUAudioKit
         {
             if (_init) return;
             _init = true;
-            
+
             // 尝试加载默认配置(只设置backing field,不访问AudioSource)
             LoadDefaultConfig();
-            
+
             _root = new GameObject("[EUAudio]");
             Object.DontDestroyOnLoad(_root);
             NativeInit();
             EUAudioSourceInit();
         }
-        
+
         /// <summary>
         /// 加载默认配置文件
         /// 会在Resources/EUAudio目录下查找名为"EUAudioConfig"的配置文件
@@ -292,32 +293,28 @@ namespace EUFramwork.Extension.EUAudioKit
         private static void LoadDefaultConfig()
         {
             var config = Resources.Load<EUAudioConfig>("EUAudio/EUAudioConfig");
-            if (config != null)
-            {
-                // [修复] 只设置backing field，不触发属性setter
-                // 原代码调用config.ApplyConfig()会通过setter访问尚未初始化的_bgm/_voice/_useSound导致NullReferenceException
-                _startSound = config.startSound;
-                _maxSound = config.maxSound;
-                _soundDelayFrame = config.soundDelayFrame;
-                _soundVolume = config.soundVolume;
-                _bgmVolume = config.bgmVolume;
-                _voiceVolume = config.voiceVolume;
-                _globalVolume = config.globalVolume;
-                _soundPitch = config.soundPitch;
-                _soundSpatialBlend = config.soundSpatialBlend;
-                _soundPriority = config.soundPriority;
-                _bgmPitch = config.bgmPitch;
-                _bgmSpatialBlend = config.bgmSpatialBlend;
-                _bgmPriority = config.bgmPriority;
-                _voicePitch = config.voicePitch;
-                _voiceSpatialBlend = config.voiceSpatialBlend;
-                _voicePriority = config.voicePriority;
+            config ??= ScriptableObject.CreateInstance<EUAudioConfig>();
+            _startSound = config.startSound;
+            _maxSound = config.maxSound;
+            _soundDelayFrame = config.soundDelayFrame;
+            _soundVolume = config.soundVolume;
+            _bgmVolume = config.bgmVolume;
+            _voiceVolume = config.voiceVolume;
+            _globalVolume = config.globalVolume;
+            _soundPitch = config.soundPitch;
+            _soundSpatialBlend = config.soundSpatialBlend;
+            _soundPriority = config.soundPriority;
+            _bgmPitch = config.bgmPitch;
+            _bgmSpatialBlend = config.bgmSpatialBlend;
+            _bgmPriority = config.bgmPriority;
+            _voicePitch = config.voicePitch;
+            _voiceSpatialBlend = config.voiceSpatialBlend;
+            _voicePriority = config.voicePriority;
 #if UNITY_EDITOR
-                Debug.Log($"[EUAudio] 已加载默认配置: {config.name}");
+            Debug.Log($"[EUAudio] 已加载默认配置: {config.name}");
 #endif
-            }
         }
-        
+
         /// <summary>
         /// 手动加载指定的配置文件
         /// 注意：此方法只能在Init()完成后调用
@@ -344,27 +341,27 @@ namespace EUFramwork.Extension.EUAudioKit
             _voice = new GameObject($"EUVoice").AddComponent<EUAudioSource>();
             _bgm.transform.SetParent(_root.transform);
             _voice.transform.SetParent(_root.transform);
-            
+
             // 应用BGM的AudioSource参数
             _bgm.Source.pitch = _bgmPitch;
             _bgm.Source.spatialBlend = _bgmSpatialBlend;
             _bgm.Source.priority = _bgmPriority;
             _bgm.Source.volume = _bgmVolume * _globalVolume;
-            
+
             // 应用Voice的AudioSource参数
             _voice.Source.pitch = _voicePitch;
             _voice.Source.spatialBlend = _voiceSpatialBlend;
             _voice.Source.priority = _voicePriority;
             _voice.Source.volume = _voiceVolume * _globalVolume;
-            
+
             // 设置 BGM 和 Voice 的结束监听
             _bgm.SetAudioEndListener((clip) => _onBgmEnd?.Invoke(clip));
             _voice.SetAudioEndListener((clip) => _onVoiceEnd?.Invoke(clip));
-            
+
             // 设置 BGM 和 Voice 的音频改变监听
             _bgm.SetAudioClipChangeListener((oldClip, newClip) => _onBgmChange?.Invoke(oldClip, newClip));
             _voice.SetAudioClipChangeListener((oldClip, newClip) => _onVoiceChange?.Invoke(oldClip, newClip));
-            
+
             for (int i = 0; i < _startSound; i++)
             {
                 if (i >= _maxSound) return; //不会超过最大数量
@@ -411,6 +408,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 euAudioSource = null;
                 return false;
             }
+
             if (poolHave) EUAudioSourceSoundCreate();
             euAudioSource = _sound[_soundPool.Pop()];
             int useIndex = _useSound.Length;
@@ -461,7 +459,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="clip">要播放的音频片段</param>
         /// <param name="position">播放位置(3D空间坐标)</param>
         /// <param name="onAudioEnd">音频播放结束时的回调函数(可选)</param>
-        public static void PlaySound(AudioClip clip, Vector3 position,Action<AudioClip> onAudioEnd=null)
+        public static void PlaySound(AudioClip clip, Vector3 position, Action<AudioClip> onAudioEnd = null)
         {
             if (!GetSound(out var ls)) return;
             var lsSource = ls.Source;
@@ -469,14 +467,14 @@ namespace EUFramwork.Extension.EUAudioKit
             ls.transform.position = position;
             // [修复] 无论onAudioEnd是否为null都要设置,避免复用时残留上次的回调
             ls.SetAudioEndListener(onAudioEnd);
-            
+
             // 应用Sound的AudioSource参数
             lsSource.pitch = _soundPitch;
             lsSource.spatialBlend = _soundSpatialBlend;
             lsSource.priority = _soundPriority;
             // [修复] 设置音效音量,原代码缺失导致音效以残留音量或默认值播放
             lsSource.volume = _soundVolume * _globalVolume;
-            
+
             lsSource.clip = clip;
             ls.Play();
         }
@@ -486,7 +484,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// </summary>
         /// <param name="clip">要播放的音频片段</param>
         /// <param name="onAudioEnd">音频播放结束时的回调函数(可选)</param>
-        public static void PlaySound(AudioClip clip,Action<AudioClip> onAudioEnd = null)
+        public static void PlaySound(AudioClip clip, Action<AudioClip> onAudioEnd = null)
         {
             PlaySound(clip, Vector3.zero, onAudioEnd);
         }
@@ -498,7 +496,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="clip">要设置的音频片段</param>
         /// <param name="fadeTime">淡出时间(秒),默认为0</param>
         /// <param name="loop">是否循环播放,默认为true</param>
-        public static void SetBGM(AudioClip clip, float fadeTime = 0,bool loop = true)
+        public static void SetBGM(AudioClip clip, float fadeTime = 0, bool loop = true)
         {
             if (!_init) Init();
             if (fadeTime > 0 && _bgm.Source.isPlaying)
@@ -511,14 +509,14 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.SetLoop(loop);
             }
         }
-        
+
         /// <summary>
         /// 设置并播放背景音乐,支持淡入淡出效果
         /// </summary>
         /// <param name="clip">要播放的音频片段</param>
         /// <param name="fadeTime">淡入淡出时间(秒),默认为0</param>
         /// <param name="loop">是否循环播放,默认为true</param>
-        public static void PlayBGM(AudioClip clip, float fadeTime = 0,bool loop = true)
+        public static void PlayBGM(AudioClip clip, float fadeTime = 0, bool loop = true)
         {
             if (!_init) Init();
             if (fadeTime <= 0)
@@ -541,7 +539,7 @@ namespace EUFramwork.Extension.EUAudioKit
             if (!_init) Init();
             _bgm.Play();
         }
-        
+
         /// <summary>
         /// 停止背景音乐播放,支持淡出效果
         /// </summary>
@@ -586,7 +584,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="clip">要播放的音频片段</param>
         /// <param name="fadeTime">淡入淡出时间(秒),默认为0</param>
         /// <param name="loop">是否循环播放,默认为false</param>
-        public static void PlayVoice(AudioClip clip, float fadeTime = 0 ,bool loop = false)
+        public static void PlayVoice(AudioClip clip, float fadeTime = 0, bool loop = false)
         {
             if (!_init) Init();
             if (fadeTime <= 0)
@@ -600,7 +598,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 PlayVoiceWithFade(clip, fadeTime, loop).Forget();
             }
         }
-        
+
         /// <summary>
         /// 播放已设置的语音
         /// </summary>
@@ -626,7 +624,7 @@ namespace EUFramwork.Extension.EUAudioKit
                 StopVoiceWithFade(fadeTime).Forget();
             }
         }
-        
+
         private static async UniTaskVoid SetBGMWithFade(AudioClip clip, float fadeTime, bool loop)
         {
             float startVolume = _bgm.Source.volume;
@@ -637,12 +635,13 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
                 await UniTask.Yield();
             }
+
             _bgm.Stop();
             _bgm.Source.volume = _bgmVolume * _globalVolume;
             _bgm.SetClip(clip);
             _bgm.SetLoop(loop);
         }
-        
+
         private static async UniTaskVoid SetVoiceWithFade(AudioClip clip, float fadeTime, bool loop)
         {
             float startVolume = _voice.Source.volume;
@@ -653,12 +652,13 @@ namespace EUFramwork.Extension.EUAudioKit
                 _voice.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
                 await UniTask.Yield();
             }
+
             _voice.Stop();
             _voice.Source.volume = _voiceVolume * _globalVolume;
             _voice.SetClip(clip);
             _voice.SetLoop(loop);
         }
-        
+
         private static async UniTaskVoid PlayBGMWithFade(AudioClip clip, float fadeTime, bool loop)
         {
             if (_bgm.Source.isPlaying)
@@ -671,14 +671,15 @@ namespace EUFramwork.Extension.EUAudioKit
                     _bgm.Source.volume = math.lerp(startVolume, 0, elapsed / (fadeTime / 2));
                     await UniTask.Yield();
                 }
+
                 _bgm.Stop();
             }
-            
+
             _bgm.SetClip(clip);
             _bgm.SetLoop(loop);
             _bgm.Source.volume = 0;
             _bgm.Play();
-            
+
             float targetVolume = _bgmVolume * _globalVolume;
             float elapsed2 = 0;
             while (elapsed2 < fadeTime / 2)
@@ -687,13 +688,14 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.volume = math.lerp(0, targetVolume, elapsed2 / (fadeTime / 2));
                 await UniTask.Yield();
             }
+
             _bgm.Source.volume = targetVolume;
         }
-        
+
         private static async UniTaskVoid StopBGMWithFade(float fadeTime)
         {
             if (!_bgm.Source.isPlaying) return;
-            
+
             float startVolume = _bgm.Source.volume;
             float elapsed = 0;
             while (elapsed < fadeTime)
@@ -702,10 +704,11 @@ namespace EUFramwork.Extension.EUAudioKit
                 _bgm.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
                 await UniTask.Yield();
             }
+
             _bgm.Stop();
             _bgm.Source.volume = _bgmVolume * _globalVolume;
         }
-        
+
         private static async UniTaskVoid PlayVoiceWithFade(AudioClip clip, float fadeTime, bool loop)
         {
             if (_voice.Source.isPlaying)
@@ -718,14 +721,15 @@ namespace EUFramwork.Extension.EUAudioKit
                     _voice.Source.volume = math.lerp(startVolume, 0, elapsed / (fadeTime / 2));
                     await UniTask.Yield();
                 }
+
                 _voice.Stop();
             }
-            
+
             _voice.SetClip(clip);
             _voice.SetLoop(loop);
             _voice.Source.volume = 0;
             _voice.Play();
-            
+
             float targetVolume = _voiceVolume * _globalVolume;
             float elapsed2 = 0;
             while (elapsed2 < fadeTime / 2)
@@ -734,13 +738,14 @@ namespace EUFramwork.Extension.EUAudioKit
                 _voice.Source.volume = math.lerp(0, targetVolume, elapsed2 / (fadeTime / 2));
                 await UniTask.Yield();
             }
+
             _voice.Source.volume = targetVolume;
         }
-        
+
         private static async UniTaskVoid StopVoiceWithFade(float fadeTime)
         {
             if (!_voice.Source.isPlaying) return;
-            
+
             float startVolume = _voice.Source.volume;
             float elapsed = 0;
             while (elapsed < fadeTime)
@@ -749,10 +754,11 @@ namespace EUFramwork.Extension.EUAudioKit
                 _voice.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
                 await UniTask.Yield();
             }
+
             _voice.Stop();
             _voice.Source.volume = _voiceVolume * _globalVolume;
         }
-        
+
         public static void SetSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange = action;
         public static void AddSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange += action;
         public static void RemoveSoundVolumeChangeListener(Action<float> action) => _onSoundVolumeChange -= action;
@@ -766,100 +772,100 @@ namespace EUFramwork.Extension.EUAudioKit
         public static void SetVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange = action;
         public static void AddVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange += action;
         public static void RemoveVoiceVolumeChangeListener(Action<float> action) => _onVoiceVolumeChange -= action;
-        public static void  RemoveAllVoiceVolumeChangeListener() => _onVoiceVolumeChange = null;
+        public static void RemoveAllVoiceVolumeChangeListener() => _onVoiceVolumeChange = null;
 
         public static void SetGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange = action;
         public static void AddGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange += action;
         public static void RemoveGlobalVolumeChangeListener(Action<float> action) => _onGlobalVolumeChange -= action;
         public static void RemoveAllGlobalVolumeChangeListener() => _onGlobalVolumeChange = null;
-        
+
         /// <summary>
         /// 设置BGM结束监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为播放结束的AudioClip</param>
         public static void SetBgmEndListener(Action<AudioClip> action) => _onBgmEnd = action;
-        
+
         /// <summary>
         /// 添加BGM结束监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为播放结束的AudioClip</param>
         public static void AddBgmEndListener(Action<AudioClip> action) => _onBgmEnd += action;
-        
+
         /// <summary>
         /// 移除BGM结束监听器
         /// </summary>
         /// <param name="action">要移除的监听器回调</param>
         public static void RemoveBgmEndListener(Action<AudioClip> action) => _onBgmEnd -= action;
-        
+
         /// <summary>
         /// 移除所有BGM结束监听器
         /// </summary>
         public static void RemoveAllBgmEndListener() => _onBgmEnd = null;
-        
+
         /// <summary>
         /// 设置Voice结束监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为播放结束的AudioClip</param>
         public static void SetVoiceEndListener(Action<AudioClip> action) => _onVoiceEnd = action;
-        
+
         /// <summary>
         /// 添加Voice结束监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为播放结束的AudioClip</param>
         public static void AddVoiceEndListener(Action<AudioClip> action) => _onVoiceEnd += action;
-        
+
         /// <summary>
         /// 移除Voice结束监听器
         /// </summary>
         /// <param name="action">要移除的监听器回调</param>
         public static void RemoveVoiceEndListener(Action<AudioClip> action) => _onVoiceEnd -= action;
-        
+
         /// <summary>
         /// 移除所有Voice结束监听器
         /// </summary>
         public static void RemoveAllVoiceEndListener() => _onVoiceEnd = null;
-        
+
         /// <summary>
         /// 设置BGM改变监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为旧AudioClip和新AudioClip</param>
         public static void SetBgmChangeListener(Action<AudioClip, AudioClip> action) => _onBgmChange = action;
-        
+
         /// <summary>
         /// 添加BGM改变监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为旧AudioClip和新AudioClip</param>
         public static void AddBgmChangeListener(Action<AudioClip, AudioClip> action) => _onBgmChange += action;
-        
+
         /// <summary>
         /// 移除BGM改变监听器
         /// </summary>
         /// <param name="action">要移除的监听器回调</param>
         public static void RemoveBgmChangeListener(Action<AudioClip, AudioClip> action) => _onBgmChange -= action;
-        
+
         /// <summary>
         /// 移除所有BGM改变监听器
         /// </summary>
         public static void RemoveAllBgmChangeListener() => _onBgmChange = null;
-        
+
         /// <summary>
         /// 设置Voice改变监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为旧AudioClip和新AudioClip</param>
         public static void SetVoiceChangeListener(Action<AudioClip, AudioClip> action) => _onVoiceChange = action;
-        
+
         /// <summary>
         /// 添加Voice改变监听器
         /// </summary>
         /// <param name="action">监听器回调,参数为旧AudioClip和新AudioClip</param>
         public static void AddVoiceChangeListener(Action<AudioClip, AudioClip> action) => _onVoiceChange += action;
-        
+
         /// <summary>
         /// 移除Voice改变监听器
         /// </summary>
         /// <param name="action">要移除的监听器回调</param>
         public static void RemoveVoiceChangeListener(Action<AudioClip, AudioClip> action) => _onVoiceChange -= action;
-        
+
         /// <summary>
         /// 移除所有Voice改变监听器
         /// </summary>
