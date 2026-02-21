@@ -80,7 +80,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
         }
 
 #if UNITY_EDITOR
-        private void FixedUpdate()
+        private void OnValidate()
         {
             Entity.Box.Width = width;
             Entity.Box.Height = height;

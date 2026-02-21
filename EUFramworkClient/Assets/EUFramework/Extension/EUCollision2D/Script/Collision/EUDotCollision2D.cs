@@ -38,7 +38,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
             EUCollision2DCore.AddObjectCommand(this);
         }
 #if UNITY_EDITOR
-        private void FixedUpdate()
+        private void OnValidate()
         {
             Entity.Offset = offset;
             UpdateData();

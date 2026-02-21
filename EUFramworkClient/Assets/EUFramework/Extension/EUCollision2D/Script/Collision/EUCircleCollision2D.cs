@@ -61,7 +61,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
             EUCollision2DCore.AddObjectCommand(this);
         }
 #if UNITY_EDITOR
-        private void FixedUpdate()
+        private void OnValidate()
         {
             Entity.Circle.Radius = radius;
             Entity.Offset = offset;
