@@ -274,7 +274,7 @@ namespace EUFramwork.Extension.EUAudioKit
             if (_init) return;
             _init = true;
             
-            // 尝试加载默认配置
+            // 尝试加载默认配置(只设置backing field,不访问AudioSource)
             LoadDefaultConfig();
             
             _root = new GameObject("[EUAudio]");
@@ -286,13 +286,32 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <summary>
         /// 加载默认配置文件
         /// 会在Resources/EUAudio目录下查找名为"EUAudioConfig"的配置文件
+        /// 注意：此方法在Init()早期调用，AudioSource尚未创建，
+        /// 因此只能设置backing field，不能使用会访问AudioSource的属性setter
         /// </summary>
         private static void LoadDefaultConfig()
         {
             var config = Resources.Load<EUAudioConfig>("EUAudio/EUAudioConfig");
             if (config != null)
             {
-                config.ApplyConfig();
+                // [修复] 只设置backing field，不触发属性setter
+                // 原代码调用config.ApplyConfig()会通过setter访问尚未初始化的_bgm/_voice/_useSound导致NullReferenceException
+                _startSound = config.startSound;
+                _maxSound = config.maxSound;
+                _soundDelayFrame = config.soundDelayFrame;
+                _soundVolume = config.soundVolume;
+                _bgmVolume = config.bgmVolume;
+                _voiceVolume = config.voiceVolume;
+                _globalVolume = config.globalVolume;
+                _soundPitch = config.soundPitch;
+                _soundSpatialBlend = config.soundSpatialBlend;
+                _soundPriority = config.soundPriority;
+                _bgmPitch = config.bgmPitch;
+                _bgmSpatialBlend = config.bgmSpatialBlend;
+                _bgmPriority = config.bgmPriority;
+                _voicePitch = config.voicePitch;
+                _voiceSpatialBlend = config.voiceSpatialBlend;
+                _voicePriority = config.voicePriority;
 #if UNITY_EDITOR
                 Debug.Log($"[EUAudio] 已加载默认配置: {config.name}");
 #endif
@@ -301,10 +320,12 @@ namespace EUFramwork.Extension.EUAudioKit
         
         /// <summary>
         /// 手动加载指定的配置文件
+        /// 注意：此方法只能在Init()完成后调用
         /// </summary>
         /// <param name="config">要加载的配置文件</param>
-        private static void LoadConfig(EUAudioConfig config)
+        public static void LoadConfig(EUAudioConfig config)
         {
+            if (!_init) Init();
             if (config != null)
             {
                 config.ApplyConfig();
@@ -328,11 +349,13 @@ namespace EUFramwork.Extension.EUAudioKit
             _bgm.Source.pitch = _bgmPitch;
             _bgm.Source.spatialBlend = _bgmSpatialBlend;
             _bgm.Source.priority = _bgmPriority;
+            _bgm.Source.volume = _bgmVolume * _globalVolume;
             
             // 应用Voice的AudioSource参数
             _voice.Source.pitch = _voicePitch;
             _voice.Source.spatialBlend = _voiceSpatialBlend;
             _voice.Source.priority = _voicePriority;
+            _voice.Source.volume = _voiceVolume * _globalVolume;
             
             // 设置 BGM 和 Voice 的结束监听
             _bgm.SetAudioEndListener((clip) => _onBgmEnd?.Invoke(clip));
@@ -444,12 +467,15 @@ namespace EUFramwork.Extension.EUAudioKit
             var lsSource = ls.Source;
             ls.DelayFrame = _soundDelayFrame;
             ls.transform.position = position;
-            if(onAudioEnd != null) ls.SetAudioEndListener(onAudioEnd);
+            // [修复] 无论onAudioEnd是否为null都要设置,避免复用时残留上次的回调
+            ls.SetAudioEndListener(onAudioEnd);
             
             // 应用Sound的AudioSource参数
             lsSource.pitch = _soundPitch;
             lsSource.spatialBlend = _soundSpatialBlend;
             lsSource.priority = _soundPriority;
+            // [修复] 设置音效音量,原代码缺失导致音效以残留音量或默认值播放
+            lsSource.volume = _soundVolume * _globalVolume;
             
             lsSource.clip = clip;
             ls.Play();
@@ -467,15 +493,23 @@ namespace EUFramwork.Extension.EUAudioKit
 
         /// <summary>
         /// 设置背景音乐但不播放
+        /// 如果当前BGM正在播放且fadeTime大于0,会先淡出当前BGM再设置新的音频
         /// </summary>
         /// <param name="clip">要设置的音频片段</param>
-        /// <param name="fadeTime">淡入淡出时间(秒),默认为0</param>
+        /// <param name="fadeTime">淡出时间(秒),默认为0</param>
         /// <param name="loop">是否循环播放,默认为true</param>
         public static void SetBGM(AudioClip clip, float fadeTime = 0,bool loop = true)
         {
             if (!_init) Init();
-            _bgm.SetClip(clip);
-            _bgm.SetLoop(loop);
+            if (fadeTime > 0 && _bgm.Source.isPlaying)
+            {
+                SetBGMWithFade(clip, fadeTime, loop).Forget();
+            }
+            else
+            {
+                _bgm.SetClip(clip);
+                _bgm.SetLoop(loop);
+            }
         }
         
         /// <summary>
@@ -527,15 +561,23 @@ namespace EUFramwork.Extension.EUAudioKit
 
         /// <summary>
         /// 设置语音但不播放
+        /// 如果当前语音正在播放且fadeTime大于0,会先淡出当前语音再设置新的音频
         /// </summary>
         /// <param name="clip">要设置的音频片段</param>
-        /// <param name="fadeTime">淡入淡出时间(秒),默认为0</param>
+        /// <param name="fadeTime">淡出时间(秒),默认为0</param>
         /// <param name="loop">是否循环播放,默认为false</param>
         public static void SetVoice(AudioClip clip, float fadeTime = 0, bool loop = false)
         {
             if (!_init) Init();
-            _voice.SetClip(clip);
-            _voice.SetLoop(loop);
+            if (fadeTime > 0 && _voice.Source.isPlaying)
+            {
+                SetVoiceWithFade(clip, fadeTime, loop).Forget();
+            }
+            else
+            {
+                _voice.SetClip(clip);
+                _voice.SetLoop(loop);
+            }
         }
 
         /// <summary>
@@ -583,6 +625,38 @@ namespace EUFramwork.Extension.EUAudioKit
             {
                 StopVoiceWithFade(fadeTime).Forget();
             }
+        }
+        
+        private static async UniTaskVoid SetBGMWithFade(AudioClip clip, float fadeTime, bool loop)
+        {
+            float startVolume = _bgm.Source.volume;
+            float elapsed = 0;
+            while (elapsed < fadeTime)
+            {
+                elapsed += Time.deltaTime;
+                _bgm.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
+                await UniTask.Yield();
+            }
+            _bgm.Stop();
+            _bgm.Source.volume = _bgmVolume * _globalVolume;
+            _bgm.SetClip(clip);
+            _bgm.SetLoop(loop);
+        }
+        
+        private static async UniTaskVoid SetVoiceWithFade(AudioClip clip, float fadeTime, bool loop)
+        {
+            float startVolume = _voice.Source.volume;
+            float elapsed = 0;
+            while (elapsed < fadeTime)
+            {
+                elapsed += Time.deltaTime;
+                _voice.Source.volume = math.lerp(startVolume, 0, elapsed / fadeTime);
+                await UniTask.Yield();
+            }
+            _voice.Stop();
+            _voice.Source.volume = _voiceVolume * _globalVolume;
+            _voice.SetClip(clip);
+            _voice.SetLoop(loop);
         }
         
         private static async UniTaskVoid PlayBGMWithFade(AudioClip clip, float fadeTime, bool loop)
