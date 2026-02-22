@@ -1,0 +1,44 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="modules-tab" class="tab-content">
+        <ui:ScrollView name="scroll-view" class="tab-scroll-view" mode="Vertical">
+            <ui:VisualElement class="form-container">
+
+                <!-- 初始化 -->
+                <ui:Label text="初始化" class="subsection-label" style="margin-top: 4px;" />
+                <ui:Button name="btn-generate-default-config"
+                           text="一键生成默认配置"
+                           class="primary-button"
+                           style="width: 100%; margin-top: 4px;"
+                           tooltip="自动创建 EUUIEditorConfig / EUUITemplateConfig / EUUIKitConfig，并刷新模板注册表" />
+
+                <!-- 分割线 -->
+                <ui:VisualElement style="height: 1px; background-color: rgba(255,255,255,0.1); margin-top: 10px; margin-bottom: 6px;" />
+
+                <!-- 程序集与代码 -->
+                <ui:Label text="程序集与代码" class="subsection-label" />
+                <ui:Button name="btn-refresh-assemblies"
+                           text="刷新程序集引用"
+                           class="action-button"
+                           style="width: 100%; margin-top: 4px;"
+                           tooltip="扫描已生成文件，重算并写入 EUUI.asmdef 与 EUUI.Editor.asmdef" />
+                <ui:Button name="btn-regenerate-all"
+                           text="重新生成全部"
+                           class="action-button"
+                           style="width: 100%; margin-top: 6px;"
+                           tooltip="对所有已有的 .Generated.cs 文件重新渲染模板（namespace 动态解析），并同步程序集引用" />
+
+                <!-- 分割线 -->
+                <ui:VisualElement style="height: 1px; background-color: rgba(255,255,255,0.1); margin-top: 10px; margin-bottom: 6px;" />
+
+                <!-- 清理 -->
+                <ui:Label text="清理" class="subsection-label" />
+                <ui:Button name="btn-delete-all-with-so"
+                           text="删除生成代码和SO配置"
+                           class="action-button"
+                           style="width: 100%; margin-top: 4px;"
+                           tooltip="删除所有 .Generated.cs + EUUIEditorConfig / EUUITemplateConfig / EUUITemplateRegistry / EUUIKitConfig，完全清理 EUUI" />
+
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
