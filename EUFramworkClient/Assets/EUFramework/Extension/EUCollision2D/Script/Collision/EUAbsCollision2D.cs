@@ -1,4 +1,5 @@
 ﻿using System;
+using EUFramework.Extension.EUCollision2D.Script.Core;
 using EUFramwork.Extension.EUCollision2DKit.Core;
 using UnityEngine;
 
@@ -12,7 +13,32 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
     {
         /// <summary> 底层实体数据，由子类填充并由算法读取 </summary>
         internal Entity Entity;
-
+        [SerializeField]
+        internal Layer layer;
+        public Layer Layer
+        {
+            get=>layer;
+            set
+            {
+                if(layer == value) return;
+                LastLayer = layer;
+                layer = value;
+                Entity.Layer = (int)layer;
+                ChangeLayer = true;
+                UpdateData();
+            }
+        }
+        #if UNITY_EDITOR
+        protected void UpdateLayer()//用于更新Layer数据
+        {
+            if(LastLayer == Layer) return;
+            LastLayer = Layer;
+            Entity.Layer = (int)Layer;
+            ChangeLayer = true;
+        }
+        #endif
+        internal Layer LastLayer{ get;private set;}
+        internal bool ChangeLayer {get; set;}
         /// <summary> 当另一个碰撞体进入时触发 </summary>
         public event Action<EUAbsCollision2D> OnEnterTrigger;
         /// <summary> 当另一个碰撞体离开时触发 </summary>

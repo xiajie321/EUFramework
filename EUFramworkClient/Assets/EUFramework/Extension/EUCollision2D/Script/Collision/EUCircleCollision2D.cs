@@ -63,6 +63,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            UpdateLayer();
             Entity.Circle.Radius = radius;
             Entity.Offset = offset;
             UpdateData();

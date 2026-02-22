@@ -82,6 +82,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Collision
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            UpdateLayer();
             Entity.Box.Width = width;
             Entity.Box.Height = height;
             Entity.Offset = offset;

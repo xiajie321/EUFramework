@@ -152,7 +152,14 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
         private static List<EUAbsCollision2D> _objects;
         /// <summary> 延迟执行的指令队列，避免在 Job 运行期间直接修改集合导致冲突 </summary>
         private static Queue<ObjectCommand> _commandQueue;
+        
+        private static NativeHashMap<int,UnsafeHashSet<int>> _layerObject;//TODO 需要传递
 
+        /// <summary>
+        /// 存储对应位掩码信息
+        /// </summary>
+        private static NativeArray<int> _layerMasks;//TODO 需要公开
+        
         /// <summary> 传递给 JobSystem 的原生实体数据数组 </summary>
         private static NativeArray<Entity> _entitys;
         /// <summary> 用于批量获取 Transform 数据的原生数组 </summary>
@@ -325,6 +332,12 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
         /// </summary>
         private static void NativeContainerInit()
         {
+            _layerObject = new NativeHashMap<int, UnsafeHashSet<int>>(32,Allocator.Persistent);
+            for (int i = 0; i < 32; i++)
+            {
+                _layerObject.Add(i,new(10,Allocator.Persistent));
+            }
+            _layerMasks = new(_config.LayerMasks,Allocator.Persistent);
             _entitys = new(_maxObjectSum, Allocator.Persistent);
             _transforms = new(_maxObjectSum);
         }
@@ -334,6 +347,18 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
         /// </summary>
         private static void NativeDispose()
         {
+            if (_layerObject.IsCreated)
+            {
+                using (var ls = _layerObject.GetValueArray(Allocator.Temp))
+                {
+                    foreach (var i in ls)
+                    {
+                        if(i.IsCreated) i.Dispose();
+                    }
+                }
+                _layerObject.Dispose();
+            }
+            if(_layerMasks.IsCreated) _layerMasks.Dispose();
             if (_entitys.IsCreated) _entitys.Dispose();
             if (_transforms.isCreated) _transforms.Dispose();
             _algorithm?.NativeDispose();
@@ -401,6 +426,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
             _objects.Add(collision2D);
             _transforms.Add(collision2D.transform);
             _entitys[_entityCount] = collision2D.Entity;
+            _layerObject[collision2D.Entity.Layer].Add(_entityCount);//在对应图层添加对应的实体
             _entityCount++;
         }
 
@@ -416,6 +442,7 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
             Entity entity = _entitys[_entityCount - 1];
             entity.Id = index;
             _entitys[index] = entity;
+            _layerObject[collision2D.Entity.Layer].Remove(index);//在对应图层移除对应的实体
             _entityCount--;
         }
 
@@ -424,6 +451,12 @@ namespace EUFramwork.Extension.EUCollision2DKit.Core
         /// </summary>
         private static void UpdateObject(EUAbsCollision2D collision2D)
         {
+            if (collision2D.ChangeLayer)
+            {
+                _layerObject[(int)collision2D.LastLayer].Remove(collision2D.Entity.Id);
+                _layerObject[collision2D.Entity.Layer].Add(collision2D.Entity.Id);
+                collision2D.ChangeLayer = false;
+            }
             _entitys[collision2D.Entity.Id] = collision2D.Entity; //更新数据到实体数组上
         }
 

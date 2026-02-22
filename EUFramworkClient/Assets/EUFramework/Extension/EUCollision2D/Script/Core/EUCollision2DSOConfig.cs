@@ -1,4 +1,5 @@
-﻿using EUFramwork.Extension.EUCollision2DKit.Core;
+﻿using System.Collections.Generic;
+using EUFramwork.Extension.EUCollision2DKit.Core;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -24,5 +25,12 @@ namespace EUFramework.Extension.EUCollision2D.Script.Core
         /// 地图大小(x为或者y为负数表示某一个方向上是不限制地图大小的;如果两个值都为负数则表示地图大小不被限制此时_mapCenter固定为0,0)
         /// </summary>
         public int2 MapSize = new int2(100,100);
+        public int[] LayerMasks = new int[32];//int类型总共32位,需要记录每个图层所能碰撞的图层。
+        public string[] LayerNames = new string[32];//对应下标图层的名称(设置完成图层后会自动生成枚举,当对应下标的string不为null或者""时会生成对应名称的枚举)
+    }
+
+    public enum Layer
+    {
+        
     }
 }
