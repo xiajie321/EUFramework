@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -14,10 +13,9 @@ namespace EUFramework.Extension.EUUI.Editor
     internal class EUUIExtensionPanel : IEUUIPanel
     {
         // ── 扩展创建 Tab 的持久状态 ──────────────────────────────────────────────
-        private EUUIExtensionTemplateCreator.ExtensionType  _extensionType        = EUUIExtensionTemplateCreator.ExtensionType.KitExtension;
-        private EUUIExtensionTemplateCreator.TemplatePreset _templatePreset       = EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader;
-        private string _extensionName        = "";
-        private string _requiredAssemblies   = "";
+        private EUUIExtensionTemplateCreator.ExtensionType  _extensionType     = EUUIExtensionTemplateCreator.ExtensionType.KitExtension;
+        private EUUIExtensionTemplateCreator.TemplatePreset _templatePreset    = EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader;
+        private string _extensionName     = "";
 
         // 模板管理 Tab 的滚动位置
         private Vector2 _scrollPos;
@@ -352,9 +350,6 @@ namespace EUFramework.Extension.EUUI.Editor
                         {
                             AssetDatabase.DeleteAsset(r.OutputAssetPath);
                             AssetDatabase.Refresh();
-                            if (!HasAnyUIKitGeneratedFile())
-                                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(false);
-                            EUUIAsmdefHelper.RecalculateFromGeneratedFiles();
                             ShowExtensionsTab(container);
                         };
                     }
@@ -363,12 +358,7 @@ namespace EUFramework.Extension.EUUI.Editor
                         btn.text     = "创建";
                         btn.clicked += () =>
                         {
-                            try
-                            {
-                                ExportRow(r);
-                                AssetDatabase.Refresh();
-                                ShowExtensionsTab(container);
-                            }
+                            try   { ExportRow(r); ShowExtensionsTab(container); }
                             catch (Exception ex) { EditorUtility.DisplayDialog("生成失败", ex.Message, "确定"); }
                         };
                     }
@@ -484,8 +474,13 @@ namespace EUFramework.Extension.EUUI.Editor
             return rows;
         }
 
-        /// <summary>将系统绝对路径转为 Assets/ 相对路径（委托给 EUUIAsmdefHelper）</summary>
-        private static string ToAssetPath(string fullPath) => EUUIAsmdefHelper.ToAssetPath(fullPath);
+        /// <summary>将系统绝对路径转为 Assets/ 相对路径</summary>
+        private static string ToAssetPath(string fullPath)
+        {
+            string ap = fullPath.Replace("\\", "/");
+            string dp = Application.dataPath.Replace("\\", "/");
+            return ap.StartsWith(dp) ? "Assets" + ap.Substring(dp.Length) : ap;
+        }
 
         /// <summary>从 .sbn 文件名中提取扩展名部分（去掉类前缀）</summary>
         private static string ExtractExtensionName(string filename)
@@ -517,16 +512,9 @@ namespace EUFramework.Extension.EUUI.Editor
                 row.OutputAssetPath,
                 string.IsNullOrEmpty(row.ExtensionName) ? null : (object)new { extension_name = row.ExtensionName },
                 row.DisplayName);
-            // 只要有任何 UIKit 扩展生成，就设置项目宏
+            // 只要有任何 UIKit 扩展生成，就设置项目宏（不依赖字符串匹配路径）
             if (IsUIKitTemplate(row.ManualExt?.templatePath ?? ""))
-                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(true);
-            // 读取伴生 JSON，将运行时所需程序集加入 EUUI.asmdef，编辑器所需程序集加入 EUUI.Editor.asmdef
-            var runtimeAsms = EUUIAsmdefHelper.ReadSidecarRuntimeAssemblies(row.ManualExt?.templatePath ?? "");
-            foreach (var asm in runtimeAsms)
-                EUUIAsmdefHelper.SetAssembly("EUUI.asmdef", asm, true);
-            var editorAsms = EUUIAsmdefHelper.ReadSidecarEditorAssemblies(row.ManualExt?.templatePath ?? "");
-            foreach (var asm in editorAsms)
-                EUUIAsmdefHelper.SetAssembly("EUUI.Editor.asmdef", asm, true);
+                SetExtensionsGeneratedDefine(true);
         }
 
         private static void ExportAllEnabled(EUUITemplateConfig config, List<ExtRow> rows)
@@ -538,7 +526,7 @@ namespace EUFramework.Extension.EUUI.Editor
                         ExportRow(row);
 
                 AssetDatabase.Refresh();
-                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(true);
+                SetExtensionsGeneratedDefine(true);
                 EditorUtility.DisplayDialog("完成", "所有扩展代码已生成", "确定");
             }
             catch (Exception e)
@@ -568,12 +556,10 @@ namespace EUFramework.Extension.EUUI.Editor
                 }
                 AssetDatabase.Refresh();
 
-                // 只有当 UIKit 生成目录下已无任何 .Generated.cs 时才移除宏
+                // 只有当 UIKit 生成目录下已无任何 .Generated.cs 时才移除宏，
+                // 避免还有其他 UIKit 扩展文件存在时与 EUUIKit.cs 的占位方法冲突
                 if (!HasAnyUIKitGeneratedFile())
-                    EUUIAsmdefHelper.SetExtensionsGeneratedDefine(false);
-
-                // 根据剩余生成文件重新计算两个 asmdef 所需的程序集引用
-                EUUIAsmdefHelper.RecalculateFromGeneratedFiles();
+                    SetExtensionsGeneratedDefine(false);
 
                 EditorUtility.DisplayDialog("完成", $"已删除 {count} 个生成文件", "确定");
             }
@@ -597,12 +583,43 @@ namespace EUFramework.Extension.EUUI.Editor
             return Directory.GetFiles(full, "*.Generated.cs", SearchOption.TopDirectoryOnly).Length > 0;
         }
 
-        // ── 私有辅助方法 ──────────────────────────────────────────────────────────
+        // ── 私有辅助方法（从 EUUIStaticExporter 迁移）────────────────────────────
 
-        private static string GetPanelBaseOutputDirectory() => EUUIAsmdefHelper.GetPanelBaseOutputDirectory();
-        private static string GetUIKitOutputDirectory()     => EUUIAsmdefHelper.GetUIKitOutputDirectory();
+        private static string GetPanelBaseOutputDirectory()
+        {
+            string[] guids = AssetDatabase.FindAssets("EUUIPanelBase t:MonoScript");
+            if (guids == null || guids.Length == 0)
+            {
+                Debug.LogError("[EUUI] 无法找到 EUUIPanelBase 脚本");
+                return null;
+            }
+            string scriptDir  = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guids[0]))?.Replace("\\", "/");
+            string generateDir = Path.Combine(scriptDir, "Generate", "PanelBase").Replace("\\", "/");
+            EnsureDirectory(generateDir);
+            return generateDir;
+        }
 
-        private static void EnsureDirectory(string assetRelDir) => EUUIAsmdefHelper.EnsureDirectory(assetRelDir);
+        private static string GetUIKitOutputDirectory()
+        {
+            string[] guids = AssetDatabase.FindAssets("EUUIKit t:MonoScript");
+            if (guids == null || guids.Length == 0)
+            {
+                Debug.LogError("[EUUI] 无法找到 EUUIKit 脚本");
+                return null;
+            }
+            string scriptDir   = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guids[0]))?.Replace("\\", "/");
+            string generateDir = Path.Combine(scriptDir, "Generate", "UIKit").Replace("\\", "/");
+            EnsureDirectory(generateDir);
+            return generateDir;
+        }
+
+        private static void EnsureDirectory(string assetRelDir)
+        {
+            string full = Path.GetFullPath(
+                Path.Combine(Path.GetDirectoryName(Application.dataPath), assetRelDir));
+            if (!Directory.Exists(full))
+                Directory.CreateDirectory(full);
+        }
 
         private static void PingAsset(string assetPath)
         {
@@ -640,6 +657,37 @@ namespace EUFramework.Extension.EUUI.Editor
         private static bool IsManagedByFramework(string sbnPath) =>
             sbnPath.Contains("/WithData/") || sbnPath.Contains("\\WithData\\");
 
+        private static void SetExtensionsGeneratedDefine(bool add)
+        {
+            const string define = "EUUI_EXTENSIONS_GENERATED";
+            foreach (BuildTargetGroup group in Enum.GetValues(typeof(BuildTargetGroup)))
+            {
+                if (group == BuildTargetGroup.Unknown) continue;
+                try
+                {
+                    string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(group);
+                    if (add)
+                    {
+                        if (defines.IndexOf(define, StringComparison.Ordinal) >= 0) continue;
+                        if (defines.Length > 0) defines += ";";
+                        defines += define;
+                    }
+                    else
+                    {
+                        var list = new List<string>(
+                            defines.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries));
+                        if (!list.Remove(define)) continue;
+                        defines = string.Join(";", list);
+                    }
+                    PlayerSettings.SetScriptingDefineSymbolsForGroup(group, defines);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[EUUI] 设置脚本宏 {define} 失败 (BuildTargetGroup.{group}): {e.Message}");
+                }
+            }
+        }
+
         // ── Tab：模板拓展（创建扩展） ────────────────────────────────────────────
 
         private void ShowCreateExtensionTab(VisualElement container)
@@ -650,24 +698,21 @@ namespace EUFramework.Extension.EUUI.Editor
 
             var tab = template.Instantiate();
 
-            var typeField          = tab.Q<EnumField>("extension-type");
-            var nameField          = tab.Q<TextField>("extension-name");
-            var presetField        = tab.Q<EnumField>("template-preset");
-            var assembliesField    = tab.Q<TextField>("required-assemblies");
-            var createBtn          = tab.Q<Button>("btn-create");
+            var typeField       = tab.Q<EnumField>("extension-type");
+            var nameField       = tab.Q<TextField>("extension-name");
+            var presetField     = tab.Q<EnumField>("template-preset");
+            var createBtn       = tab.Q<Button>("btn-create");
 
-            var typeHint           = tab.Q<HelpBox>("type-hint");
-            var nameValidation     = tab.Q<HelpBox>("name-validation");
-            var presetHint         = tab.Q<HelpBox>("preset-hint");
-            var previewLabel       = tab.Q<Label>("preview-label");
-            var previewFilename    = tab.Q<TextField>("preview-filename");
-            var existsHint         = tab.Q<HelpBox>("exists-hint");
+            var typeHint        = tab.Q<HelpBox>("type-hint");
+            var nameValidation  = tab.Q<HelpBox>("name-validation");
+            var presetHint      = tab.Q<HelpBox>("preset-hint");
+            var previewLabel    = tab.Q<Label>("preview-label");
+            var previewFilename = tab.Q<TextField>("preview-filename");
+            var existsHint      = tab.Q<HelpBox>("exists-hint");
 
             typeField.Init(_extensionType);
             presetField.Init(_templatePreset);
-            nameField.value       = _extensionName;
-            if (assembliesField != null)
-                assembliesField.value = _requiredAssemblies;
+            nameField.value = _extensionName;
 
             UpdateTypeHint(typeHint, _extensionType);
             UpdatePresetHint(presetHint, _templatePreset);
@@ -689,10 +734,6 @@ namespace EUFramework.Extension.EUUI.Editor
             {
                 _templatePreset = (EUUIExtensionTemplateCreator.TemplatePreset)evt.newValue;
                 UpdatePresetHint(presetHint, _templatePreset);
-            });
-            assembliesField?.RegisterValueChangedCallback(evt =>
-            {
-                _requiredAssemblies = evt.newValue;
             });
 
             createBtn.clicked += () => CreateExtensionTemplate(container);
@@ -813,21 +854,6 @@ namespace EUFramework.Extension.EUUI.Editor
         private bool CanCreateExtension() =>
             !string.IsNullOrEmpty(_extensionName) && IsValidExtensionName(_extensionName);
 
-        /// <summary>
-        /// 解析逗号分隔的程序集输入，返回去空白、去重后的数组
-        /// </summary>
-        private static string[] ParseAssembliesInput(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-                return System.Array.Empty<string>();
-            return input
-                .Split(new[] { ',', '，' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
         private void CreateExtensionTemplate(VisualElement container)
         {
             try
@@ -853,21 +879,6 @@ namespace EUFramework.Extension.EUUI.Editor
                     _extensionType, _templatePreset, _extensionName);
 
                 File.WriteAllText(fullPath, content, System.Text.Encoding.UTF8);
-
-                // 解析所需程序集，生成伴生 JSON
-                string[] parsedAssemblies = ParseAssembliesInput(_requiredAssemblies);
-                string sidecarNote = "";
-                if (parsedAssemblies.Length > 0)
-                {
-                    string jsonContent = "{\n    \"requiredAssemblies\": ["
-                        + string.Join(", ", parsedAssemblies.Select(a => $"\"{a}\""))
-                        + "]\n}\n";
-                    string jsonPath = Path.ChangeExtension(fullPath, ".json");
-                    File.WriteAllText(jsonPath, jsonContent, System.Text.Encoding.UTF8);
-                    sidecarNote = $"\n已生成伴生配置：{Path.GetFileName(jsonPath)}\n程序集：{string.Join(", ", parsedAssemblies)}";
-                    Debug.Log($"[EUUI] 伴生配置已创建: {jsonPath}");
-                }
-
                 AssetDatabase.Refresh();
 
                 var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
@@ -879,12 +890,10 @@ namespace EUFramework.Extension.EUUI.Editor
 
                 EditorUtility.DisplayDialog("创建成功",
                     $"扩展模板已创建：\n{assetPath}\n\n" +
-                    "模板注册表将自动更新，请在模板中实现 TODO 标记的部分。"
-                    + sidecarNote, "确定");
+                    "模板注册表将自动更新，请在模板中实现 TODO 标记的部分。", "确定");
 
                 Debug.Log($"[EUUI] 扩展模板已创建: {assetPath}");
-                _extensionName      = "";
-                _requiredAssemblies = "";
+                _extensionName = "";
                 ShowCreateExtensionTab(container);
             }
             catch (Exception e)
