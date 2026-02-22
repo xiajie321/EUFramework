@@ -16,6 +16,7 @@ namespace EUFramework.Extension.EUUI.Editor
         private VisualElement _selectedContainer;
 
         private readonly EUUISOConfigPanel   _soConfigPanel   = new EUUISOConfigPanel();
+        private readonly EUUIModulePanel     _modulePanel     = new EUUIModulePanel();
         private readonly EUUIExtensionPanel  _extensionPanel  = new EUUIExtensionPanel();
         private readonly EUUIResourcePanel   _resourcePanel   = new EUUIResourcePanel();
 
@@ -74,12 +75,16 @@ namespace EUFramework.Extension.EUUI.Editor
 
         private void BindNavigationButtons()
         {
-            var btnSOConfig        = rootVisualElement.Q<Button>("btn-so-config");
-            var btnExtensions      = rootVisualElement.Q<Button>("btn-extensions");
+            var btnSOConfig         = rootVisualElement.Q<Button>("btn-so-config");
+            var btnModules          = rootVisualElement.Q<Button>("btn-modules");
+            var btnExtensions       = rootVisualElement.Q<Button>("btn-extensions");
             var btnResourceCreation = rootVisualElement.Q<Button>("btn-resource-creation");
 
             if (btnSOConfig != null)
                 btnSOConfig.clicked += () => { SetSelectedButton(btnSOConfig); ShowPanel(_soConfigPanel); };
+
+            if (btnModules != null)
+                btnModules.clicked += () => { SetSelectedButton(btnModules); ShowPanel(_modulePanel); };
 
             if (btnExtensions != null)
                 btnExtensions.clicked += () => { SetSelectedButton(btnExtensions); ShowPanel(_extensionPanel); };

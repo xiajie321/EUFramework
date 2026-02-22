@@ -1,3 +1,6 @@
 {
-    "requiredAssemblies": ["EURes", "YooAsset"]
+    "requiredAssemblies": ["EURes", "YooAsset"],
+    "namespaceVariables": {
+        "eu_res_namespace": "EURes"
+    }
 }

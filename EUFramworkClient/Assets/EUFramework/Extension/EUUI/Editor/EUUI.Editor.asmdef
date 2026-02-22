@@ -1,12 +1,9 @@
-{
+﻿{
     "name": "EUUI.Editor",
     "rootNamespace": "EUFramework.Extension.EUUI.Editor",
     "references": [
         "EUUI",
-        "YooAsset",
-        "YooAsset.Editor",
-        "UniTask",
-        "EURes"
+        "UniTask"
     ],
     "includePlatforms": [
         "Editor"
