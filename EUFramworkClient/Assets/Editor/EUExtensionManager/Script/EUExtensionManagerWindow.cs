@@ -680,6 +680,17 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
 
                 actionBar.Add(CreateActionButton("文档", "btn-secondary", () => EUExtensionLoader.OpenDocumentation(localInfo)));
                 actionBar.Add(CreateActionButton("定位", "btn-secondary", () => EditorUtility.RevealInFinder(localInfo.folderPath)));
+                actionBar.Add(CreateActionButton("导出", "btn-secondary", () =>
+                {
+                    string dest = EditorUtility.SaveFolderPanel(
+                        $"选择导出目录 [{localInfo.displayName}]", "", "");
+                    if (string.IsNullOrEmpty(dest)) return;
+                    int count = EUExtensionLoader.ExportModule(localInfo.folderPath, dest);
+                    string moduleDirName = System.IO.Path.GetFileName(localInfo.folderPath);
+                    EditorUtility.DisplayDialog("导出完成",
+                        $"{localInfo.displayName} 已导出\n\n目标：{dest}/{moduleDirName}\n文件数：{count} 个（已排除 .meta）",
+                        "确定");
+                }));
                 
                 // 管理器自身不允许卸载 (通过包名判断，假设包名为 com.eu.extension-manager)
                 // 也可以结合 category 判断，这里使用包名检查更准确
@@ -883,13 +894,14 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
         private TextField m_UrlField;
         private TextField m_PathField;
         private TextField m_CorePathField;
+        private TextField m_TargetPathField;
         private Label m_StatusLabel;
 
         public static void ShowSettings(Action onClose = null)
         {
             var wnd = GetWindow<EUExtensionSettingsWindow>(true, "EU 设置", true);
-            wnd.minSize = new Vector2(600, 700);
-            wnd.maxSize = new Vector2(600, 700);
+            wnd.minSize = new Vector2(600, 880);
+            wnd.maxSize = new Vector2(600, 880);
             wnd.m_OnClose = onClose;
             wnd.Show();
         }
@@ -1021,6 +1033,63 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
             statusPanel.Add(m_StatusLabel);
             UpdateStatus();
 
+            // Group 3: 同步到目标项目
+            VisualElement group3 = new VisualElement();
+            group3.AddToClassList("settings-group");
+            content.Add(group3);
+
+            Label group3Label = new Label("框架同步到目标项目");
+            group3Label.AddToClassList("settings-group-label");
+            group3.Add(group3Label);
+
+            // 目标项目路径选择
+            VisualElement rowTarget = new VisualElement();
+            rowTarget.AddToClassList("settings-row");
+            group3.Add(rowTarget);
+
+            Label labelTarget = new Label("目标项目根目录（含 Assets 文件夹）");
+            labelTarget.AddToClassList("settings-label");
+            rowTarget.Add(labelTarget);
+
+            VisualElement inputRowTarget = new VisualElement();
+            inputRowTarget.AddToClassList("settings-input-row");
+            rowTarget.Add(inputRowTarget);
+
+            m_TargetPathField = new TextField();
+            m_TargetPathField.AddToClassList("settings-text-field");
+            m_TargetPathField.isReadOnly = true;
+            m_TargetPathField.value = EUExtensionLoader.TargetProjectPath;
+            inputRowTarget.Add(m_TargetPathField);
+
+            Button selectTargetBtn = new Button(() =>
+            {
+                string current = EUExtensionLoader.TargetProjectPath;
+                string selected = EditorUtility.OpenFolderPanel("选择目标项目根目录", current, "");
+                if (!string.IsNullOrEmpty(selected))
+                {
+                    EUExtensionLoader.TargetProjectPath = selected;
+                    m_TargetPathField.value = selected;
+                }
+            }) { text = "..." };
+            selectTargetBtn.tooltip = "选择目标项目根目录";
+            selectTargetBtn.AddToClassList("settings-icon-btn");
+            inputRowTarget.Add(selectTargetBtn);
+
+            Label helpTarget = new Label("将当前框架所有模块（排除 .meta 文件）同步到目标业务项目。");
+            helpTarget.AddToClassList("settings-help-text");
+            rowTarget.Add(helpTarget);
+
+            // 同步按钮
+            VisualElement syncBtnRow = new VisualElement();
+            syncBtnRow.style.flexDirection = FlexDirection.Row;
+            syncBtnRow.style.marginTop = 8;
+            group3.Add(syncBtnRow);
+
+            Button syncBtn = new Button(() => OnSyncToTargetProject()) { text = "同步到目标项目" };
+            syncBtn.AddToClassList("settings-btn");
+            syncBtn.AddToClassList("btn-action");
+            syncBtnRow.Add(syncBtn);
+
             // Footer (Fixed at bottom)
             VisualElement footer = new VisualElement();
             footer.AddToClassList("settings-footer");
@@ -1091,6 +1160,74 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
                 m_PathField.value = EUExtensionLoader.ExtensionRootPath;
                 m_CorePathField.value = EUExtensionLoader.CoreInstallPath;
                 UpdateStatus();
+            }
+        }
+
+        private void OnSyncToTargetProject()
+        {
+            string targetPath = EUExtensionLoader.TargetProjectPath;
+            if (string.IsNullOrEmpty(targetPath))
+            {
+                EditorUtility.DisplayDialog("错误", "请先配置目标项目根目录", "确定");
+                return;
+            }
+
+            if (!System.IO.Directory.Exists(targetPath))
+            {
+                EditorUtility.DisplayDialog("错误", $"目标项目路径不存在：\n{targetPath}", "确定");
+                return;
+            }
+
+            string assetsCheck = System.IO.Path.Combine(targetPath, "Assets");
+            if (!System.IO.Directory.Exists(assetsCheck))
+            {
+                EditorUtility.DisplayDialog("错误", $"目标路径下未找到 Assets 文件夹：\n{assetsCheck}\n\n请选择包含 Assets 文件夹的项目根目录。", "确定");
+                return;
+            }
+
+            bool confirm = EditorUtility.DisplayDialog("同步确认",
+                $"将把当前框架所有模块同步到：\n{targetPath}\n\n" +
+                "规则：\n" +
+                "• 排除所有 .meta 文件（目标项目自动生成）\n" +
+                "• 排除 Generated / Example / Scenes 目录\n" +
+                "• 已有文件会被覆盖\n\n" +
+                "是否继续？",
+                "确认同步", "取消");
+
+            if (!confirm) return;
+
+            try
+            {
+                EditorUtility.DisplayProgressBar("同步中", "正在同步框架模块...", 0.1f);
+                var result = EUExtensionLoader.SyncToTargetProject(targetPath);
+                EditorUtility.ClearProgressBar();
+
+                if (result.HasError)
+                {
+                    EditorUtility.DisplayDialog("同步失败", result.Error, "确定");
+                    return;
+                }
+
+                string summary = $"同步完成！\n\n共同步 {result.Modules.Count} 个模块，{result.TotalFilesCopied} 个文件\n\n";
+                summary += "模块列表：\n";
+                foreach (var m in result.Modules)
+                    summary += $"  • {m.DisplayName}（{m.FilesCopied} 个文件）\n";
+
+                if (result.FailedModules.Count > 0)
+                {
+                    summary += $"\n失败 {result.FailedModules.Count} 个：\n";
+                    foreach (var f in result.FailedModules)
+                        summary += $"  • {f}\n";
+                }
+
+                Debug.Log($"[EUExtensionManager] 框架同步完成 → {targetPath}\n{summary}");
+                EditorUtility.DisplayDialog("同步完成", summary, "确定");
+            }
+            catch (Exception ex)
+            {
+                EditorUtility.ClearProgressBar();
+                Debug.LogError($"[EUExtensionManager] 同步失败: {ex.Message}\n{ex.StackTrace}");
+                EditorUtility.DisplayDialog("同步失败", $"同步过程中发生错误：\n{ex.Message}", "确定");
             }
         }
 

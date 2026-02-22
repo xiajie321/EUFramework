@@ -24,9 +24,16 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
         private const string PrefsKey_CommunityUrl = "EUExtensionManager_CommunityUrl";
         private const string PrefsKey_ExtensionRootPath = "EUExtensionManager_ExtensionRootPath";
         private const string PrefsKey_CoreInstallPath = "EUExtensionManager_CoreInstallPath";
+        private const string PrefsKey_TargetProjectPath = "EUExtensionManager_TargetProjectPath";
         private const string DefaultCommunityUrl = "https://github.com/xiajie321/EUFramworkCommunity";
         private const string DefaultExtensionRootPath = "Assets/EUFramework/Extension";
         private const string DefaultCoreInstallPath = "Assets/EUFramework/Core";
+
+        // 同步时默认排除的目录名（不区分大小写）
+        private static readonly HashSet<string> SyncExcludedDirNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Generated", "Example", "Examples", "Scenes"
+        };
 
         public static string ExtensionRootPath
         {
@@ -44,6 +51,15 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
         {
             get => EditorPrefs.GetString(PrefsKey_CommunityUrl, DefaultCommunityUrl);
             set => EditorPrefs.SetString(PrefsKey_CommunityUrl, value);
+        }
+
+        /// <summary>
+        /// 目标业务项目的根目录（包含 Assets 文件夹的那一层）
+        /// </summary>
+        public static string TargetProjectPath
+        {
+            get => EditorPrefs.GetString(PrefsKey_TargetProjectPath, "");
+            set => EditorPrefs.SetString(PrefsKey_TargetProjectPath, value);
         }
 
         public static string GetFullPath(string path)
@@ -1120,6 +1136,177 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
             }
         }
 
+        #region 导出单个模块
+
+        /// <summary>
+        /// 将指定模块目录导出到目标文件夹（排除 .meta 文件），
+        /// 会在目标文件夹下创建与模块同名的子目录。
+        /// </summary>
+        /// <param name="moduleFolderPath">模块的绝对路径</param>
+        /// <param name="destFolder">目标文件夹路径（导出结果放在 destFolder/模块目录名/ 下）</param>
+        /// <returns>复制的文件数量</returns>
+        public static int ExportModule(string moduleFolderPath, string destFolder)
+        {
+            if (string.IsNullOrEmpty(moduleFolderPath) || !Directory.Exists(moduleFolderPath))
+                throw new DirectoryNotFoundException($"模块目录不存在：{moduleFolderPath}");
+
+            string moduleDirName = Path.GetFileName(moduleFolderPath.TrimEnd('/', '\\'));
+            string targetDir = Path.Combine(destFolder, moduleDirName);
+            return ExportDirectoryExcludeMeta(moduleFolderPath, targetDir);
+        }
+
+        /// <summary>
+        /// 递归复制目录，排除 .meta 文件
+        /// </summary>
+        private static int ExportDirectoryExcludeMeta(string sourceDir, string targetDir)
+        {
+            int count = 0;
+            Directory.CreateDirectory(targetDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                if (Path.GetExtension(file).Equals(".meta", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
+                count++;
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                count += ExportDirectoryExcludeMeta(dir, Path.Combine(targetDir, Path.GetFileName(dir)));
+            }
+
+            return count;
+        }
+
+        #endregion
+
+        #region 同步到目标项目
+
+        /// <summary>
+        /// 将所有本地模块同步到目标业务项目，排除 .meta 文件。
+        /// 根据模块相对于当前项目 Assets 的路径，在目标项目中保持相同的目录结构。
+        /// </summary>
+        /// <param name="targetProjectRoot">目标项目根目录（包含 Assets 文件夹那一层）</param>
+        /// <param name="excludeDirNames">额外需要排除的目录名集合（会合并到默认排除列表）</param>
+        /// <returns>同步结果</returns>
+        public static SyncResult SyncToTargetProject(string targetProjectRoot, HashSet<string> excludeDirNames = null)
+        {
+            var result = new SyncResult();
+
+            if (string.IsNullOrEmpty(targetProjectRoot) || !Directory.Exists(targetProjectRoot))
+            {
+                result.Error = $"目标项目路径不存在：{targetProjectRoot}";
+                return result;
+            }
+
+            string targetAssetsDir = Path.Combine(targetProjectRoot, "Assets").Replace("\\", "/");
+            if (!Directory.Exists(targetAssetsDir))
+            {
+                result.Error = $"目标项目下未找到 Assets 目录：{targetAssetsDir}";
+                return result;
+            }
+
+            // 合并排除目录列表
+            var effectiveExcludes = new HashSet<string>(SyncExcludedDirNames, StringComparer.OrdinalIgnoreCase);
+            if (excludeDirNames != null)
+            {
+                foreach (var d in excludeDirNames) effectiveExcludes.Add(d);
+            }
+
+            // 当前项目的 Assets 绝对路径（统一用正斜杠）
+            string sourceAssetsDir = Path.GetFullPath(Application.dataPath).Replace("\\", "/");
+
+            // 获取所有本地模块
+            var allModules = GetAllLocalExtensions();
+
+            foreach (var module in allModules)
+            {
+                if (string.IsNullOrEmpty(module.folderPath)) continue;
+
+                string fullModulePath = Path.GetFullPath(module.folderPath).Replace("\\", "/");
+
+                // 计算相对于 Assets 的相对路径
+                // 例：sourceAssetsDir = "D:/EUFramework/EUFramworkClient/Assets"
+                //     fullModulePath  = "D:/EUFramework/EUFramworkClient/Assets/EUFramework/Extension/EURes"
+                //     relPath         = "EUFramework/Extension/EURes"
+                string relPath = GetRelativeToAssetsDir(fullModulePath, sourceAssetsDir);
+                if (string.IsNullOrEmpty(relPath))
+                {
+                    Debug.LogWarning($"[EUExtensionManager] 模块路径不在 Assets 下，跳过：{fullModulePath}");
+                    continue;
+                }
+
+                string targetModuleDir = Path.Combine(targetAssetsDir, relPath).Replace("\\", "/");
+
+                try
+                {
+                    int copied = SyncDirectoryExcludeMeta(fullModulePath, targetModuleDir, effectiveExcludes);
+                    result.Modules.Add(new ModuleSyncResult
+                    {
+                        DisplayName = module.displayName ?? module.name,
+                        SourcePath = fullModulePath,
+                        TargetPath = targetModuleDir,
+                        FilesCopied = copied
+                    });
+                    result.TotalFilesCopied += copied;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[EUExtensionManager] 同步模块失败 [{module.displayName}]: {e.Message}");
+                    result.FailedModules.Add($"{module.displayName}: {e.Message}");
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 递归复制目录，排除 .meta 文件及指定目录名
+        /// </summary>
+        private static int SyncDirectoryExcludeMeta(string sourceDir, string targetDir, HashSet<string> excludeDirNames)
+        {
+            int count = 0;
+            Directory.CreateDirectory(targetDir);
+
+            // 复制文件（排除 .meta）
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                if (Path.GetExtension(file).Equals(".meta", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string destFile = Path.Combine(targetDir, Path.GetFileName(file));
+                File.Copy(file, destFile, overwrite: true);
+                count++;
+            }
+
+            // 递归子目录（排除列表中的目录名）
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                string dirName = Path.GetFileName(dir);
+                if (excludeDirNames.Contains(dirName)) continue;
+
+                string destSubDir = Path.Combine(targetDir, dirName);
+                count += SyncDirectoryExcludeMeta(dir, destSubDir, excludeDirNames);
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 计算 fullPath 相对于 assetsDir 的相对路径。
+        /// 若 fullPath 不在 assetsDir 下则返回 null。
+        /// </summary>
+        private static string GetRelativeToAssetsDir(string fullPath, string assetsDir)
+        {
+            assetsDir = assetsDir.TrimEnd('/');
+            if (!fullPath.StartsWith(assetsDir, StringComparison.OrdinalIgnoreCase)) return null;
+            string rel = fullPath.Substring(assetsDir.Length).TrimStart('/');
+            return string.IsNullOrEmpty(rel) ? null : rel;
+        }
+
+        #endregion
+
         private static void DownloadAndExtractZip(string url, string progressTitle, Action<string> onExtracted, Action<bool> onComplete)
         {
             EditorUtility.DisplayProgressBar("下载中", progressTitle, 0.1f);
@@ -1183,6 +1370,25 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
                 }
             };
         }
+    }
+
+    /// <summary>同步操作的整体结果</summary>
+    public class SyncResult
+    {
+        public List<ModuleSyncResult> Modules = new List<ModuleSyncResult>();
+        public List<string> FailedModules = new List<string>();
+        public int TotalFilesCopied;
+        public string Error;
+        public bool HasError => !string.IsNullOrEmpty(Error);
+    }
+
+    /// <summary>单个模块的同步结果</summary>
+    public class ModuleSyncResult
+    {
+        public string DisplayName;
+        public string SourcePath;
+        public string TargetPath;
+        public int FilesCopied;
     }
 }
 #endif
