@@ -34,6 +34,16 @@
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
+            
+            <ui:VisualElement name="btn-modules-container" class="sidebar-button-container">
+                <ui:Button name="btn-modules" class="sidebar-button">
+                    <ui:Label text="M" class="sidebar-button-icon" />
+                    <ui:VisualElement class="sidebar-button-text-container">
+                        <ui:Label text="模块管理" class="sidebar-button-title" />
+                        <ui:Label text="安装/卸载扩展模块" class="sidebar-button-subtitle" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
         </ui:VisualElement>
         
         <!-- 右侧内容区域 -->

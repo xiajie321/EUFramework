@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.U2D;
 using Cysharp.Threading.Tasks;
-using EUFramework.Extension.EURes;
+using {{ eu_res_namespace }};
 using YooAsset;
 
 namespace EUFramework.Extension.EUUI

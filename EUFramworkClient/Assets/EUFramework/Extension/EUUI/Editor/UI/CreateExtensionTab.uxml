@@ -23,6 +23,15 @@
                 <ui:TextField name="preview-filename" readonly="true" class="preview-field" style="display: none; min-height: 22px;" />
                 <ui:HelpBox name="exists-hint" message-type="None" class="form-helpbox" style="display: none;" />
 
+                <!-- 所需程序集（可选） -->
+                <ui:Label text="所需程序集（可选）" class="section-label" />
+                <ui:TextField name="required-assemblies" class="form-field"
+                    tooltip="需要加入 EUUI.asmdef 的额外程序集，多个用英文逗号分隔。留空则不修改程序集引用。&#10;示例：Com.RotaryHeart.Lib.ScrollRectExtension, DOTween" />
+                <ui:HelpBox name="assemblies-hint"
+                    message-type="Info"
+                    text="填写后，生成扩展时会自动将对应程序集写入 EUUI.asmdef 的 references，并生成伴生 .json 文件。留空则跳过。"
+                    class="form-helpbox" />
+
                 <!-- 创建按钮 -->
                 <ui:Button name="btn-create" text="创建扩展模板" class="primary-button" />
 
