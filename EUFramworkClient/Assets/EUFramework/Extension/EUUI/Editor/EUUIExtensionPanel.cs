@@ -350,6 +350,10 @@ namespace EUFramework.Extension.EUUI.Editor
                         {
                             AssetDatabase.DeleteAsset(r.OutputAssetPath);
                             AssetDatabase.Refresh();
+                            if (!HasAnyUIKitGeneratedFile())
+                                SetExtensionsGeneratedDefine(false);
+                            if (!HasAnyEUResGeneratedFile())
+                                SetEUResReferenceInEUUIAsmdef(false);
                             ShowExtensionsTab(container);
                         };
                     }
@@ -515,6 +519,9 @@ namespace EUFramework.Extension.EUUI.Editor
             // 只要有任何 UIKit 扩展生成，就设置项目宏（不依赖字符串匹配路径）
             if (IsUIKitTemplate(row.ManualExt?.templatePath ?? ""))
                 SetExtensionsGeneratedDefine(true);
+            // 生成 EURes 相关模板时，同步将 EURes 加入 EUUI.asmdef 的 references
+            if (IsEUResTemplate(row.ManualExt?.templatePath ?? ""))
+                SetEUResReferenceInEUUIAsmdef(true);
         }
 
         private static void ExportAllEnabled(EUUITemplateConfig config, List<ExtRow> rows)
@@ -560,6 +567,10 @@ namespace EUFramework.Extension.EUUI.Editor
                 // 避免还有其他 UIKit 扩展文件存在时与 EUUIKit.cs 的占位方法冲突
                 if (!HasAnyUIKitGeneratedFile())
                     SetExtensionsGeneratedDefine(false);
+
+                // 若 EURes 相关生成文件已全部删除，同步从 EUUI.asmdef 移除 EURes 引用
+                if (!HasAnyEUResGeneratedFile())
+                    SetEUResReferenceInEUUIAsmdef(false);
 
                 EditorUtility.DisplayDialog("完成", $"已删除 {count} 个生成文件", "确定");
             }
@@ -686,6 +697,106 @@ namespace EUFramework.Extension.EUUI.Editor
                     Debug.LogWarning($"[EUUI] 设置脚本宏 {define} 失败 (BuildTargetGroup.{group}): {e.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// 判断该 .sbn 是否为 EURes 相关模板（文件名含 ".EURes."）
+        /// </summary>
+        private static bool IsEUResTemplate(string path) =>
+            path.Contains(".EURes.", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// 检查是否还存在任何 EURes 相关的已生成文件（PanelBase 或 UIKit 目录下含 "EURes" 的 .Generated.cs）
+        /// </summary>
+        private static bool HasAnyEUResGeneratedFile()
+        {
+            foreach (var dir in new[] { GetPanelBaseOutputDirectory(), GetUIKitOutputDirectory() })
+            {
+                if (string.IsNullOrEmpty(dir)) continue;
+                string full = Path.GetFullPath(
+                    Path.Combine(Path.GetDirectoryName(Application.dataPath), dir));
+                if (!Directory.Exists(full)) continue;
+                foreach (var f in Directory.GetFiles(full, "*.EURes.Generated.cs", SearchOption.TopDirectoryOnly))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 向 EUUI.asmdef 的 references 中添加或移除 "EURes" 名称引用
+        /// </summary>
+        private static void SetEUResReferenceInEUUIAsmdef(bool add)
+        {
+            const string euResName = "EURes";
+
+            // 找到 EUUI.asmdef
+            string[] guids = AssetDatabase.FindAssets("EUUI t:AssemblyDefinitionAsset");
+            string asmdefPath = null;
+            foreach (string g in guids)
+            {
+                string p = AssetDatabase.GUIDToAssetPath(g);
+                if (Path.GetFileName(p).Equals("EUUI.asmdef", StringComparison.OrdinalIgnoreCase))
+                {
+                    asmdefPath = p;
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(asmdefPath))
+            {
+                Debug.LogError("[EUUI] 无法找到 EUUI.asmdef，跳过 EURes 引用管理");
+                return;
+            }
+
+            string fullPath = Path.GetFullPath(
+                Path.Combine(Path.GetDirectoryName(Application.dataPath), asmdefPath));
+            string json = File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+
+            // 简单解析 references 数组，避免引入额外依赖
+            bool hasRef = json.Contains($"\"{euResName}\"");
+
+            if (add && hasRef)   return; // 已存在，无需修改
+            if (!add && !hasRef) return; // 本就没有，无需修改
+
+            if (add)
+            {
+                // 在 references 数组末尾插入 "EURes"
+                int insertIdx = json.LastIndexOf(']');
+                if (insertIdx < 0)
+                {
+                    Debug.LogError("[EUUI] EUUI.asmdef 格式异常，无法写入 EURes 引用");
+                    return;
+                }
+                // 找最后一个实际元素，决定是否需要前置逗号
+                string before = json.Substring(0, insertIdx).TrimEnd();
+                string comma  = before.EndsWith("[") ? "" : ",\n        ";
+                json = json.Substring(0, insertIdx)
+                     + comma + $"\"{euResName}\"\n    "
+                     + json.Substring(insertIdx);
+                Debug.Log("[EUUI] 已向 EUUI.asmdef 添加 EURes 引用");
+            }
+            else
+            {
+                // 移除 "EURes" 条目（处理末尾逗号和前置逗号两种情况）
+                json = System.Text.RegularExpressions.Regex.Replace(
+                    json,
+                    @",?\s*""EURes""\s*,?",
+                    m =>
+                    {
+                        // 若匹配到前后都有逗号，保留一个逗号
+                        bool hadLeading  = m.Value.TrimStart().StartsWith(",");
+                        bool hadTrailing = m.Value.TrimEnd().EndsWith(",");
+                        return (hadLeading && hadTrailing) ? "," : "";
+                    });
+                // 清理可能残留的连续逗号或数组内空行
+                json = System.Text.RegularExpressions.Regex.Replace(json, @",(\s*,)+", ",");
+                json = System.Text.RegularExpressions.Regex.Replace(json, @"\[\s*,", "[");
+                json = System.Text.RegularExpressions.Regex.Replace(json, @",\s*\]", "\n    ]");
+                Debug.Log("[EUUI] 已从 EUUI.asmdef 移除 EURes 引用");
+            }
+
+            File.WriteAllText(fullPath, json, System.Text.Encoding.UTF8);
+            AssetDatabase.ImportAsset(asmdefPath, ImportAssetOptions.ForceUpdate);
         }
 
         // ── Tab：模板拓展（创建扩展） ────────────────────────────────────────────

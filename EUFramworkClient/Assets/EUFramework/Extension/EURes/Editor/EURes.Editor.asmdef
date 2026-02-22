@@ -2,9 +2,9 @@
     "name": "EURes.Editor",
     "rootNamespace": "EUFramework.Extension.EURes.Editor",
     "references": [
-        "GUID:704e71568b96fef4b9cfb5e499764948",
-        "GUID:e34a5702dd353724aa315fb8011f08c3",
-        "GUID:4d1926c9df5b052469a1c63448b7609a"
+        "EURes",
+        "YooAsset",
+        "YooAsset.Editor"
     ],
     "includePlatforms": [
         "Editor"

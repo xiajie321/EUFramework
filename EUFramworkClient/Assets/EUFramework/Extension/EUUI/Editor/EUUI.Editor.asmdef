@@ -2,11 +2,11 @@
     "name": "EUUI.Editor",
     "rootNamespace": "EUFramework.Extension.EUUI.Editor",
     "references": [
-        "GUID:a1b2c3d4e5f678901234567890abcdef",
-        "GUID:e34a5702dd353724aa315fb8011f08c3",
-        "GUID:f51ebe6a0ceec4240a699833d6309b23",
-        "GUID:704e71568b96fef4b9cfb5e499764948",
-        "GUID:4d1926c9df5b052469a1c63448b7609a"
+        "EUUI",
+        "YooAsset",
+        "YooAsset.Editor",
+        "UniTask",
+        "EURes"
     ],
     "includePlatforms": [
         "Editor"

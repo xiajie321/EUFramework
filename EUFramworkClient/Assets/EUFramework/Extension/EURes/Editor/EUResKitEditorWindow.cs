@@ -1192,19 +1192,6 @@ namespace EUFramework.Extension.EURes.Editor
             
             GUILayout.Space(20);
             
-            // 程序集引用管理区域
-            GUILayout.Label("程序集引用管理", EditorStyles.boldLabel);
-            GUILayout.Space(5);
-            
-            EditorGUILayout.HelpBox("刷新 YooAsset 和 UniTask 的程序集引用，解决引用丢失问题", MessageType.Info);
-            
-            if (GUILayout.Button("🔄 刷新程序集引用", GUILayout.Height(40)))
-            {
-                RefreshAssemblyReferences();
-            }
-            
-            GUILayout.Space(10);
-            
             // 提示用户使用模块管理工具面板
             EditorGUILayout.HelpBox(
                 "💡 提示：一键生成、删除文件、刷新命名空间等功能已移至【模块管理工具】面板",
@@ -1883,57 +1870,6 @@ namespace EUFramework.Extension.EURes.Editor
             textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
         
-        /// <summary>
-        /// 刷新程序集引用（YooAsset 和 UniTask）
-        /// </summary>
-        private void RefreshAssemblyReferences()
-        {
-            try
-            {
-                Debug.Log("[EUResKit] 开始刷新程序集引用...");
-                
-                // 1. 刷新 AssetDatabase
-                AssetDatabase.Refresh();
-                
-                // 2. 强制重新导入关键的 asmdef 文件（动态路径）
-                string[] asmdefPaths = new[]
-                {
-                    Path.Combine(EUResKitPathHelper.GetModuleRoot(), "EURes.asmdef").Replace("\\", "/"),
-                    Path.Combine(EUResKitPathHelper.GetEditorPath(), "EURes.Editor.asmdef").Replace("\\", "/")
-                };
-                
-                foreach (var path in asmdefPaths)
-                {
-                    if (File.Exists(path))
-                    {
-                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-                        Debug.Log($"[EUResKit] 重新导入: {path}");
-                    }
-                }
-                
-                // 3. 请求脚本重新编译
-                UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-                
-                EditorUtility.DisplayDialog("刷新完成", 
-                    "程序集引用已刷新！\n\n" +
-                    "操作内容：\n" +
-                    "1. 刷新 AssetDatabase\n" +
-                    "2. 重新导入 .asmdef 文件\n" +
-                    "3. 请求脚本重新编译\n\n" +
-                    "如果仍有问题，请尝试：\n" +
-                    "• 关闭并重新打开 Unity\n" +
-                    "• 删除 Library 文件夹后重新打开项目", 
-                    "确定");
-                
-                Debug.Log("[EUResKit] ✓ 程序集引用刷新完成");
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"[EUResKit] 刷新程序集引用失败: {e.Message}");
-                EditorUtility.DisplayDialog("刷新失败", $"刷新程序集引用时出错：\n{e.Message}", "确定");
-            }
-        }
-
         #endregion
 
         #region 模块管理工具
