@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -13,9 +14,10 @@ namespace EUFramework.Extension.EUUI.Editor
     internal class EUUIExtensionPanel : IEUUIPanel
     {
         // ── 扩展创建 Tab 的持久状态 ──────────────────────────────────────────────
-        private EUUIExtensionTemplateCreator.ExtensionType  _extensionType     = EUUIExtensionTemplateCreator.ExtensionType.KitExtension;
-        private EUUIExtensionTemplateCreator.TemplatePreset _templatePreset    = EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader;
-        private string _extensionName     = "";
+        private EUUIExtensionTemplateCreator.ExtensionType  _extensionType        = EUUIExtensionTemplateCreator.ExtensionType.KitExtension;
+        private EUUIExtensionTemplateCreator.TemplatePreset _templatePreset       = EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader;
+        private string _extensionName        = "";
+        private string _requiredAssemblies   = "";
 
         // 模板管理 Tab 的滚动位置
         private Vector2 _scrollPos;
@@ -352,8 +354,7 @@ namespace EUFramework.Extension.EUUI.Editor
                             AssetDatabase.Refresh();
                             if (!HasAnyUIKitGeneratedFile())
                                 SetExtensionsGeneratedDefine(false);
-                            if (!HasAnyEUResGeneratedFile())
-                                SetEUResReferenceInEUUIAsmdef(false);
+                            RecalculateEUUIAsmdefReferences();
                             ShowExtensionsTab(container);
                         };
                     }
@@ -516,12 +517,13 @@ namespace EUFramework.Extension.EUUI.Editor
                 row.OutputAssetPath,
                 string.IsNullOrEmpty(row.ExtensionName) ? null : (object)new { extension_name = row.ExtensionName },
                 row.DisplayName);
-            // 只要有任何 UIKit 扩展生成，就设置项目宏（不依赖字符串匹配路径）
+            // 只要有任何 UIKit 扩展生成，就设置项目宏
             if (IsUIKitTemplate(row.ManualExt?.templatePath ?? ""))
                 SetExtensionsGeneratedDefine(true);
-            // 生成 EURes 相关模板时，同步将 EURes 加入 EUUI.asmdef 的 references
-            if (IsEUResTemplate(row.ManualExt?.templatePath ?? ""))
-                SetEUResReferenceInEUUIAsmdef(true);
+            // 读取伴生 JSON，将所需程序集加入 EUUI.asmdef
+            var required = ReadSidecarAssemblies(row.ManualExt?.templatePath ?? "");
+            foreach (var asm in required)
+                SetAssemblyInEUUIAsmdef(asm, true);
         }
 
         private static void ExportAllEnabled(EUUITemplateConfig config, List<ExtRow> rows)
@@ -563,14 +565,12 @@ namespace EUFramework.Extension.EUUI.Editor
                 }
                 AssetDatabase.Refresh();
 
-                // 只有当 UIKit 生成目录下已无任何 .Generated.cs 时才移除宏，
-                // 避免还有其他 UIKit 扩展文件存在时与 EUUIKit.cs 的占位方法冲突
+                // 只有当 UIKit 生成目录下已无任何 .Generated.cs 时才移除宏
                 if (!HasAnyUIKitGeneratedFile())
                     SetExtensionsGeneratedDefine(false);
 
-                // 若 EURes 相关生成文件已全部删除，同步从 EUUI.asmdef 移除 EURes 引用
-                if (!HasAnyEUResGeneratedFile())
-                    SetEUResReferenceInEUUIAsmdef(false);
+                // 根据剩余生成文件重新计算 EUUI.asmdef 所需的程序集引用
+                RecalculateEUUIAsmdefReferences();
 
                 EditorUtility.DisplayDialog("完成", $"已删除 {count} 个生成文件", "确定");
             }
@@ -700,99 +700,187 @@ namespace EUFramework.Extension.EUUI.Editor
         }
 
         /// <summary>
-        /// 判断该 .sbn 是否为 EURes 相关模板（文件名含 ".EURes."）
+        /// 读取 .sbn 伴生 .json 中声明的 requiredAssemblies
+        /// 伴生文件与 .sbn 同目录同名，扩展名改为 .json
         /// </summary>
-        private static bool IsEUResTemplate(string path) =>
-            path.Contains(".EURes.", StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// 检查是否还存在任何 EURes 相关的已生成文件（PanelBase 或 UIKit 目录下含 "EURes" 的 .Generated.cs）
-        /// </summary>
-        private static bool HasAnyEUResGeneratedFile()
+        private static string[] ReadSidecarAssemblies(string sbnAssetPath)
         {
-            foreach (var dir in new[] { GetPanelBaseOutputDirectory(), GetUIKitOutputDirectory() })
+            if (string.IsNullOrEmpty(sbnAssetPath)) return System.Array.Empty<string>();
+
+            string sbnFull = Path.GetFullPath(
+                Path.Combine(Path.GetDirectoryName(Application.dataPath), sbnAssetPath));
+            string jsonFull = Path.ChangeExtension(sbnFull, ".json");
+
+            if (!File.Exists(jsonFull)) return System.Array.Empty<string>();
+
+            try
             {
-                if (string.IsNullOrEmpty(dir)) continue;
-                string full = Path.GetFullPath(
-                    Path.Combine(Path.GetDirectoryName(Application.dataPath), dir));
-                if (!Directory.Exists(full)) continue;
-                foreach (var f in Directory.GetFiles(full, "*.EURes.Generated.cs", SearchOption.TopDirectoryOnly))
-                    return true;
+                string content = File.ReadAllText(jsonFull, System.Text.Encoding.UTF8);
+                // 解析 "requiredAssemblies": ["A", "B"] 无需引入额外 JSON 库
+                var matches = System.Text.RegularExpressions.Regex.Matches(
+                    content, "\"requiredAssemblies\"\\s*:\\s*\\[([^\\]]*?)\\]",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                if (matches.Count == 0) return System.Array.Empty<string>();
+
+                var names = new List<string>();
+                var entries = System.Text.RegularExpressions.Regex.Matches(
+                    matches[0].Groups[1].Value, "\"([^\"]+)\"");
+                foreach (System.Text.RegularExpressions.Match m in entries)
+                    names.Add(m.Groups[1].Value);
+                return names.ToArray();
             }
-            return false;
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[EUUI] 读取伴生配置失败 ({jsonFull}): {e.Message}");
+                return System.Array.Empty<string>();
+            }
         }
 
         /// <summary>
-        /// 向 EUUI.asmdef 的 references 中添加或移除 "EURes" 名称引用
+        /// 扫描所有已生成文件对应的 .sbn 伴生 JSON，重新计算并写入 EUUI.asmdef 的 references。
+        /// 基础引用（UniTask）始终保留，额外引用完全由当前存在的生成文件决定。
         /// </summary>
-        private static void SetEUResReferenceInEUUIAsmdef(bool add)
+        private static void RecalculateEUUIAsmdefReferences()
         {
-            const string euResName = "EURes";
+            // 收集所有生成文件对应 .sbn 的路径
+            var sbnPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string editorDir = EUUITemplateLocator.GetEditorDirectory();
+            if (!string.IsNullOrEmpty(editorDir))
+            {
+                string staticDir = Path.GetFullPath(
+                    Path.Combine(Path.GetDirectoryName(Application.dataPath),
+                        $"{editorDir}/Templates/Sbn/Static"));
 
-            // 找到 EUUI.asmdef
+                foreach (var outDir in new[] { GetPanelBaseOutputDirectory(), GetUIKitOutputDirectory() })
+                {
+                    if (string.IsNullOrEmpty(outDir)) continue;
+                    string outFull = Path.GetFullPath(
+                        Path.Combine(Path.GetDirectoryName(Application.dataPath), outDir));
+                    if (!Directory.Exists(outFull)) continue;
+
+                    foreach (var genFile in Directory.GetFiles(outFull, "*.Generated.cs", SearchOption.TopDirectoryOnly))
+                    {
+                        // "EUUIKit.EURes.Generated.cs" → "EUUIKit.EURes.sbn"
+                        string baseName = Path.GetFileName(genFile)
+                            .Replace(".Generated.cs", ".sbn", StringComparison.OrdinalIgnoreCase);
+                        // 在 Static/ 下递归查找对应 .sbn
+                        if (Directory.Exists(staticDir))
+                        {
+                            foreach (var sbn in Directory.GetFiles(staticDir, baseName, SearchOption.AllDirectories))
+                            {
+                                string rel = ToAssetPath(sbn);
+                                sbnPaths.Add(rel);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 收集所有需要的程序集（去重）
+            var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var sbn in sbnPaths)
+            {
+                foreach (var asm in ReadSidecarAssemblies(sbn))
+                    required.Add(asm);
+            }
+
+            // 基础引用（永远保留）
+            var baseRefs = new[] { "UniTask" };
+
+            // 重写 EUUI.asmdef
             string[] guids = AssetDatabase.FindAssets("EUUI t:AssemblyDefinitionAsset");
             string asmdefPath = null;
             foreach (string g in guids)
             {
                 string p = AssetDatabase.GUIDToAssetPath(g);
                 if (Path.GetFileName(p).Equals("EUUI.asmdef", StringComparison.OrdinalIgnoreCase))
-                {
-                    asmdefPath = p;
-                    break;
-                }
+                { asmdefPath = p; break; }
             }
-
             if (string.IsNullOrEmpty(asmdefPath))
             {
-                Debug.LogError("[EUUI] 无法找到 EUUI.asmdef，跳过 EURes 引用管理");
+                Debug.LogError("[EUUI] 无法找到 EUUI.asmdef");
+                return;
+            }
+
+            string asmdefFull = Path.GetFullPath(
+                Path.Combine(Path.GetDirectoryName(Application.dataPath), asmdefPath));
+            string json = File.ReadAllText(asmdefFull, System.Text.Encoding.UTF8);
+
+            // 构建目标 references 列表
+            var allRefs = new List<string>(baseRefs);
+            foreach (var r in required)
+                if (!allRefs.Contains(r, StringComparer.OrdinalIgnoreCase))
+                    allRefs.Add(r);
+
+            // 用正则替换 "references": [...] 块
+            string newRefsBlock = "\"references\": [\n"
+                + string.Join(",\n", allRefs.Select(r => $"        \"{r}\""))
+                + "\n    ]";
+            json = System.Text.RegularExpressions.Regex.Replace(
+                json,
+                @"""references""\s*:\s*\[[^\]]*\]",
+                newRefsBlock,
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+
+            File.WriteAllText(asmdefFull, json, System.Text.Encoding.UTF8);
+            AssetDatabase.ImportAsset(asmdefPath, ImportAssetOptions.ForceUpdate);
+            Debug.Log($"[EUUI] EUUI.asmdef references 已重算: [{string.Join(", ", allRefs)}]");
+        }
+
+        /// <summary>
+        /// 向 EUUI.asmdef 的 references 中添加单个程序集名称（幂等）
+        /// </summary>
+        private static void SetAssemblyInEUUIAsmdef(string assemblyName, bool add)
+        {
+            if (string.IsNullOrEmpty(assemblyName)) return;
+
+            string[] guids = AssetDatabase.FindAssets("EUUI t:AssemblyDefinitionAsset");
+            string asmdefPath = null;
+            foreach (string g in guids)
+            {
+                string p = AssetDatabase.GUIDToAssetPath(g);
+                if (Path.GetFileName(p).Equals("EUUI.asmdef", StringComparison.OrdinalIgnoreCase))
+                { asmdefPath = p; break; }
+            }
+            if (string.IsNullOrEmpty(asmdefPath))
+            {
+                Debug.LogError("[EUUI] 无法找到 EUUI.asmdef");
                 return;
             }
 
             string fullPath = Path.GetFullPath(
                 Path.Combine(Path.GetDirectoryName(Application.dataPath), asmdefPath));
             string json = File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+            bool hasRef = json.Contains($"\"{assemblyName}\"");
 
-            // 简单解析 references 数组，避免引入额外依赖
-            bool hasRef = json.Contains($"\"{euResName}\"");
-
-            if (add && hasRef)   return; // 已存在，无需修改
-            if (!add && !hasRef) return; // 本就没有，无需修改
+            if (add && hasRef)   return;
+            if (!add && !hasRef) return;
 
             if (add)
             {
-                // 在 references 数组末尾插入 "EURes"
                 int insertIdx = json.LastIndexOf(']');
-                if (insertIdx < 0)
-                {
-                    Debug.LogError("[EUUI] EUUI.asmdef 格式异常，无法写入 EURes 引用");
-                    return;
-                }
-                // 找最后一个实际元素，决定是否需要前置逗号
+                if (insertIdx < 0) { Debug.LogError("[EUUI] EUUI.asmdef 格式异常"); return; }
                 string before = json.Substring(0, insertIdx).TrimEnd();
                 string comma  = before.EndsWith("[") ? "" : ",\n        ";
                 json = json.Substring(0, insertIdx)
-                     + comma + $"\"{euResName}\"\n    "
+                     + comma + $"\"{assemblyName}\"\n    "
                      + json.Substring(insertIdx);
-                Debug.Log("[EUUI] 已向 EUUI.asmdef 添加 EURes 引用");
+                Debug.Log($"[EUUI] 已向 EUUI.asmdef 添加引用: {assemblyName}");
             }
             else
             {
-                // 移除 "EURes" 条目（处理末尾逗号和前置逗号两种情况）
                 json = System.Text.RegularExpressions.Regex.Replace(
-                    json,
-                    @",?\s*""EURes""\s*,?",
+                    json, $@",?\s*""{System.Text.RegularExpressions.Regex.Escape(assemblyName)}""\s*,?",
                     m =>
                     {
-                        // 若匹配到前后都有逗号，保留一个逗号
                         bool hadLeading  = m.Value.TrimStart().StartsWith(",");
                         bool hadTrailing = m.Value.TrimEnd().EndsWith(",");
                         return (hadLeading && hadTrailing) ? "," : "";
                     });
-                // 清理可能残留的连续逗号或数组内空行
                 json = System.Text.RegularExpressions.Regex.Replace(json, @",(\s*,)+", ",");
                 json = System.Text.RegularExpressions.Regex.Replace(json, @"\[\s*,", "[");
                 json = System.Text.RegularExpressions.Regex.Replace(json, @",\s*\]", "\n    ]");
-                Debug.Log("[EUUI] 已从 EUUI.asmdef 移除 EURes 引用");
+                Debug.Log($"[EUUI] 已从 EUUI.asmdef 移除引用: {assemblyName}");
             }
 
             File.WriteAllText(fullPath, json, System.Text.Encoding.UTF8);
@@ -809,21 +897,24 @@ namespace EUFramework.Extension.EUUI.Editor
 
             var tab = template.Instantiate();
 
-            var typeField       = tab.Q<EnumField>("extension-type");
-            var nameField       = tab.Q<TextField>("extension-name");
-            var presetField     = tab.Q<EnumField>("template-preset");
-            var createBtn       = tab.Q<Button>("btn-create");
+            var typeField          = tab.Q<EnumField>("extension-type");
+            var nameField          = tab.Q<TextField>("extension-name");
+            var presetField        = tab.Q<EnumField>("template-preset");
+            var assembliesField    = tab.Q<TextField>("required-assemblies");
+            var createBtn          = tab.Q<Button>("btn-create");
 
-            var typeHint        = tab.Q<HelpBox>("type-hint");
-            var nameValidation  = tab.Q<HelpBox>("name-validation");
-            var presetHint      = tab.Q<HelpBox>("preset-hint");
-            var previewLabel    = tab.Q<Label>("preview-label");
-            var previewFilename = tab.Q<TextField>("preview-filename");
-            var existsHint      = tab.Q<HelpBox>("exists-hint");
+            var typeHint           = tab.Q<HelpBox>("type-hint");
+            var nameValidation     = tab.Q<HelpBox>("name-validation");
+            var presetHint         = tab.Q<HelpBox>("preset-hint");
+            var previewLabel       = tab.Q<Label>("preview-label");
+            var previewFilename    = tab.Q<TextField>("preview-filename");
+            var existsHint         = tab.Q<HelpBox>("exists-hint");
 
             typeField.Init(_extensionType);
             presetField.Init(_templatePreset);
-            nameField.value = _extensionName;
+            nameField.value       = _extensionName;
+            if (assembliesField != null)
+                assembliesField.value = _requiredAssemblies;
 
             UpdateTypeHint(typeHint, _extensionType);
             UpdatePresetHint(presetHint, _templatePreset);
@@ -845,6 +936,10 @@ namespace EUFramework.Extension.EUUI.Editor
             {
                 _templatePreset = (EUUIExtensionTemplateCreator.TemplatePreset)evt.newValue;
                 UpdatePresetHint(presetHint, _templatePreset);
+            });
+            assembliesField?.RegisterValueChangedCallback(evt =>
+            {
+                _requiredAssemblies = evt.newValue;
             });
 
             createBtn.clicked += () => CreateExtensionTemplate(container);
@@ -965,6 +1060,21 @@ namespace EUFramework.Extension.EUUI.Editor
         private bool CanCreateExtension() =>
             !string.IsNullOrEmpty(_extensionName) && IsValidExtensionName(_extensionName);
 
+        /// <summary>
+        /// 解析逗号分隔的程序集输入，返回去空白、去重后的数组
+        /// </summary>
+        private static string[] ParseAssembliesInput(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return System.Array.Empty<string>();
+            return input
+                .Split(new[] { ',', '，' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
         private void CreateExtensionTemplate(VisualElement container)
         {
             try
@@ -990,6 +1100,21 @@ namespace EUFramework.Extension.EUUI.Editor
                     _extensionType, _templatePreset, _extensionName);
 
                 File.WriteAllText(fullPath, content, System.Text.Encoding.UTF8);
+
+                // 解析所需程序集，生成伴生 JSON
+                string[] parsedAssemblies = ParseAssembliesInput(_requiredAssemblies);
+                string sidecarNote = "";
+                if (parsedAssemblies.Length > 0)
+                {
+                    string jsonContent = "{\n    \"requiredAssemblies\": ["
+                        + string.Join(", ", parsedAssemblies.Select(a => $"\"{a}\""))
+                        + "]\n}\n";
+                    string jsonPath = Path.ChangeExtension(fullPath, ".json");
+                    File.WriteAllText(jsonPath, jsonContent, System.Text.Encoding.UTF8);
+                    sidecarNote = $"\n已生成伴生配置：{Path.GetFileName(jsonPath)}\n程序集：{string.Join(", ", parsedAssemblies)}";
+                    Debug.Log($"[EUUI] 伴生配置已创建: {jsonPath}");
+                }
+
                 AssetDatabase.Refresh();
 
                 var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
@@ -1001,10 +1126,12 @@ namespace EUFramework.Extension.EUUI.Editor
 
                 EditorUtility.DisplayDialog("创建成功",
                     $"扩展模板已创建：\n{assetPath}\n\n" +
-                    "模板注册表将自动更新，请在模板中实现 TODO 标记的部分。", "确定");
+                    "模板注册表将自动更新，请在模板中实现 TODO 标记的部分。"
+                    + sidecarNote, "确定");
 
                 Debug.Log($"[EUUI] 扩展模板已创建: {assetPath}");
-                _extensionName = "";
+                _extensionName      = "";
+                _requiredAssemblies = "";
                 ShowCreateExtensionTab(container);
             }
             catch (Exception e)

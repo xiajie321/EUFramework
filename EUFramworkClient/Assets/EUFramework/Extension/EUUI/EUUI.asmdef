@@ -2,7 +2,6 @@
     "name": "EUUI",
     "rootNamespace": "EUFramework.Extension.EUUI",
     "references": [
-        "YooAsset",
         "UniTask"
     ],
     "includePlatforms": [],
