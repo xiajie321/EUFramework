@@ -1,0 +1,25 @@
+{
+    "name": "EUUI.OSAExtension.Editor",
+    "rootNamespace": "Framework.Editor",
+    "references": [
+        "EUUI",
+        "EUUI.Editor",
+        "EUUI.OSAExtension",
+        "OSA.Core",
+        "OSA.Core.Editor",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "Scriban"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

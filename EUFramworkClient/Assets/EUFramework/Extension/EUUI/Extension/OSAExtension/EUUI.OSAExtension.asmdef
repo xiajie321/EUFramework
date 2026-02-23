@@ -1,8 +1,9 @@
 {
-    "name": "EUUI",
-    "rootNamespace": "EUFramework.Extension.EUUI",
+    "name": "EUUI.OSAExtension",
+    "rootNamespace": "EUUI.Extension",
     "references": [
-        "UniTask"
+        "EUUI",
+        "OSA.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

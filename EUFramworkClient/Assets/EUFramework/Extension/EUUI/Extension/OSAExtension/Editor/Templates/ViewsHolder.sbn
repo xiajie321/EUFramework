@@ -1,0 +1,40 @@
+//------------------------------------------------------------------------------
+// 业务逻辑部分 - 仅在初始创建时生成，请在此编写你的 ViewsHolder 逻辑
+//------------------------------------------------------------------------------
+using EUUI.Extension; 
+using frame8.Logic.Misc.Other.Extensions;
+using UnityEngine;
+
+namespace {{ namespace_name }}
+{
+    /// <summary>
+    /// {{ data_class_name }} 数据类
+    /// </summary>
+    public class {{ data_class_name }}
+    {
+        // TODO: 添加数据字段
+    }
+
+    /// <summary>
+    /// {{ class_name }} ViewsHolder
+    /// </summary>
+    public partial class {{ class_name }} : {{ base_class }}<{{ data_class_name }}>
+    {
+        protected override void OnCollectViews()
+        {
+        // 调用自动生成的绑定方法 业务层使用时 取消注释
+           // BindViews(); 
+        }
+
+        public override void OnAcquire({{ data_class_name }} data, int index)
+        {
+            // TODO: 绑定数据到 UI
+        }
+
+        public override void OnRelease()
+        {
+            // TODO: 清理资源（可选）
+        }
+    }
+}
+

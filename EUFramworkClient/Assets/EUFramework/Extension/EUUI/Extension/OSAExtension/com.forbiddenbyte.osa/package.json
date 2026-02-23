@@ -1,0 +1,10 @@
+{
+  "name": "com.forbiddenbyte.osa",
+  "version": "7.2.1",
+  "displayName": "Optimized ScrollView Adapter",
+  "description": "Optimized ScrollView Adapter (OSA) is a highly optimized, feature-rich, and easy-to-use scrollview for Unity.",
+  "unity": "2021.3",
+  "author": {
+    "name": "ForbiddenByte"
+  }
+}

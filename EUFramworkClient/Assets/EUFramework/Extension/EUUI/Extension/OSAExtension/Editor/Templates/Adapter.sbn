@@ -1,0 +1,32 @@
+//------------------------------------------------------------------------------
+// 业务逻辑部分 - 仅在初始创建时生成，请在此编写你的 Adapter 逻辑
+//------------------------------------------------------------------------------
+using System.Collections.Generic;
+using EUUI.Extension; 
+using UnityEngine;
+
+namespace {{ namespace_name }}
+{
+    /// <summary>
+    /// {{ class_name }} - {{ adapter_type }} Adapter
+    /// </summary>
+    public class {{ class_name }} : {{ base_class }}<{{ data_class_name }}, {{ vh_class_name }}>
+    {
+        protected override void Start()
+        {
+            // 配置参数（可选）
+            {{~ if is_grid ~}}
+            // _Params.Grid.CellPrefab = ...
+            // _Params.Grid.SpacingInGroup = 10f;
+            // _Params.Grid.SpacingBetweenGroups = 10f;
+            {{~ else ~}}
+            // _Params.ItemPrefab = ...
+            {{~ end ~}}
+            
+            base.Start();
+        }
+
+        // 可在此添加自定义方法
+    }
+}
+

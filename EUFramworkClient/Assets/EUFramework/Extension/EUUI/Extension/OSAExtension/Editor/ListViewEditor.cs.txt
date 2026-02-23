@@ -1,0 +1,1240 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using Scriban;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UI;
+using Com.ForbiddenByte.OSA.Core;
+using Com.ForbiddenByte.OSA.CustomParams;
+using Com.ForbiddenByte.OSA.CustomAdapters.GridView;
+
+namespace Framework.Editor
+{
+    /// <summary>
+    /// ListView 编辑器工具
+    /// </summary>
+    public static class ListViewEditor
+    {
+        /// <summary>
+        /// 脚本编译完成后自动检查是否有待挂载的 Adapter
+        /// </summary>
+        [UnityEditor.Callbacks.DidReloadScripts]
+        private static void OnScriptsReloaded()
+        {
+            // 延迟一帧执行，确保编译完全完成
+            EditorApplication.delayCall += CheckPendingAdapterMount;
+        }
+        
+        private static void CheckPendingAdapterMount()
+        {
+            string typeName = EditorPrefs.GetString("ListView_PendingAdapter_Type", "");
+            int instanceID = EditorPrefs.GetInt("ListView_PendingAdapter_InstanceID", 0);
+            
+            if (string.IsNullOrEmpty(typeName) || instanceID == 0) return;
+            
+            bool isGrid = EditorPrefs.GetBool("ListView_PendingAdapter_IsGrid", true);
+            int itemPrefabID = EditorPrefs.GetInt("ListView_PendingAdapter_ItemPrefab", 0);
+            
+            // 清除 EditorPrefs
+            EditorPrefs.DeleteKey("ListView_PendingAdapter_Type");
+            EditorPrefs.DeleteKey("ListView_PendingAdapter_InstanceID");
+            EditorPrefs.DeleteKey("ListView_PendingAdapter_IsGrid");
+            EditorPrefs.DeleteKey("ListView_PendingAdapter_ItemPrefab");
+            
+            // 查找类型
+            Type adapterType = null;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                adapterType = asm.GetType(typeName);
+                if (adapterType != null) break;
+            }
+            
+            if (adapterType == null)
+            {
+                UniLogger.LogWarning($"[ListView] 未找到类型: {typeName}，请手动挂载 Adapter");
+                return;
+            }
+            
+            // 查找 GameObject
+            GameObject go = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+            if (go == null)
+            {
+                UniLogger.LogWarning("[ListView] 未找到目标 GameObject，请手动挂载 Adapter");
+                return;
+            }
+            
+            // 检查是否已有该组件
+            if (go.GetComponent(adapterType) != null)
+            {
+                UniLogger.Log($"<color=yellow>[ListView] Adapter 已存在于 {go.name}</color>");
+                return;
+            }
+            
+            // 挂载组件
+            var adapter = Undo.AddComponent(go, adapterType);
+            
+            // 配置参数
+            if (adapter is IOSA iAdapter)
+            {
+                var scrollRect = go.GetComponent<ScrollRect>();
+                var baseParams = iAdapter.BaseParameters;
+                if (baseParams != null && scrollRect != null)
+                {
+                    baseParams.Viewport = scrollRect.viewport;
+                    baseParams.Content = scrollRect.content;
+                    baseParams.ContentPadding = new RectOffset(10, 10, 10, 10);
+                    baseParams.ContentSpacing = 10f;
+                    
+                    // 设置 ItemPrefab
+                    RectTransform itemPrefab = itemPrefabID != 0 
+                        ? EditorUtility.InstanceIDToObject(itemPrefabID) as RectTransform 
+                        : null;
+                    
+                    if (itemPrefab != null)
+                    {
+                        if (baseParams is BaseParamsWithPrefab listParams)
+                        {
+                            listParams.ItemPrefab = itemPrefab;
+                        }
+                        else if (baseParams is GridParams gridParams)
+                        {
+                            gridParams.Grid.CellPrefab = itemPrefab;
+                        }
+                    }
+                    
+                    // 移除 ScrollRect（OSA 会替代其功能）
+                    Undo.DestroyObjectImmediate(scrollRect);
+                }
+            }
+            
+            UniLogger.Log($"<color=green>[ListView] Adapter 已自动挂载到 {go.name}</color>");
+            Selection.activeGameObject = go;
+            EditorUtility.SetDirty(go);
+        }
+
+        #region 菜单入口
+
+        [MenuItem("Assets/Framework/ListView/生成 ViewsHolder", false, 100)]
+        public static void GenerateViewsHolder()
+        {
+            GameObject prefab = Selection.activeGameObject;
+            if (prefab == null)
+            {
+                EditorUtility.DisplayDialog("错误", "请先选中一个 Item Prefab", "确定");
+                return;
+            }
+            ViewsHolderGeneratorWindow.ShowWindow(prefab);
+        }
+
+        [MenuItem("Assets/Framework/ListView/生成 ViewsHolder", true)]
+        public static bool ValidateGenerateViewsHolder()
+        {
+            return Selection.activeGameObject != null;
+        }
+
+        [MenuItem("Assets/Framework/ListView/生成 Adapter", false, 101)]
+        public static void GenerateAdapter()
+        {
+            AdapterGeneratorWindow.ShowWindow();
+        }
+
+        [MenuItem("CONTEXT/ScrollRect/配置为 Framework ListView", false, 100)]
+        public static void ConfigureScrollRectAsListView(MenuCommand command)
+        {
+            ScrollRect scrollRect = command.context as ScrollRect;
+            if (scrollRect == null) return;
+            ListViewWizard.ShowWindow(scrollRect);
+        }
+
+        [MenuItem("Framework/UIKit/配置 ListView", false, 102)]
+        public static void ConfigureSelectedScrollRect()
+        {
+            if (Selection.activeGameObject == null)
+            {
+                EditorUtility.DisplayDialog("提示", "请先选中一个 GameObject", "确定");
+                return;
+            }
+
+            ScrollRect scrollRect = Selection.activeGameObject.GetComponent<ScrollRect>();
+            if (scrollRect != null)
+            {
+                ListViewWizard.ShowWindow(scrollRect);
+            }
+            else
+            {
+                ListViewWizard.ShowWindowForCreate(Selection.activeGameObject);
+            }
+        }
+
+        [MenuItem("GameObject/UI/Framework ListView", false, 100)]
+        public static void ConfigureFromHierarchy(MenuCommand command)
+        {
+            GameObject go = command.context as GameObject ?? Selection.activeGameObject;
+            if (go == null)
+            {
+                EditorUtility.DisplayDialog("提示", "请先选中一个 GameObject", "确定");
+                return;
+            }
+
+            ScrollRect scrollRect = go.GetComponent<ScrollRect>() ?? go.GetComponentInChildren<ScrollRect>();
+            if (scrollRect != null)
+            {
+                ListViewWizard.ShowWindow(scrollRect);
+            }
+            else
+            {
+                ListViewWizard.ShowWindowForCreate(go);
+            }
+        }
+
+        [MenuItem("Framework/UIKit/清理废弃 ViewsHolder", false, 200)]
+        public static void CleanupOrphanedViewsHolders()
+        {
+            string genDir = UIEditorConstants.ListViewBindScripts;
+            if (!Directory.Exists(genDir))
+            {
+                EditorUtility.DisplayDialog("提示", "Generated/ListView 目录不存在", "确定");
+                return;
+            }
+
+            HashSet<string> validNames = new HashSet<string>();
+            string logicRoot = UIEditorConstants.UILogicScripts;
+
+            if (Directory.Exists(logicRoot))
+            {
+                string[] allDirs = Directory.GetDirectories(logicRoot, "*", SearchOption.AllDirectories);
+                foreach (var dir in allDirs)
+                {
+                    if (Path.GetFileName(dir) == UIEditorConstants.ListViewCompFolder)
+                    {
+                        foreach (var file in Directory.GetFiles(dir, "*.cs"))
+                        {
+                            validNames.Add(Path.GetFileNameWithoutExtension(file));
+                        }
+                    }
+                }
+            }
+
+            string[] genFiles = Directory.GetFiles(genDir, "*.Generated.cs");
+            List<string> orphaned = new List<string>();
+
+            foreach (var file in genFiles)
+            {
+                string name = Path.GetFileName(file).Replace(".Generated.cs", "");
+                if (!validNames.Contains(name))
+                    orphaned.Add(file);
+            }
+
+            if (orphaned.Count == 0)
+            {
+                EditorUtility.DisplayDialog("提示", "未发现废弃脚本", "确定");
+                return;
+            }
+
+            if (EditorUtility.DisplayDialog("清理", $"发现 {orphaned.Count} 个废弃脚本，是否删除？", "删除", "取消"))
+            {
+                foreach (var file in orphaned)
+                {
+                    AssetDatabase.DeleteAsset(UIEditorHelper.ToAssetPath(file));
+                }
+                AssetDatabase.Refresh();
+            }
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        public static List<UIComponentInfo> AnalyzePrefab(GameObject prefab)
+        {
+            var result = new List<UIComponentInfo>();
+            var allTransforms = prefab.GetComponentsInChildren<Transform>(true);
+
+            foreach (var t in allTransforms)
+            {
+                if (t == prefab.transform) continue;
+                string typeName = GetUIComponentType(t.gameObject);
+                if (!string.IsNullOrEmpty(typeName))
+                {
+                    result.Add(new UIComponentInfo
+                    {
+                        name = t.name,
+                        type = typeName,
+                        path = GetRelativePath(t, prefab.transform)
+                    });
+                }
+            }
+            return result;
+        }
+
+        private static string GetUIComponentType(GameObject go)
+        {
+            if (go.TryGetComponent<Button>(out _)) return "Button";
+            if (go.TryGetComponent<Toggle>(out _)) return "Toggle";
+            if (go.TryGetComponent<Slider>(out _)) return "Slider";
+            if (go.TryGetComponent<InputField>(out _)) return "InputField";
+            if (go.TryGetComponent<TMPro.TMP_InputField>(out _)) return "TMP_InputField";
+            if (go.TryGetComponent<TMPro.TextMeshProUGUI>(out _)) return "TextMeshProUGUI";
+            if (go.TryGetComponent<Text>(out _)) return "Text";
+            if (go.TryGetComponent<RawImage>(out _)) return "RawImage";
+            if (go.TryGetComponent<Image>(out _)) return "Image";
+            return null;
+        }
+
+        private static string GetRelativePath(Transform child, Transform root)
+        {
+            if (child.parent == root) return child.name;
+            return GetRelativePath(child.parent, root) + "/" + child.name;
+        }
+
+        public class UIComponentInfo
+        {
+            public string name;
+            public string type;
+            public string path;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Framework ListView Wizard - 类似 OSA Wizard 的分步向导
+    /// </summary>
+    public class ListViewWizard : EditorWindow
+    {
+        private enum WizardStep { CreateScrollView, Initialize }
+
+        private WizardStep _step = WizardStep.CreateScrollView;
+        private GameObject _parentObject;
+        private bool _isHorizontal = false;
+        private ScrollRect _scrollRect;
+        private RectTransform _itemPrefab;
+        private bool _isGrid = true;
+
+        private List<Type> _availableAdapters = new List<Type>();
+        private string[] _adapterOptions;
+        private int _selectedAdapterIndex = 0;
+
+        private GUIStyle _titleStyle;
+        private GUIStyle _boxStyle;
+        
+        // 从 UIPanelDescription 获取的信息
+        private string _packageName = "Common";
+        private string _namespace = "Game.UI";
+
+        public static void ShowWindow(ScrollRect scrollRect)
+        {
+            var window = GetWindow<ListViewWizard>(true, "Framework ListView Wizard");
+            window._scrollRect = scrollRect;
+            window._parentObject = scrollRect?.gameObject;
+            window._step = WizardStep.Initialize;
+            window.minSize = new Vector2(480, 380);
+            window.maxSize = new Vector2(480, 380);
+            window.TryGetPanelDescription(scrollRect?.gameObject);
+            window.CenterOnMainWin();
+        }
+
+        public static void ShowWindowForCreate(GameObject parent)
+        {
+            var window = GetWindow<ListViewWizard>(true, "Framework ListView Wizard");
+            window._parentObject = parent;
+            window._scrollRect = null;
+            window._step = WizardStep.CreateScrollView;
+            window.minSize = new Vector2(480, 380);
+            window.maxSize = new Vector2(480, 380);
+            window.TryGetPanelDescription(parent);
+            window.CenterOnMainWin();
+        }
+        
+        /// <summary>
+        /// 从父级查找 UIPanelDescription 获取 PackageName 和 Namespace
+        /// </summary>
+        private void TryGetPanelDescription(GameObject go)
+        {
+            if (go == null) return;
+            
+            var desc = go.GetComponentInParent<UIPanelDescription>();
+            if (desc != null)
+            {
+                if (!string.IsNullOrEmpty(desc.PackageName))
+                    _packageName = desc.PackageName;
+                if (!string.IsNullOrEmpty(desc.Namespace))
+                    _namespace = desc.Namespace;
+            }
+        }
+
+        private void InitStyles()
+        {
+            if (_titleStyle == null)
+            {
+                _titleStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 18,
+                    alignment = TextAnchor.MiddleCenter
+                };
+            }
+            if (_boxStyle == null)
+            {
+                _boxStyle = new GUIStyle("box") { padding = new RectOffset(10, 10, 10, 10) };
+            }
+        }
+
+        private void OnGUI()
+        {
+            InitStyles();
+
+            switch (_step)
+            {
+                case WizardStep.CreateScrollView:
+                    DrawStep1();
+                    break;
+                case WizardStep.Initialize:
+                    DrawStep2();
+                    break;
+            }
+
+            // 版本号
+            GUI.Label(new Rect(position.width - 110, position.height - 25, 105, 20),
+                "Framework v1.0", EditorStyles.miniLabel);
+        }
+
+        #region Step 1: 创建 ScrollView
+
+        private void DrawStep1()
+        {
+            EditorGUILayout.Space(15);
+            EditorGUILayout.LabelField("Create ScrollView", _titleStyle);
+            EditorGUILayout.Space(20);
+
+            EditorGUILayout.BeginVertical(_boxStyle);
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("ScrollView's parent", GUILayout.Width(140));
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.ObjectField(_parentObject, typeof(GameObject), true);
+                EditorGUI.EndDisabledGroup();
+                EditorGUILayout.LabelField("(ReadOnly)", GUILayout.Width(70));
+                EditorGUILayout.EndHorizontal();
+
+                if (_parentObject != null)
+                {
+                    EditorGUILayout.LabelField($"Path: {GetHierarchyPath(_parentObject)}", EditorStyles.miniLabel);
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.BeginVertical(_boxStyle);
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Orientation:", GUILayout.Width(140));
+                if (GUILayout.Toggle(!_isHorizontal, "Horizontal", "Button")) _isHorizontal = false;
+                if (GUILayout.Toggle(_isHorizontal, "Vertical", "Button")) _isHorizontal = true;
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.EndVertical();
+
+            GUILayout.FlexibleSpace();
+
+            EditorGUI.BeginDisabledGroup(_parentObject == null);
+            if (GUILayout.Button("Create", GUILayout.Height(35)))
+            {
+                CreateScrollView();
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space(15);
+        }
+
+        private void CreateScrollView()
+        {
+            if (_parentObject == null) return;
+
+            GameObject scrollViewGO = new GameObject("ListView", typeof(RectTransform), typeof(ScrollRect), typeof(Image));
+            scrollViewGO.transform.SetParent(_parentObject.transform, false);
+
+            RectTransform scrollRT = scrollViewGO.GetComponent<RectTransform>();
+            scrollRT.anchorMin = Vector2.zero;
+            scrollRT.anchorMax = Vector2.one;
+            scrollRT.offsetMin = new Vector2(10, 10);
+            scrollRT.offsetMax = new Vector2(-10, -10);
+
+            scrollViewGO.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.3f);
+
+            _scrollRect = scrollViewGO.GetComponent<ScrollRect>();
+            _scrollRect.horizontal = _isHorizontal;
+            _scrollRect.vertical = !_isHorizontal;
+
+            // Viewport
+            GameObject viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewport.transform.SetParent(scrollViewGO.transform, false);
+
+            RectTransform viewportRT = viewport.GetComponent<RectTransform>();
+            viewportRT.anchorMin = Vector2.zero;
+            viewportRT.anchorMax = Vector2.one;
+            viewportRT.sizeDelta = Vector2.zero;
+            viewportRT.pivot = _isHorizontal ? new Vector2(0, 0.5f) : new Vector2(0.5f, 1);
+
+            viewport.GetComponent<Image>().color = Color.white;
+            viewport.GetComponent<Mask>().showMaskGraphic = false;
+
+            // Content
+            GameObject content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+
+            RectTransform contentRT = content.GetComponent<RectTransform>();
+            if (_isHorizontal)
+            {
+                contentRT.anchorMin = new Vector2(0, 0);
+                contentRT.anchorMax = new Vector2(0, 1);
+                contentRT.pivot = new Vector2(0, 0.5f);
+                contentRT.sizeDelta = new Vector2(300, 0);
+            }
+            else
+            {
+                contentRT.anchorMin = new Vector2(0, 1);
+                contentRT.anchorMax = new Vector2(1, 1);
+                contentRT.pivot = new Vector2(0.5f, 1);
+                contentRT.sizeDelta = new Vector2(0, 300);
+            }
+
+            _scrollRect.viewport = viewportRT;
+            _scrollRect.content = contentRT;
+
+            Undo.RegisterCreatedObjectUndo(scrollViewGO, "Create ListView");
+            Selection.activeGameObject = scrollViewGO;
+
+            _step = WizardStep.Initialize;
+            Repaint();
+        }
+
+        #endregion
+
+        #region Step 2: 初始化
+
+        private void DrawStep2()
+        {
+            EditorGUILayout.Space(15);
+            EditorGUILayout.LabelField("Initialize ListView", _titleStyle);
+            EditorGUILayout.Space(20);
+
+            // ScrollRect 信息
+            EditorGUILayout.BeginVertical(_boxStyle);
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("ScrollRect to initialize", GUILayout.Width(150));
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.ObjectField(_scrollRect, typeof(ScrollRect), true);
+                EditorGUI.EndDisabledGroup();
+                EditorGUILayout.LabelField("(ReadOnly)", GUILayout.Width(70));
+                EditorGUILayout.EndHorizontal();
+
+                if (_scrollRect != null)
+                {
+                    EditorGUILayout.LabelField($"Path: {GetHierarchyPath(_scrollRect.gameObject)}", EditorStyles.miniLabel);
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Adapter 脚本选择
+            EditorGUILayout.BeginVertical(_boxStyle);
+            {
+                EditorGUILayout.LabelField("Adapter Script", EditorStyles.boldLabel);
+                EditorGUILayout.Space(5);
+
+                bool isGridBefore = _isGrid;
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUIStyle toggleStyle = new GUIStyle("Button") { fixedWidth = 160, fixedHeight = 28 };
+                if (GUILayout.Toggle(_isGrid, "GridAdapter", toggleStyle)) _isGrid = true;
+                if (GUILayout.Toggle(!_isGrid, "ListAdapter", toggleStyle)) _isGrid = false;
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
+
+                if (isGridBefore != _isGrid || _adapterOptions == null)
+                {
+                    UpdateAvailableAdapters();
+                }
+
+                EditorGUILayout.Space(5);
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Script:", GUILayout.Width(60));
+                _selectedAdapterIndex = EditorGUILayout.Popup(_selectedAdapterIndex, _adapterOptions);
+                EditorGUILayout.EndHorizontal();
+
+                if (_selectedAdapterIndex == 0)
+                {
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.HelpBox("选择一个已有的 Adapter 脚本，或者稍后生成。已有的脚本必须继承自 FrameworkListAdapter/GridAdapter 且是非泛型的。", MessageType.None);
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+
+            // Item Prefab
+            EditorGUILayout.BeginVertical(_boxStyle);
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Item prefab", GUILayout.Width(100));
+                _itemPrefab = EditorGUILayout.ObjectField(_itemPrefab, typeof(RectTransform), true) as RectTransform;
+
+                string btnText = _isGrid ? "Generate GridItem" : "Generate ListItem";
+                if (GUILayout.Button(btnText, GUILayout.Width(160)))
+                {
+                    GenerateExampleItem();
+                }
+                EditorGUILayout.EndHorizontal();
+
+                if (_itemPrefab == null)
+                {
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.HelpBox($"点击 '{btnText}' 自动生成示例 Item", MessageType.Info);
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            GUILayout.FlexibleSpace();
+
+            EditorGUI.BeginDisabledGroup(_itemPrefab == null);
+            if (GUILayout.Button("Initialize", GUILayout.Height(35)))
+            {
+                CompleteSetup();
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space(15);
+        }
+
+        private void GenerateExampleItem()
+        {
+            if (_scrollRect == null || _scrollRect.content == null)
+            {
+                EditorUtility.DisplayDialog("错误", "ScrollRect 或 Content 不存在", "确定");
+                return;
+            }
+
+            GameObject itemGO = _isGrid ? CreateGridItem() : CreateListItem();
+            // Item模板应与Viewport同级，作为ListView的直接子节点
+            itemGO.transform.SetParent(_scrollRect.transform, false);
+
+            _itemPrefab = itemGO.GetComponent<RectTransform>();
+
+            Undo.RegisterCreatedObjectUndo(itemGO, "Generate Item Prefab");
+            Selection.activeGameObject = itemGO;
+            EditorGUIUtility.PingObject(itemGO);
+
+            UniLogger.Log($"<color=green>已生成 Item Prefab: {itemGO.name}</color>");
+            Repaint();
+        }
+
+        private GameObject CreateGridItem()
+        {
+            GameObject root = new GameObject("GridItem", typeof(RectTransform), typeof(Image));
+            root.GetComponent<RectTransform>().sizeDelta = new Vector2(150, 150);
+            root.GetComponent<Image>().color = new Color(0.25f, 0.25f, 0.3f, 0.95f);
+
+            // Cover
+            GameObject cover = new GameObject("CoverImage", typeof(RectTransform), typeof(Image));
+            cover.transform.SetParent(root.transform, false);
+            RectTransform coverRT = cover.GetComponent<RectTransform>();
+            coverRT.anchorMin = new Vector2(0, 0.35f);
+            coverRT.anchorMax = new Vector2(1, 1);
+            coverRT.offsetMin = new Vector2(8, 0);
+            coverRT.offsetMax = new Vector2(-8, -8);
+            cover.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.5f);
+
+            // Title
+            CreateTextChild(root, "TitleText", "Grid Item", 16,
+                new Vector2(0, 0), new Vector2(1, 0.35f),
+                new Vector2(8, 5), new Vector2(-8, 0));
+
+            return root;
+        }
+
+        private GameObject CreateListItem()
+        {
+            GameObject root = new GameObject("ListItem", typeof(RectTransform), typeof(Image));
+            RectTransform rt = root.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.pivot = new Vector2(0.5f, 1);
+            rt.sizeDelta = new Vector2(0, 80);
+            root.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.25f, 0.9f);
+
+            // Icon
+            GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(root.transform, false);
+            RectTransform iconRT = icon.GetComponent<RectTransform>();
+            iconRT.anchorMin = iconRT.anchorMax = new Vector2(0, 0.5f);
+            iconRT.pivot = new Vector2(0, 0.5f);
+            iconRT.anchoredPosition = new Vector2(10, 0);
+            iconRT.sizeDelta = new Vector2(60, 60);
+            icon.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.5f);
+
+            // Title
+            CreateTextChild(root, "TitleText", "List Item Title", 20,
+                new Vector2(0, 0.5f), new Vector2(1, 1),
+                new Vector2(80, 0), new Vector2(-10, -5));
+
+            // Desc
+            CreateTextChild(root, "DescText", "Description text", 14,
+                new Vector2(0, 0), new Vector2(1, 0.5f),
+                new Vector2(80, 5), new Vector2(-10, 0),
+                new Color(0.6f, 0.6f, 0.6f));
+
+            return root;
+        }
+
+        private void CreateTextChild(GameObject parent, string name, string text, int fontSize,
+            Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax, Color? color = null)
+        {
+            GameObject textObj = new GameObject(name, typeof(RectTransform));
+            textObj.transform.SetParent(parent.transform, false);
+
+            RectTransform textRT = textObj.GetComponent<RectTransform>();
+            textRT.anchorMin = anchorMin;
+            textRT.anchorMax = anchorMax;
+            textRT.offsetMin = offsetMin;
+            textRT.offsetMax = offsetMax;
+
+            Color textColor = color ?? Color.white;
+
+            var tmpType = Type.GetType("TMPro.TextMeshProUGUI, Unity.TextMeshPro");
+            if (tmpType != null)
+            {
+                var tmp = textObj.AddComponent(tmpType);
+                tmpType.GetProperty("text")?.SetValue(tmp, text);
+                tmpType.GetProperty("fontSize")?.SetValue(tmp, (float)fontSize);
+                tmpType.GetProperty("color")?.SetValue(tmp, textColor);
+                tmpType.GetProperty("alignment")?.SetValue(tmp, 513);
+            }
+            else
+            {
+                Text uiText = textObj.AddComponent<Text>();
+                uiText.text = text;
+                uiText.fontSize = fontSize;
+                uiText.color = textColor;
+                uiText.alignment = TextAnchor.MiddleLeft;
+            }
+        }
+
+        private void CompleteSetup()
+        {
+            if (_scrollRect == null) return;
+
+            if (_selectedAdapterIndex == 0)
+            {
+                bool generate = EditorUtility.DisplayDialog("完成物体的基础创建",
+                    "您尚未选择 Adapter 脚本。ListView 的物体结构已创建完成。\n\n您想现在生成 Adapter 脚本吗？",
+                    "生成 Adapter", "稍后手动配置");
+
+                if (generate)
+                {
+                    // 传递 packageName、namespace、scrollRect 和 itemPrefab
+                    AdapterGeneratorWindow.ShowWindow(_isGrid, _packageName, _namespace, _scrollRect, _itemPrefab);
+                }
+
+                Selection.activeGameObject = _scrollRect.gameObject;
+                Close();
+                return;
+            }
+
+            Type adapterType = _availableAdapters[_selectedAdapterIndex - 1];
+
+            // 1. 移除可能冲突的 OSA 组件
+            var allOSAs = _scrollRect.GetComponents<IOSA>();
+            foreach (var osa in allOSAs)
+            {
+                if (osa is MonoBehaviour mb)
+                {
+                    Undo.DestroyObjectImmediate(mb);
+                }
+            }
+
+            // 2. 挂载新组件
+            Component newAdapter = Undo.AddComponent(_scrollRect.gameObject, adapterType);
+
+            // 3. 配置参数
+            if (newAdapter is IOSA iAdapter)
+            {
+                var baseParams = iAdapter.BaseParameters;
+                if (baseParams != null)
+                {
+                    // 设置基本结构
+                    baseParams.Viewport = _scrollRect.viewport;
+                    baseParams.Content = _scrollRect.content;
+                    baseParams.Orientation = _isHorizontal
+                        ? BaseParams.OrientationEnum.HORIZONTAL
+                        : BaseParams.OrientationEnum.VERTICAL;
+
+                    // 设置默认边距和间距
+                    baseParams.ContentPadding = new RectOffset(10, 10, 10, 10);
+                    baseParams.ContentSpacing = 10f;
+
+                    // 设置 Prefab
+                    if (_itemPrefab != null)
+                    {
+                        if (baseParams is BaseParamsWithPrefab listParams)
+                        {
+                            listParams.ItemPrefab = _itemPrefab;
+                        }
+                        else if (baseParams is GridParams gridParams)
+                        {
+                            gridParams.Grid.CellPrefab = _itemPrefab;
+                            // Grid 模式下通常需要设置 GroupPadding 以避免重叠
+                            gridParams.Grid.GroupPadding = _isHorizontal
+                                ? new RectOffset(0, 0, 10, 10)
+                                : new RectOffset(10, 10, 0, 0);
+                        }
+                    }
+                }
+            }
+
+            // 4. 移除 ScrollRect（OSA 会替代其功能）
+            GameObject targetGO = _scrollRect.gameObject;
+            Undo.DestroyObjectImmediate(_scrollRect);
+
+            EditorUtility.DisplayDialog("初始化成功",
+                $"ListView 初始化完成！\n\n" +
+                $"• Adapter: {adapterType.Name}\n" +
+                $"• Item Prefab: {(_itemPrefab != null ? _itemPrefab.name : "未设置")}\n" +
+                $"• Orientation: {(_isHorizontal ? "Horizontal" : "Vertical")}",
+                "完成");
+
+            Selection.activeGameObject = targetGO;
+            Close();
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        private void UpdateAvailableAdapters()
+        {
+            _availableAdapters.Clear();
+            // 查找所有非泛型的 Adapter 实现
+            var allTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .Where(t => t.IsClass && !t.IsAbstract && !t.IsGenericType);
+
+            Type baseType = _isGrid ? typeof(FrameworkGridAdapter<,>) : typeof(FrameworkListAdapter<,>);
+
+            foreach (var type in allTypes)
+            {
+                if (IsSubclassOfRawGeneric(baseType, type))
+                {
+                    _availableAdapters.Add(type);
+                }
+            }
+
+            _adapterOptions = new string[_availableAdapters.Count + 1];
+            _adapterOptions[0] = "<Generate New / Manual Setup>";
+            for (int i = 0; i < _availableAdapters.Count; i++)
+            {
+                _adapterOptions[i + 1] = _availableAdapters[i].Name;
+            }
+
+            if (_selectedAdapterIndex >= _adapterOptions.Length)
+                _selectedAdapterIndex = 0;
+        }
+
+        private static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
+        {
+            while (toCheck != null && toCheck != typeof(object))
+            {
+                var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+                if (generic == cur) return true;
+                toCheck = toCheck.BaseType;
+            }
+            return false;
+        }
+
+        private string GetHierarchyPath(GameObject go)
+        {
+            if (go == null) return "";
+            string path = go.name;
+            Transform parent = go.transform.parent;
+            while (parent != null)
+            {
+                path = parent.name + "/" + path;
+                parent = parent.parent;
+            }
+            return path;
+        }
+
+        private void CenterOnMainWin()
+        {
+            var main = EditorGUIUtility.GetMainWindowPosition();
+            var pos = position;
+            pos.x = main.x + (main.width - pos.width) * 0.5f;
+            pos.y = main.y + (main.height - pos.height) * 0.5f;
+            position = pos;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Adapter 生成器弹窗 - 同时生成 Adapter、Data、ViewsHolder 文件
+    /// </summary>
+    public class AdapterGeneratorWindow : EditorWindow
+    {
+        private string _className = "MyListAdapter";
+        private string _dataClassName = "MyItemData";
+        private string _vhClassName = "MyItemVH";
+        private string _namespace = "Game.UI";
+        private string _packageName = "Common";
+        private bool _isGrid = true;
+        
+        // 关联的 ScrollRect 和 ItemPrefab，用于生成后自动挂载
+        private ScrollRect _scrollRect;
+        private RectTransform _itemPrefab;
+
+        private const string AdapterTemplatePath = "Assets/Scripts/Framework/Kit/UIKit/Extension/ListView/Editor/Templates/Adapter.sbn";
+        private const string ViewsHolderTemplatePath = "Assets/Scripts/Framework/Kit/UIKit/Extension/ListView/Editor/Templates/ViewsHolder.sbn";
+        private const string ViewsHolderGenTemplatePath = "Assets/Scripts/Framework/Kit/UIKit/Extension/ListView/Editor/Templates/ViewsHolder.Generated.sbn";
+
+        public static void ShowWindow(bool isGrid = true)
+        {
+            ShowWindow(isGrid, "Common", "Game.UI", null, null);
+        }
+        
+        public static void ShowWindow(bool isGrid, string packageName, string namespaceName, ScrollRect scrollRect, RectTransform itemPrefab)
+        {
+            var window = GetWindow<AdapterGeneratorWindow>(true, "生成 ListView 脚本");
+            window._isGrid = isGrid;
+            window._packageName = packageName ?? "Common";
+            window._namespace = namespaceName ?? "Game.UI";
+            window._scrollRect = scrollRect;
+            window._itemPrefab = itemPrefab;
+            window.minSize = new Vector2(450, 340);
+            window.CenterOnMainWin();
+        }
+
+        private void OnGUI()
+        {
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("ListView 脚本生成器", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+            
+            // 基本设置
+            EditorGUILayout.BeginVertical("box");
+            _className = EditorGUILayout.TextField("Adapter 类名:", _className);
+            _dataClassName = EditorGUILayout.TextField("Data 类名:", _dataClassName);
+            _vhClassName = EditorGUILayout.TextField("ViewsHolder 类名:", _vhClassName);
+            EditorGUILayout.EndVertical();
+            
+            EditorGUILayout.Space(5);
+            
+            // 路径设置
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("生成位置", EditorStyles.boldLabel);
+            _namespace = EditorGUILayout.TextField("命名空间:", _namespace);
+            _packageName = EditorGUILayout.TextField("PackageName:", _packageName);
+            _isGrid = EditorGUILayout.Toggle("Grid 模式:", _isGrid);
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+            
+            // 显示将要生成的文件
+            string baseClass = _isGrid ? "FrameworkGridAdapter" : "FrameworkListAdapter";
+            string vhBaseClass = _isGrid ? "FrameworkGridViewsHolder" : "FrameworkListViewsHolder";
+            string outputDir = $"Assets/.../UI/{_packageName}/Comp/";
+            
+            EditorGUILayout.HelpBox(
+                $"将生成以下文件到 {outputDir}:\n\n" +
+                $"• {_className}.cs\n" +
+                $"    └─ {baseClass}<{_dataClassName}, {_vhClassName}>\n\n" +
+                $"• {_vhClassName}.cs\n" +
+                $"    └─ {_dataClassName} (数据类)\n" +
+                $"    └─ {_vhClassName} : {vhBaseClass}<{_dataClassName}>",
+                MessageType.Info);
+            
+            // 显示关联信息
+            if (_scrollRect != null)
+            {
+                EditorGUILayout.Space(5);
+                EditorGUILayout.HelpBox(
+                    $"生成后将自动:\n" +
+                    $"• 挂载 Adapter 到 {_scrollRect.name}\n" +
+                    (_itemPrefab != null ? $"• 配置 ItemPrefab: {_itemPrefab.name}" : ""),
+                    MessageType.None);
+            }
+
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("生成全部脚本", GUILayout.Height(35)))
+            {
+                GenerateAllCode();
+            }
+
+            EditorGUILayout.Space(10);
+        }
+
+        private void GenerateAllCode()
+        {
+            if (string.IsNullOrEmpty(_className) || string.IsNullOrEmpty(_dataClassName) || string.IsNullOrEmpty(_vhClassName))
+            {
+                EditorUtility.DisplayDialog("错误", "类名不能为空！", "确定");
+                return;
+            }
+
+            if (!File.Exists(AdapterTemplatePath) || !File.Exists(ViewsHolderTemplatePath))
+            {
+                EditorUtility.DisplayDialog("错误", "模板文件不存在！", "确定");
+                return;
+            }
+
+            try
+            {
+                string logicDir = Path.Combine(UIEditorConstants.UILogicScripts, _packageName, UIEditorConstants.ListViewCompFolder);
+                UIEditorConstants.EnsureDirectory(logicDir);
+                
+                var generatedFiles = new List<string>();
+                
+                // 1. 生成 Adapter 文件
+                string adapterPath = Path.Combine(logicDir, $"{_className}.cs");
+                if (!File.Exists(adapterPath) || EditorUtility.DisplayDialog("文件已存在", $"{_className}.cs 已存在，是否覆盖？", "覆盖", "跳过"))
+                {
+                    var adapterTemplate = Template.Parse(File.ReadAllText(AdapterTemplatePath));
+                    var adapterContext = new
+                    {
+                        namespace_name = _namespace,
+                        class_name = _className,
+                        data_class_name = _dataClassName,
+                        vh_class_name = _vhClassName,
+                        base_class = _isGrid ? "FrameworkGridAdapter" : "FrameworkListAdapter",
+                        adapter_type = _isGrid ? "Grid" : "List",
+                        is_grid = _isGrid
+                    };
+                    File.WriteAllText(adapterPath, adapterTemplate.Render(adapterContext), Encoding.UTF8);
+                    generatedFiles.Add($"Adapter: {adapterPath}");
+                }
+                
+                // 2. 生成 ViewsHolder 文件 (包含 Data 类)
+                string vhPath = Path.Combine(logicDir, $"{_vhClassName}.cs");
+                if (!File.Exists(vhPath))
+                {
+                    var vhTemplate = Template.Parse(File.ReadAllText(ViewsHolderTemplatePath));
+                    var vhContext = new
+                    {
+                        namespace_name = _namespace,
+                        class_name = _vhClassName,
+                        data_class_name = _dataClassName,
+                        base_class = _isGrid ? "FrameworkGridViewsHolder" : "FrameworkListViewsHolder",
+                        views_property = _isGrid ? "views" : "root"
+                    };
+                    File.WriteAllText(vhPath, vhTemplate.Render(vhContext), Encoding.UTF8);
+                    generatedFiles.Add($"ViewsHolder: {vhPath}");
+                }
+                
+                // 3. 生成 ViewsHolder.Generated 文件 (如果有 ItemPrefab)
+                if (_itemPrefab != null && File.Exists(ViewsHolderGenTemplatePath))
+                {
+                    string genDir = UIEditorConstants.ListViewBindScripts;
+                    UIEditorConstants.EnsureDirectory(genDir);
+                    string genPath = Path.Combine(genDir, $"{_vhClassName}.Generated.cs");
+                    
+                    var members = ListViewEditor.AnalyzePrefab(_itemPrefab.gameObject);
+                    var genTemplate = Template.Parse(File.ReadAllText(ViewsHolderGenTemplatePath));
+                    var genContext = new
+                    {
+                        namespace_name = _namespace,
+                        class_name = _vhClassName,
+                        views_property = _isGrid ? "views" : "root",
+                        members = members
+                    };
+                    File.WriteAllText(genPath, genTemplate.Render(genContext), Encoding.UTF8);
+                    generatedFiles.Add($"Generated: {genPath}");
+                }
+
+                UniLogger.Log($"<color=cyan>ListView 脚本生成完成！共 {generatedFiles.Count} 个文件</color>");
+                
+                // 刷新资源并等待编译
+                AssetDatabase.Refresh();
+                
+                // 记录需要挂载的信息，编译完成后由 [DidReloadScripts] 回调执行挂载
+                if (_scrollRect != null)
+                {
+                    string adapterTypeName = $"{_namespace}.{_className}";
+                    EditorPrefs.SetString("ListView_PendingAdapter_Type", adapterTypeName);
+                    EditorPrefs.SetInt("ListView_PendingAdapter_InstanceID", _scrollRect.gameObject.GetInstanceID());
+                    EditorPrefs.SetBool("ListView_PendingAdapter_IsGrid", _isGrid);
+                    if (_itemPrefab != null)
+                        EditorPrefs.SetInt("ListView_PendingAdapter_ItemPrefab", _itemPrefab.GetInstanceID());
+                }
+
+                string message = $"脚本生成完成！\n\n{string.Join("\n", generatedFiles)}";
+                if (_scrollRect != null)
+                {
+                    message += "\n\n编译完成后将自动挂载 Adapter。";
+                }
+                EditorUtility.DisplayDialog("成功", message, "确定");
+                Close();
+            }
+            catch (Exception e)
+            {
+                UniLogger.LogError($"生成失败: {e.Message}");
+                EditorUtility.DisplayDialog("错误", e.Message, "确定");
+            }
+        }
+        
+
+        private void CenterOnMainWin()
+        {
+            var main = EditorGUIUtility.GetMainWindowPosition();
+            var pos = position;
+            pos.x = main.x + (main.width - pos.width) * 0.5f;
+            pos.y = main.y + (main.height - pos.height) * 0.5f;
+            position = pos;
+        }
+    }
+
+    /// <summary>
+    /// ViewsHolder 生成器弹窗
+    /// </summary>
+    public class ViewsHolderGeneratorWindow : EditorWindow
+    {
+        private GameObject _prefab;
+        private string _className = "";
+        private string _dataClassName = "";
+        private string _namespace = "Game.UI";
+        private string _packageName = "Common";
+        private bool _isGrid = true;
+        private List<ListViewEditor.UIComponentInfo> _components;
+        private Vector2 _scrollPos;
+
+        private const string GenTemplatePath = "Assets/Scripts/Framework/Kit/UIKit/Extension/ListView/Editor/Templates/ViewsHolder.Generated.sbn";
+        private const string LogicTemplatePath = "Assets/Scripts/Framework/Kit/UIKit/Extension/ListView/Editor/Templates/ViewsHolder.sbn";
+
+        public static void ShowWindow(GameObject prefab, bool isGrid = true)
+        {
+            var window = GetWindow<ViewsHolderGeneratorWindow>(true, "生成 ViewsHolder");
+            window._prefab = prefab;
+            window._className = prefab.name + "VH";
+            window._dataClassName = prefab.name + "Data";
+            window._isGrid = isGrid;
+            window._components = ListViewEditor.AnalyzePrefab(prefab);
+            window.minSize = new Vector2(420, 400);
+            window.CenterOnMainWin();
+        }
+
+        private void OnGUI()
+        {
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("基本设置", EditorStyles.boldLabel);
+            _className = EditorGUILayout.TextField("ViewsHolder 类名:", _className);
+            _dataClassName = EditorGUILayout.TextField("Data 类名:", _dataClassName);
+            _namespace = EditorGUILayout.TextField("命名空间:", _namespace);
+            _packageName = EditorGUILayout.TextField("PackageName:", _packageName);
+            _isGrid = EditorGUILayout.Toggle("Grid 模式:", _isGrid);
+
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField($"检测到 {_components?.Count ?? 0} 个 UI 组件:", EditorStyles.boldLabel);
+
+            if (_components != null)
+            {
+                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(150));
+                foreach (var comp in _components)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField($"  {comp.type}", GUILayout.Width(120));
+                    EditorGUILayout.LabelField(comp.name, EditorStyles.boldLabel);
+                    EditorGUILayout.EndHorizontal();
+                }
+                EditorGUILayout.EndScrollView();
+            }
+
+            GUILayout.FlexibleSpace();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("刷新组件", GUILayout.Height(30)))
+            {
+                _components = ListViewEditor.AnalyzePrefab(_prefab);
+            }
+            if (GUILayout.Button("生成代码", GUILayout.Height(30)))
+            {
+                GenerateCode();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(10);
+        }
+
+        private void GenerateCode()
+        {
+            if (string.IsNullOrEmpty(_className) || string.IsNullOrEmpty(_dataClassName))
+            {
+                EditorUtility.DisplayDialog("错误", "类名不能为空！", "确定");
+                return;
+            }
+
+            if (!File.Exists(GenTemplatePath) || !File.Exists(LogicTemplatePath))
+            {
+                EditorUtility.DisplayDialog("错误", "模板文件不存在", "确定");
+                return;
+            }
+
+            try
+            {
+                var genTemplate = Template.Parse(File.ReadAllText(GenTemplatePath));
+                var logicTemplate = Template.Parse(File.ReadAllText(LogicTemplatePath));
+
+                var context = new
+                {
+                    namespace_name = _namespace,
+                    class_name = _className,
+                    data_class_name = _dataClassName,
+                    base_class = _isGrid ? "FrameworkGridViewsHolder" : "FrameworkListViewsHolder",
+                    views_property = _isGrid ? "views" : "root",
+                    members = _components
+                };
+
+                // Generated 文件
+                string genDir = UIEditorConstants.ListViewBindScripts;
+                UIEditorConstants.EnsureDirectory(genDir);
+                string genPath = Path.Combine(genDir, $"{_className}.Generated.cs");
+                File.WriteAllText(genPath, genTemplate.Render(context), Encoding.UTF8);
+                UniLogger.Log($"<color=white>Generated 已生成: {genPath}</color>");
+
+                // Logic 文件
+                string logicDir = Path.Combine(UIEditorConstants.UILogicScripts, _packageName, UIEditorConstants.ListViewCompFolder);
+                UIEditorConstants.EnsureDirectory(logicDir);
+                string logicPath = Path.Combine(logicDir, $"{_className}.cs");
+
+                if (!File.Exists(logicPath))
+                {
+                    File.WriteAllText(logicPath, logicTemplate.Render(context), Encoding.UTF8);
+                    UniLogger.Log($"<color=cyan>Logic 已生成: {logicPath}</color>");
+                }
+
+                AssetDatabase.Refresh();
+                EditorUtility.DisplayDialog("成功", $"ViewsHolder 生成完成！\n\nGenerated: {genPath}\nLogic: {logicPath}", "确定");
+                Close();
+            }
+            catch (Exception e)
+            {
+                UniLogger.LogError($"生成失败: {e.Message}");
+                EditorUtility.DisplayDialog("错误", e.Message, "确定");
+            }
+        }
+
+        private void CenterOnMainWin()
+        {
+            var main = EditorGUIUtility.GetMainWindowPosition();
+            var pos = position;
+            pos.x = main.x + (main.width - pos.width) * 0.5f;
+            pos.y = main.y + (main.height - pos.height) * 0.5f;
+            position = pos;
+        }
+    }
+}
