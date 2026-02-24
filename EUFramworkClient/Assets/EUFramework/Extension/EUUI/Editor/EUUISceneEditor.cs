@@ -106,11 +106,26 @@ namespace EUFramework.Extension.EUUI.Editor
             CreateSubLayer(canvasGO.transform, nameUIRoot);
             CreateSubLayer(canvasGO.transform, nameExcludedTop);
 
-            // 4. EventSystem
-            GameObject eventSystem = new GameObject("EventSystem",
-                typeof(UnityEngine.EventSystems.EventSystem),
-                typeof(UnityEngine.EventSystems.StandaloneInputModule));
+            // 4. EventSystem（自动适配 Input System / Input Module）
+            GameObject eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
             eventSystem.transform.SetParent(uiRoot.transform);
+
+            bool hasInputSystem = false;
+            try
+            {
+                var inputSystemType = System.Type.GetType(
+                    "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+                if (inputSystemType != null)
+                {
+                    eventSystem.AddComponent(inputSystemType);
+                    hasInputSystem = true;
+                }
+            }
+            catch (System.Exception) { }
+
+            if (!hasInputSystem)
+                eventSystem.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 
             if (EditorSceneManager.SaveScene(newScene, scenePath))
             {

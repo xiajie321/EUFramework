@@ -43,14 +43,14 @@ namespace Com.ForbiddenByte.OSA.Core.SubComponents
 		public virtual float GetMaxInputModuleActionsPerSecondToExpect()
 		{
 			if (!EventSystem.current)
-				return 1f;
+				return 10f;
 
 			if (!EventSystem.current.currentInputModule)
-				return 1f;
+				return 10f;
 
 			var standaloneInputModule = EventSystem.current.currentInputModule as StandaloneInputModule;
 			if (!standaloneInputModule)
-				return 1f;
+				return 10f;
 
 			return standaloneInputModule.inputActionsPerSecond;
 		}

@@ -162,7 +162,23 @@ namespace EUFramework.Extension.EUUI
             {
                 var es = new GameObject("EventSystem");
                 es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+
+                bool hasInputSystem = false;
+                try
+                {
+                    var inputSystemType = System.Type.GetType(
+                        "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+                    if (inputSystemType != null)
+                    {
+                        es.AddComponent(inputSystemType);
+                        hasInputSystem = true;
+                    }
+                }
+                catch (System.Exception) { }
+
+                if (!hasInputSystem)
+                    es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+
                 UnityEngine.Object.DontDestroyOnLoad(es);
             }
         }
