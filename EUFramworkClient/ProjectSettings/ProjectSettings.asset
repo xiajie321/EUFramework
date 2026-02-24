@@ -672,7 +672,7 @@ PlayerSettings:
     PS5: EUUI_EXTENSIONS_GENERATED
     QNX: EUUI_EXTENSIONS_GENERATED
     Stadia: EUUI_EXTENSIONS_GENERATED
-    Standalone: EUUI_EXTENSIONS_GENERATED
+    Standalone: 
     VisionOS: EUUI_EXTENSIONS_GENERATED
     WebGL: EUUI_EXTENSIONS_GENERATED
     Windows Store Apps: EUUI_EXTENSIONS_GENERATED
@@ -784,7 +784,7 @@ PlayerSettings:
   hmiLogStartupTiming: 0
   hmiCpuConfiguration: 
   apiCompatibilityLevel: 6
-  activeInputHandler: 0
+  activeInputHandler: 1
   windowsGamepadBackendHint: 0
   cloudProjectId: 
   framebufferDepthMemorylessMode: 0
