@@ -64,15 +64,26 @@ namespace EUFramework.Extension.EUUI
         {
             if (_isVisible) return;
             _isVisible = true;
-            gameObject.SetActive(_isVisible);
+            gameObject.SetActive(true);
             OnShow();
+
+            var defaultSel = GetDefaultSelectable();
+            if (defaultSel != null)
+                EUUIKit.SetDefaultSelection(defaultSel);
         }
 
         public virtual void Hide()
         {
             if (!_isVisible) return;
             _isVisible = false;
-            gameObject.SetActive(_isVisible);
+
+            var es = EventSystem.current;
+            if (es != null
+                && es.currentSelectedGameObject != null
+                && es.currentSelectedGameObject.transform.IsChildOf(transform))
+                EUUIKit.ClearSelection();
+
+            gameObject.SetActive(false);
             OnHide();
         }
 
@@ -127,6 +138,59 @@ namespace EUFramework.Extension.EUUI
         }
 
         #region UI Helpers
+
+        // ── 导航支持 ──────────────────────────────────────
+
+        /// <summary>
+        /// 面板 Show 时默认聚焦的元素，子类按需重写
+        /// 返回 null 则不自动设置焦点
+        /// </summary>
+        protected virtual Selectable GetDefaultSelectable() => null;
+
+        /// <summary>
+        /// 将一组 Selectable 连接为循环/非循环导航链
+        /// vertical=true 为上下链，false 为左右链
+        /// </summary>
+        protected void SetupNavigationChain(bool loop, bool vertical, params Selectable[] selectables)
+        {
+            if (selectables == null || selectables.Length == 0) return;
+            for (int i = 0; i < selectables.Length; i++)
+            {
+                if (selectables[i] == null) continue;
+                var nav  = selectables[i].navigation;
+                nav.mode = Navigation.Mode.Explicit;
+
+                int prev = loop ? (i - 1 + selectables.Length) % selectables.Length : i - 1;
+                int next = loop ? (i + 1) % selectables.Length : i + 1;
+
+                if (vertical)
+                {
+                    nav.selectOnUp   = prev >= 0 && prev < selectables.Length ? selectables[prev] : null;
+                    nav.selectOnDown = next >= 0 && next < selectables.Length ? selectables[next] : null;
+                }
+                else
+                {
+                    nav.selectOnLeft  = prev >= 0 && prev < selectables.Length ? selectables[prev] : null;
+                    nav.selectOnRight = next >= 0 && next < selectables.Length ? selectables[next] : null;
+                }
+                selectables[i].navigation = nav;
+            }
+        }
+
+        /// <summary>
+        /// 让一个纯 Image / GameObject 参与键盘导航
+        /// 会在其上挂载 transition=None 的 Button，不影响原有视觉
+        /// 点击逻辑仍用 AddClick() 注册
+        /// </summary>
+        protected Button MakeNavigable(GameObject go)
+        {
+            if (go == null) return null;
+            var btn = go.GetComponent<Button>() ?? go.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            return btn;
+        }
+
+        // ──────────────────────────────────────────────────
 
         protected void SetText(Text text, string content)
         {

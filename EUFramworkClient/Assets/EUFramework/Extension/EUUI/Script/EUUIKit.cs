@@ -105,6 +105,9 @@ namespace EUFramework.Extension.EUUI
             // 7. 确保 EventSystem
             EnsureEventSystem();
 
+            // 8. 初始化导航处理器
+            InitNavigation();
+
             _initialized = true;
             Debug.Log("[EUUIKit] 初始化完成");
         }
