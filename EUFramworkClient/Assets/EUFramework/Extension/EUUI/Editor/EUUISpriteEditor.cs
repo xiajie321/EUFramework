@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.U2D;
+using EUFramework.Extension.EUUI;
 
 namespace EUFramework.Extension.EUUI.Editor
 {
@@ -18,7 +19,7 @@ namespace EUFramework.Extension.EUUI.Editor
             Debug.Log("<color=cyan>[EUUISpriteEditor] 脚本已加载并初始化成功。</color>");
         }
 
-        [MenuItem("Framework/UIKit/Sprite/一键生成图集 &g", false, 1)]
+        [EUHotboxEntry("生成图集", "图集", "从选中文件夹一键生成 SpriteAtlas")]
         public static void GenerateAtlasFromFolder()
         {
             Debug.Log("[EUUISpriteEditor] ---> 开始执行图集生成流程 <---");

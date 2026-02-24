@@ -15,10 +15,10 @@ namespace EUFramework.Extension.EUUI.Editor
         private Button       _selectedButton;
         private VisualElement _selectedContainer;
 
-        private readonly EUUISOConfigPanel   _soConfigPanel   = new EUUISOConfigPanel();
-        private readonly EUUIModulePanel     _modulePanel     = new EUUIModulePanel();
-        private readonly EUUIExtensionPanel  _extensionPanel  = new EUUIExtensionPanel();
-        private readonly EUUIResourcePanel   _resourcePanel   = new EUUIResourcePanel();
+        private readonly EUUISOConfigPanel        _soConfigPanel        = new EUUISOConfigPanel();
+        private readonly EUUIModulePanel          _modulePanel          = new EUUIModulePanel();
+        private readonly EUUIExtensionPanel       _extensionPanel       = new EUUIExtensionPanel();
+        private readonly EUUIOrchestrationPanel   _orchestrationPanel   = new EUUIOrchestrationPanel();
 
         [MenuItem("EUFramework/拓展/EUUI 配置工具", false, 101)]
         public static void ShowWindow()
@@ -75,10 +75,10 @@ namespace EUFramework.Extension.EUUI.Editor
 
         private void BindNavigationButtons()
         {
-            var btnSOConfig         = rootVisualElement.Q<Button>("btn-so-config");
-            var btnModules          = rootVisualElement.Q<Button>("btn-modules");
-            var btnExtensions       = rootVisualElement.Q<Button>("btn-extensions");
-            var btnResourceCreation = rootVisualElement.Q<Button>("btn-resource-creation");
+            var btnSOConfig      = rootVisualElement.Q<Button>("btn-so-config");
+            var btnModules       = rootVisualElement.Q<Button>("btn-modules");
+            var btnExtensions    = rootVisualElement.Q<Button>("btn-extensions");
+            var btnOrchestration = rootVisualElement.Q<Button>("btn-orchestration");
 
             if (btnSOConfig != null)
                 btnSOConfig.clicked += () => { SetSelectedButton(btnSOConfig); ShowPanel(_soConfigPanel); };
@@ -89,8 +89,8 @@ namespace EUFramework.Extension.EUUI.Editor
             if (btnExtensions != null)
                 btnExtensions.clicked += () => { SetSelectedButton(btnExtensions); ShowPanel(_extensionPanel); };
 
-            if (btnResourceCreation != null)
-                btnResourceCreation.clicked += () => { SetSelectedButton(btnResourceCreation); ShowPanel(_resourcePanel); };
+            if (btnOrchestration != null)
+                btnOrchestration.clicked += () => { SetSelectedButton(btnOrchestration); ShowPanel(_orchestrationPanel); };
         }
 
         private void ShowPanel(IEUUIPanel panel)

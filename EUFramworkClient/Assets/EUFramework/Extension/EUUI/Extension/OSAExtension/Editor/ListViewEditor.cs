@@ -108,31 +108,25 @@ namespace Framework.Editor
 
         #region 菜单入口
 
-        [MenuItem("Assets/Framework/ListView/生成 ViewsHolder", false, 100)]
+        [EUHotboxEntry("生成 ViewsHolder", "ListView", "从选中 Item Prefab 生成 ViewsHolder 绑定代码")]
         public static void GenerateViewsHolder()
         {
             GameObject prefab = Selection.activeGameObject;
             if (prefab == null)
             {
-                EditorUtility.DisplayDialog("错误", "请先选中一个 Item Prefab", "确定");
+                EditorUtility.DisplayDialog("错误", "请先在 Hierarchy 或 Project 中选中一个 Item Prefab", "确定");
                 return;
             }
             ViewsHolderGeneratorWindow.ShowWindow(prefab);
         }
 
-        [MenuItem("Assets/Framework/ListView/生成 ViewsHolder", true)]
-        public static bool ValidateGenerateViewsHolder()
-        {
-            return Selection.activeGameObject != null;
-        }
-
-        [MenuItem("Assets/Framework/ListView/生成 Adapter", false, 101)]
+        [EUHotboxEntry("生成 Adapter", "ListView", "弹出 Adapter 生成器窗口")]
         public static void GenerateAdapter()
         {
             AdapterGeneratorWindow.ShowWindow();
         }
 
-        [MenuItem("Framework/UIKit/清理废弃 ViewsHolder.Generated", false, 200)]
+        [EUHotboxEntry("清理废弃 VH", "ListView", "删除没有对应逻辑脚本的 ViewsHolder.Generated 文件")]
         public static void CleanupOrphanedViewsHolders()
         {
             var config = OSAListViewConfig.GetOrCreate();

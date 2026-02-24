@@ -132,6 +132,7 @@ namespace EUFramework.Extension.EUUI.Editor
             rt.anchoredPosition = Vector2.zero;
         }
 
+        [EUHotboxEntry("创建 UI 场景", "UI 制作", "弹出场景名称输入窗口，创建标准 UI 场景结构")]
         // [MenuItem("EUFramework/拓展/EUUI/创建 UI 场景 &u", false, 102)]
         public static void ShowCreateSceneWindow()
         {
@@ -141,6 +142,7 @@ namespace EUFramework.Extension.EUUI.Editor
         /// <summary>
         /// 定位到当前场景的 UIRoot 节点（聚焦并展开 Hierarchy）
         /// </summary>
+        [EUHotboxEntry("定位 UIRoot", "UI 制作", "在 Hierarchy 中定位并展开 UIRoot 节点")]
         // [MenuItem("EUFramework/拓展/EUUI/定位 UIRoot &f", false, 103)]
         public static void LocateUIRoot()
         {

@@ -145,6 +145,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         /// <summary>
         /// 导出当前场景的 UIRoot 为 Prefab：保存到配置路径，并移除 Prefab 内的 EUUINodeBind 组件
         /// </summary>
+        [EUHotboxEntry("导出 Prefab", "UI 制作", "将当前场景的 UIRoot 导出为干净的 Prefab")]
         // [MenuItem("EUFramework/拓展/EUUI/导出 Prefab", false, 105)]
         public static void ExportCurrentPanelToPrefab()
         {
@@ -193,6 +194,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         /// <summary>
         /// 开始自动绑定流程：校验命名 → 生成 Generated/逻辑代码 → 刷新后编译，编译完成后自动执行绑定并导出 Prefab
         /// </summary>
+        [EUHotboxEntry("自动绑定导出", "UI 制作", "代码生成 + 字段绑定 + 导出 Prefab 完整自动流程")]
         // [MenuItem("EUFramework/拓展/EUUI/自动绑定并导出 Prefab", false, 106)]
         public static void StartExportProcess()
         {

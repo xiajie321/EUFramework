@@ -25,16 +25,16 @@
                 </ui:Button>
             </ui:VisualElement>
             
-            <ui:VisualElement name="btn-resource-creation-container" class="sidebar-button-container">
-                <ui:Button name="btn-resource-creation" class="sidebar-button">
-                    <ui:Label text="R" class="sidebar-button-icon" />
+            <ui:VisualElement name="btn-orchestration-container" class="sidebar-button-container">
+                <ui:Button name="btn-orchestration" class="sidebar-button">
+                    <ui:Label text="H" class="sidebar-button-icon" />
                     <ui:VisualElement class="sidebar-button-text-container">
-                        <ui:Label text="资源制作" class="sidebar-button-title" />
-                        <ui:Label text="UI场景、绑定、导出" class="sidebar-button-subtitle" />
+                        <ui:Label text="功能编排" class="sidebar-button-title" />
+                        <ui:Label text="Space 键快捷面板配置" class="sidebar-button-subtitle" />
                     </ui:VisualElement>
                 </ui:Button>
             </ui:VisualElement>
-            
+
             <ui:VisualElement name="btn-modules-container" class="sidebar-button-container">
                 <ui:Button name="btn-modules" class="sidebar-button">
                     <ui:Label text="M" class="sidebar-button-icon" />
