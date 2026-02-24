@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using EUFramework.Extension.EUUI.Editor;
+using Scriban.Runtime;
 using UnityEditor;
 using UnityEngine;
 
@@ -128,6 +129,35 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             string content = ReadTemplateContent(templateId);
             var template = Scriban.Template.Parse(content);
             string result = template.Render(context ?? new { });
+
+            WriteFileWithRetry(normalizedOutputPath, result, displayName ?? Path.GetFileNameWithoutExtension(outputPath));
+        }
+
+        /// <summary>
+        /// 核心导出方法（ScriptObject 版本）：支持动态键名的模板变量注入（如 eu_res_namespace）
+        /// </summary>
+        /// <param name="templateId">注册表中的模板 ID</param>
+        /// <param name="outputPath">输出文件路径</param>
+        /// <param name="scriptObject">Scriban ScriptObject 上下文，支持任意动态键</param>
+        /// <param name="displayName">日志显示名（可选）</param>
+        public static void Export(
+            string templateId,
+            string outputPath,
+            ScriptObject scriptObject,
+            string displayName = null)
+        {
+            if (!ValidateExport(templateId, outputPath, out string errorMessage))
+                throw new ArgumentException(errorMessage);
+
+            string normalizedOutputPath = NormalizeOutputPath(outputPath);
+            EnsureOutputDirectory(normalizedOutputPath);
+
+            string content = ReadTemplateContent(templateId);
+            var template = Scriban.Template.Parse(content);
+            var templateContext = new Scriban.TemplateContext();
+            if (scriptObject != null)
+                templateContext.PushGlobal(scriptObject);
+            string result = template.Render(templateContext);
 
             WriteFileWithRetry(normalizedOutputPath, result, displayName ?? Path.GetFileNameWithoutExtension(outputPath));
         }

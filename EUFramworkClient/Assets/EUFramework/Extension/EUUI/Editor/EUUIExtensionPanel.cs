@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Scriban.Runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -512,19 +513,30 @@ namespace EUFramework.Extension.EUUI.Editor
         private static void ExportRow(ExtRow row)
         {
             if (string.IsNullOrEmpty(row.TemplateId) || string.IsNullOrEmpty(row.OutputAssetPath)) return;
-            EUUIBaseExporter.Export(
-                row.TemplateId,
-                row.OutputAssetPath,
-                string.IsNullOrEmpty(row.ExtensionName) ? null : (object)new { extension_name = row.ExtensionName },
-                row.DisplayName);
+
+            // 构建 Scriban 上下文：先注入 extension_name，再从伴生 JSON 读取 namespaceVariables 并解析 rootNamespace
+            var scriptObject = new ScriptObject();
+            if (!string.IsNullOrEmpty(row.ExtensionName))
+                scriptObject["extension_name"] = row.ExtensionName;
+
+            string sbnPath = row.ManualExt?.templatePath ?? "";
+            var nsVarMap = EUUIAsmdefHelper.ReadSidecarNamespaceVariables(sbnPath);
+            foreach (var kv in nsVarMap)
+            {
+                string ns = EUUIAsmdefHelper.GetAssemblyRootNamespace(kv.Value);
+                scriptObject[kv.Key] = !string.IsNullOrEmpty(ns) ? ns : kv.Value;
+            }
+
+            EUUIBaseExporter.Export(row.TemplateId, row.OutputAssetPath, scriptObject, row.DisplayName);
+
             // 只要有任何 UIKit 扩展生成，就设置项目宏
-            if (IsUIKitTemplate(row.ManualExt?.templatePath ?? ""))
+            if (IsUIKitTemplate(sbnPath))
                 EUUIAsmdefHelper.SetExtensionsGeneratedDefine(true);
             // 读取伴生 JSON，将运行时所需程序集加入 EUUI.asmdef，编辑器所需程序集加入 EUUI.Editor.asmdef
-            var runtimeAsms = EUUIAsmdefHelper.ReadSidecarRuntimeAssemblies(row.ManualExt?.templatePath ?? "");
+            var runtimeAsms = EUUIAsmdefHelper.ReadSidecarRuntimeAssemblies(sbnPath);
             foreach (var asm in runtimeAsms)
                 EUUIAsmdefHelper.SetAssembly("EUUI.asmdef", asm, true);
-            var editorAsms = EUUIAsmdefHelper.ReadSidecarEditorAssemblies(row.ManualExt?.templatePath ?? "");
+            var editorAsms = EUUIAsmdefHelper.ReadSidecarEditorAssemblies(sbnPath);
             foreach (var asm in editorAsms)
                 EUUIAsmdefHelper.SetAssembly("EUUI.Editor.asmdef", asm, true);
         }
