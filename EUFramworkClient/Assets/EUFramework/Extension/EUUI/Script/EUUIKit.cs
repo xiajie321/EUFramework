@@ -229,6 +229,16 @@ namespace EUFramework.Extension.EUUI
                 return existingPanel as T;
             }
 
+            // LRU 缓存命中 → 跳过资源加载，直接复用
+            if (TryPopFromCache<T>(panelName, out var cachedPanel))
+            {
+                cachedPanel.gameObject.transform.SetParent(GetLayer(cachedPanel.DefaultLayer), false);
+                _activePanels[panelName] = cachedPanel;
+                cachedPanel.Show();
+                Debug.Log($"[EUUIKit] 从 LRU 缓存复用面板: {panelName}");
+                return cachedPanel;
+            }
+
             // 防重复打开
             if (_opening.Contains(panelName))
             {
@@ -283,13 +293,15 @@ namespace EUFramework.Extension.EUUI
         public static void Close<T>() where T : EUUIPanelBase<T>
         {
             string panelName = typeof(T).Name;
+
+            // 若该面板在 LRU 缓存中，先销毁缓存版本
+            RemoveFromCache(panelName);
+
             if (_activePanels.TryGetValue(panelName, out var panel))
             {
                 _activePanels.Remove(panelName);
                 RemoveFromPanelStack(panelName);
                 panel.Close();
-                
-                // 释放资源（由扩展实现）
                 OnPanelClosed(panelName);
             }
         }
@@ -368,8 +380,12 @@ namespace EUFramework.Extension.EUUI
                 topPanel.Hide();
                 if (topPanel.EnableClose)
                 {
-                    topPanel.Close();
                     _activePanels.Remove(topName);
+                    if (!TryCachePanel(topName, topPanel))
+                    {
+                        topPanel.Close();
+                        OnPanelClosed(topName);
+                    }
                 }
             }
 
@@ -448,8 +464,11 @@ namespace EUFramework.Extension.EUUI
         public static void CloseAllExcept<T>() where T : EUUIPanelBase<T>
         {
             string targetName = typeof(T).Name;
-            var tempList = _activePanels.Keys.ToArray();
 
+            // 先清空 LRU 缓存（批量关闭时不保留缓存）
+            ClearLRUCache();
+
+            var tempList = _activePanels.Keys.ToArray();
             foreach (var name in tempList)
             {
                 if (name != targetName)
@@ -461,6 +480,7 @@ namespace EUFramework.Extension.EUUI
                         {
                             panel.Close();
                             _activePanels.Remove(name);
+                            OnPanelClosed(name);
                         }
                     }
                 }
@@ -475,8 +495,10 @@ namespace EUFramework.Extension.EUUI
         /// </summary>
         public static void CloseAll()
         {
-            var tempList = _activePanels.Keys.ToArray();
+            // 先清空 LRU 缓存（批量关闭时不保留缓存）
+            ClearLRUCache();
 
+            var tempList = _activePanels.Keys.ToArray();
             foreach (var name in tempList)
             {
                 if (_activePanels.TryGetValue(name, out var panel))
@@ -486,6 +508,7 @@ namespace EUFramework.Extension.EUUI
                     {
                         panel.Close();
                         _activePanels.Remove(name);
+                        OnPanelClosed(name);
                     }
                 }
             }

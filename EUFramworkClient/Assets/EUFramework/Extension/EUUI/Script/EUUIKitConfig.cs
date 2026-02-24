@@ -42,6 +42,10 @@ namespace EUFramework.Extension.EUUI
         [Tooltip("UI 相机清除标志")]
         public CameraClearFlags uiCameraClearFlags = CameraClearFlags.Depth;
 
+        [Header("面板缓存（LRU）")]
+        [Tooltip("最多缓存多少个已关闭的面板，0 表示不缓存（立即销毁），默认 5")]
+        public int panelCacheCapacity = 5;
+
         [Header("层级排序")]
         [Tooltip("各层级的 Canvas SortingOrder 基础值")]
         public int baseSortingOrder = 0;
