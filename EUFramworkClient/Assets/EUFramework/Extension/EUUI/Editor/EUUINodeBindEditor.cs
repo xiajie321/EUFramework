@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using EUFramework.Extension.EUUI;
@@ -65,7 +66,7 @@ namespace EUFramework.Extension.EUUI.Editor
         /// 批量为选中的对象添加 EUUINodeBind 脚本，并自动匹配 UI 类型
         /// </summary>
         [EUHotboxEntry("绑定 NodeBind", "UI 制作", "为当前选中的节点批量添加 EUUINodeBind 组件")]
-        // [MenuItem("EUFramework/拓展/EUUI/绑定 NodeBind &b", false, 104)]
+        [Shortcut("EUUI/绑定 NodeBind", KeyCode.B, ShortcutModifiers.Alt)]
         public static void AddBindComponent()
         {
             foreach (GameObject go in Selection.gameObjects)

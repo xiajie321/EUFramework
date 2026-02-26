@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using EUFramework.Extension.EUUI;
@@ -148,7 +149,7 @@ namespace EUFramework.Extension.EUUI.Editor
         }
 
         [EUHotboxEntry("创建 UI 场景", "UI 制作", "弹出场景名称输入窗口，创建标准 UI 场景结构")]
-        // [MenuItem("EUFramework/拓展/EUUI/创建 UI 场景 &u", false, 102)]
+        [Shortcut("EUUI/创建 UI 场景", KeyCode.U, ShortcutModifiers.Alt)]
         public static void ShowCreateSceneWindow()
         {
             EUUISceneCreateWindow.ShowWindow((name, template) => ExecuteCreateUIScene(name, template));
