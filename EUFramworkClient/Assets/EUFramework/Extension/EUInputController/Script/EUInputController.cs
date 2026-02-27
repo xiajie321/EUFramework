@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -37,16 +39,16 @@ namespace EUFramework.Extension.EUInputController
         private Action<InputDevice> _onAddedDevice;
         private Action<InputDevice> _onRemovedDevice;
         private Action<EUMainInputControllerChangeData> _onMainInputControllerChange;
+        private Action<InputDevice> _onPlayerInputOfDeviceChange;//TODO 玩家控制器输入设备改变事件
         private PlayerInputController _mainPlayerInputController; //主控玩家控制器
-        private List<PlayerInputController> _playerInputControllers; //用来记录玩家控制器进入的先后顺序
+        private List<PlayerInputController> _playerInputControllerList; //用来记录玩家控制器进入的先后顺序
+        private List<InputDevice> _playerInputDeviceList;//用来记录玩家控制设备进入的先后顺序
         private Dictionary<PlayerInputController, int> _playerInputControllerMapId; //给控制器标记Id
         private Dictionary<int, PlayerInputController> _playerInputControllerMap; //标记对应ID的控件
-        private Dictionary<int, InputDevice> _playerInputDevices;//用于存储设备
-        private Dictionary<int, int> _idAndDevicesId;//用于处理设备与控制器的映射关系方便通过控制器id快速找到对应设备
-        private Dictionary<int, int> _devicesIdAndId;//用于处理设备与控制器的映射关系方便通过设备id快速找到对应控制器
+        private Dictionary<int, InputDevice> _playerInputDeviceMap;//用于存储设备
+        private Dictionary<int, int> _idAndDevicesIdMap;//用于处理设备与控制器的映射关系方便通过控制器id快速找到对应设备
+        private Dictionary<int, int> _devicesIdAndIdMap;//用于处理设备与控制器的映射关系方便通过设备id快速找到对应控制器
         private int _maxPlayerInputControllers = 4;
-        private bool _isNewGamepadAddPlayerController = true; //在新的游戏手柄接入时添加玩家控制器
-        private bool _isFirstGamepadForMainPlayerController = true; //将第一个接入的手柄设为主玩家控制器。
 
         public int MaxPlayerInputControllers
         {
@@ -54,57 +56,60 @@ namespace EUFramework.Extension.EUInputController
             set
             {
                 if (_maxPlayerInputControllers == value) return;
-                if (_maxPlayerInputControllers > value && _playerInputControllers.Count > 0)
+                if (_maxPlayerInputControllers > value && _playerInputControllerList.Count > 0)
                 {
                     int ls = _maxPlayerInputControllers - value;
-                    for (int i = 0; i < ls; i++)
+                    for (int i = 1; i < ls; i++)
                     {
-                        PlayerInputController ls2 = _playerInputControllers[^1];
+                        PlayerInputController ls2 = _playerInputControllerList[^1];
                         _playerInputControllerMap.Remove(_playerInputControllerMapId[ls2]);
                         _playerInputControllerMapId.Remove(ls2);
-                        _playerInputControllers.RemoveAt(_playerInputControllers.Count - 1);
+                        SetPlayerInputControllerOfDevice(ls2,null);
+                        _idAndDevicesIdMap.Remove(GetPlayerInputControllerId(ls2));
+                        _playerInputControllerList.RemoveAt(_playerInputControllerList.Count - 1);
                     }
                 }
 
                 _maxPlayerInputControllers = value;
             }
         } //设置一台机器所能容纳的最大玩家控制器数量
-
-        public int CurrentPlayerInputController
+        /// <summary>
+        /// 当前已连接的输入控制器数量
+        /// </summary>
+        public int CurrentPlayerInputControllerCount
         {
-            get => _playerInputControllers.Count;
-        } //当前已经连接的玩家控制器数量
-        public bool IsNewGamepadAddPlayerController
-        {
-            get => _isNewGamepadAddPlayerController;
-            set
-            {
-                if (_isNewGamepadAddPlayerController == value) return;
-                IsNewGamepadAddPlayerController = value;
-            }
+            get => _playerInputControllerList.Count;
         }
-
-        public bool IsFirstGamepadForMainPlayerController
+        /// <summary>
+        /// 当前已连接的输入设备数量
+        /// </summary>
+        public int CurrentPlayerInputDeviceCount
         {
-            get => _isFirstGamepadForMainPlayerController;
-            set
-            {
-                if (_isFirstGamepadForMainPlayerController == value) return;
-                _isFirstGamepadForMainPlayerController = value;
-            }
+            get => _playerInputDeviceList.Count;
         }
 
         private int _id = 0;
-
+        
         private void Init()
         {
-            _playerInputControllers = new(_maxPlayerInputControllers);
+            _playerInputControllerList = new(_maxPlayerInputControllers);
+            _playerInputDeviceList = new(_maxPlayerInputControllers);
             _playerInputControllerMap = new(_maxPlayerInputControllers);
             _playerInputControllerMapId = new(_maxPlayerInputControllers);
-            _playerInputDevices = new(_maxPlayerInputControllers);
-            _idAndDevicesId = new(_maxPlayerInputControllers);
-            _devicesIdAndId = new(_maxPlayerInputControllers);
-            AddPlayerInputController(_id++);
+            _playerInputDeviceMap = new(_maxPlayerInputControllers);
+            _idAndDevicesIdMap = new(_maxPlayerInputControllers);
+            _devicesIdAndIdMap = new(_maxPlayerInputControllers);
+            AddPlayerInputController(_id++);//默认会有一个控制器
+            
+            // 初始化已连接的设备
+            foreach (var device in InputSystem.devices)
+            {
+                if (device is Gamepad)
+                {
+                    AddPlayerInputDevice(device.deviceId, device);
+                }
+            }
+            
             InputSystem.onDeviceChange += OnDeviceChange;
         }
 
@@ -113,7 +118,6 @@ namespace EUFramework.Extension.EUInputController
             if (inputDevice is not Gamepad) return;
             if (change == InputDeviceChange.Added)
             {
-                //TODO 需要添加在新的手柄加入时的操作
                 AddPlayerInputDevice(inputDevice.deviceId, inputDevice);
             }
 
@@ -122,36 +126,97 @@ namespace EUFramework.Extension.EUInputController
                 RemovePlayerInputDevice(inputDevice.deviceId);
             }
 #if UNITY_EDITOR
-            Debug.Log($"[EUInputController] 当前设备数量:{GetPlayerInputDeviceCount()}");
+            Debug.Log($"[EUInputController] 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
 #endif
         }
 
         #region 玩家输入控制器相关
-
-        //TODO 需要处理设备接入时的手柄绑定问题
-        //TODO 设置手柄时添加在字典中添加对应引用
+        
         private void AddPlayerInputController(int playerId)
         {
+            if(CurrentPlayerInputControllerCount >= _maxPlayerInputControllers) return;
             if (_playerInputControllerMap.ContainsKey(playerId)) return;
             var ls = new PlayerInputController();
             _playerInputControllerMap.Add(playerId, ls);
             _playerInputControllerMapId.Add(ls, playerId);
-            _playerInputControllers.Add(ls);
-            _idAndDevicesId.Add(playerId,-1);
+            _playerInputControllerList.Add(ls);
+            _idAndDevicesIdMap.Add(playerId,-1);
+            if (_playerInputControllerList.Count == 1)
+            {
+                SetMainPlayerInputController(ls);
+            }
         }
-
-        private void RemovePlayerInputController(int playerId)
+        /// <summary>
+        /// 移除玩家输入控制器
+        /// </summary>
+        /// <param name="playerId"></param>
+        public void RemovePlayerInputController(int playerId)
         {
+            if(CurrentPlayerInputControllerCount <= 1) return;
             if (!_playerInputControllerMap.TryGetValue(playerId, out var ls)) return;
             _playerInputControllerMapId.Remove(ls);
             _playerInputControllerMap.Remove(playerId);
-            _playerInputControllers.Remove(ls);
-            if (_idAndDevicesId[playerId] != -1)
-                _devicesIdAndId[_idAndDevicesId[playerId]] = -1;
-            _idAndDevicesId.Remove(playerId);
-            
+            _playerInputControllerList.Remove(ls);
+            if (_idAndDevicesIdMap[playerId] != -1)
+                _devicesIdAndIdMap[_idAndDevicesIdMap[playerId]] = -1;
+            _idAndDevicesIdMap.Remove(playerId);
         }
 
+        /// <summary>
+        /// 移除玩家输入控制器
+        /// </summary>
+        /// <param name="playerInputController"></param>
+        public void RemovePlayerInputController(PlayerInputController playerInputController)
+        {
+            RemovePlayerInputController(GetPlayerInputControllerId(playerInputController));
+        }
+        /// <summary>
+        /// 添加玩家输入控制器
+        /// </summary>
+        /// <returns></returns>
+        public int AddPlayerInputController()
+        {
+            AddPlayerInputController(_id++);
+            return _id;
+        }
+        /// <summary>
+        /// 绑定玩家输入控制器的输入设备
+        /// </summary>
+        /// <param name="playerInputController">玩家输入控制器引用</param>
+        /// <param name="inputDevice">输入设备的引用</param>
+        public void SetPlayerInputControllerOfDevice(PlayerInputController playerInputController,InputDevice inputDevice)
+        {
+            int id = GetPlayerInputControllerId(playerInputController);
+            if (inputDevice is Gamepad device)
+            {
+                playerInputController.BindGamepad(device);
+                if (_devicesIdAndIdMap[inputDevice.deviceId] != -1)//该设备原先有对应的控制器
+                {
+                    SetPlayerInputControllerOfDevice(_playerInputControllerMap[_devicesIdAndIdMap[inputDevice.deviceId]],null);//设置该设备原先的控制器为空
+                }
+                _idAndDevicesIdMap[id] = inputDevice.deviceId;
+                _devicesIdAndIdMap[inputDevice.deviceId] = id;
+                return;
+            }
+
+            if (inputDevice != null) return;
+            if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
+            {
+                _devicesIdAndIdMap[_idAndDevicesIdMap[id]] = -1;//将该设备原先的控制器标记为无对应引用
+                _idAndDevicesIdMap[id] = -1;//标记当前控制器对应的设备为无对应引用
+            }
+            playerInputController.BindGamepad(null);
+        }
+        /// <summary>
+        /// 绑定玩家输入控制器的输入设备
+        /// </summary>
+        /// <param name="playerId">玩家输入控制器Id</param>
+        /// <param name="inputDevice">输入设备的引用</param>
+        public void SetPlayerInputControllerOfDevice(int playerId, InputDevice inputDevice)
+        {
+            PlayerInputController playerInputController = GetPlayerInputController(playerId);
+            SetPlayerInputControllerOfDevice(playerInputController, inputDevice);
+        }
         /// <summary>
         /// 获取当前的主玩家控制器
         /// </summary>
@@ -198,6 +263,28 @@ namespace EUFramework.Extension.EUInputController
         {
             return _playerInputControllerMap[playerId];
         }
+        
+        /// <summary>
+        /// 获取玩家输入控制器列表(注意:该方法会产生少量GC高频调用慎用)
+        /// </summary>
+        public PlayerInputController[] GetPlayerInputControllerList()=>new List<PlayerInputController>(_playerInputControllerList).ToArray();
+        
+        /// <summary>
+        /// 获取空闲玩家输入控制器列表(注意:该方法会产生少量GC高频调用慎用)
+        /// </summary>
+        public PlayerInputController[] GetIdlePlayerInputControllerList()
+        {
+            var ls = new List<PlayerInputController>();
+            foreach (var value in _idAndDevicesIdMap.Keys)
+            {
+                if (_idAndDevicesIdMap[value] == -1)
+                {
+                    ls.Add(_playerInputControllerMap[value]);
+                }
+            }
+            return ls.ToArray();
+        }
+        
 
         /// <summary>
         /// 获取玩家控制器Id
@@ -234,16 +321,21 @@ namespace EUFramework.Extension.EUInputController
 
         private void AddPlayerInputDevice(int deviceId, InputDevice inputDevice)
         {
-            if (!_playerInputDevices.TryAdd(deviceId, inputDevice)) return;
-            _devicesIdAndId.Add(deviceId, -1);//添加映射关系
+            if (!_playerInputDeviceMap.TryAdd(deviceId, inputDevice)) return;
+            _playerInputDeviceList.Add(inputDevice);
+            _devicesIdAndIdMap.Add(deviceId, -1);//添加映射关系
             _onAddedDevice?.Invoke(inputDevice);
         }
 
         private void RemovePlayerInputDevice(int deviceId)
         {
-            if (!_playerInputDevices.Remove(deviceId, out var inputDevice)) return;
-            if (_devicesIdAndId[deviceId] != -1) _idAndDevicesId[_devicesIdAndId[deviceId]] = -1;
-            _devicesIdAndId.Remove(inputDevice.deviceId);//移除映射关系
+            if (!_playerInputDeviceMap.Remove(deviceId, out var inputDevice)) return;
+            if (_devicesIdAndIdMap[deviceId] != -1)
+            {
+                SetPlayerInputControllerOfDevice(_devicesIdAndIdMap[deviceId],null);
+            }
+            _playerInputDeviceList.Remove(inputDevice);
+            _devicesIdAndIdMap.Remove(inputDevice.deviceId);//移除映射关系
             _onRemovedDevice?.Invoke(inputDevice);
         }
 
@@ -251,18 +343,34 @@ namespace EUFramework.Extension.EUInputController
         /// 获取设备数量
         /// </summary>
         /// <returns>设备数量</returns>
-        public int GetPlayerInputDeviceCount() => _playerInputDevices.Count;
+        public int GetPlayerInputDeviceCount() => _playerInputDeviceMap.Count;
 
         /// <summary>
         /// 获取玩家输入设备列表(注意:该方法会产生少量GC高频调用慎用)
         /// </summary>
-        public InputDevice[] GetPlayerInputDeviceList() => _playerInputDevices.Values.ToArray();
+        public InputDevice[] GetPlayerInputDeviceList() => new List<InputDevice>(_playerInputDeviceList).ToArray();
+        /// <summary>
+        /// 获取空闲玩家输入设备列表(注意:该方法会产生少量GC高频调用慎用)
+        /// </summary>
+        /// <returns></returns>
+        public InputDevice[] GetIdlePlayerInputDeviceList()
+        {
+            List<InputDevice> inputDevices = new List<InputDevice>();
+            foreach (var value in _devicesIdAndIdMap.Keys)
+            {
+                if (_devicesIdAndIdMap[value] == -1)
+                {
+                    inputDevices.Add(_playerInputDeviceMap[value]);
+                }
+            }
+            return inputDevices.ToArray();
+        }
 
         /// <summary>
         /// 获取玩家输入设备字典(注意:该方法会产生少量GC高频调用慎用)
         /// </summary>
         public Dictionary<int, InputDevice> GetPlayerInputDeviceDictionary() =>
-            new Dictionary<int, InputDevice>(_playerInputDevices); //确保外部不会直接修改原先的字典
+            new Dictionary<int, InputDevice>(_playerInputDeviceMap); //确保外部不会直接修改原先的字典
 
         /// <summary>
         /// 添加玩家输入设备接入事件监听

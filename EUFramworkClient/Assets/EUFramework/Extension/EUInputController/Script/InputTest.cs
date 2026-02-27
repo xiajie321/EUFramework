@@ -1,9 +1,6 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using EUFramework.Extension.EUInputController;
+using EUFramwork.Extension.EUFSMKit;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class InputTest : MonoBehaviour
 {
