@@ -15,7 +15,7 @@ namespace EUFramework.Extension.EUUI
     {
         private static EUUIKitConfig _config;
         private static GameObject _euuiRoot;
-        private static GameObject _poolRoot;
+        private static GameObject _euuiCacheRoot;
         private static Camera _uiCamera;
         private static Canvas _canvas;
         private static CanvasScaler _canvasScaler;
@@ -50,8 +50,9 @@ namespace EUFramework.Extension.EUUI
         /// <summary>
         /// 初始化 UI 系统（建议在游戏启动时调用一次）
         /// </summary>
-        public static void Initialize()
+        public static void Initialize(GameObject gameRoot = null)
         {
+            Debug.LogWarning("[EUUIKit] 已经初始化过，跳过 11");
             if (_initialized)
             {
                 Debug.LogWarning("[EUUIKit] 已经初始化过，跳过");
@@ -70,6 +71,8 @@ namespace EUFramework.Extension.EUUI
                 UnityEngine.Object.DontDestroyOnLoad(_euuiRoot);
             }
 
+            if (gameRoot != null) _euuiRoot.transform.SetParent(gameRoot.transform);
+
             // 2. 配置 Canvas（ScreenSpaceCamera 模式）
             _canvas = GetOrAddComponent<Canvas>(_euuiRoot);
             _canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -86,18 +89,18 @@ namespace EUFramework.Extension.EUUI
             // 4. 创建 UI 相机
             InitUICamera();
 
-            // 5. 创建 PoolRoot
-            var poolTrans = _euuiRoot.transform.Find("PoolRoot");
-            if (poolTrans == null)
+            // 5. 创建 EUUICacheRoot
+            var cacheTrans = _euuiRoot.transform.Find("EUUICacheRoot");
+            if (cacheTrans == null)
             {
-                _poolRoot = new GameObject("PoolRoot");
-                _poolRoot.transform.SetParent(_euuiRoot.transform, false);
+                _euuiCacheRoot = new GameObject("EUUICacheRoot");
+                _euuiCacheRoot.transform.SetParent(_euuiRoot.transform, false);
             }
             else
             {
-                _poolRoot = poolTrans.gameObject;
+                _euuiCacheRoot = cacheTrans.gameObject;
             }
-            _poolRoot.SetActive(false);
+            _euuiCacheRoot.SetActive(false);
 
             // 6. 初始化层级
             InitLayers();
@@ -194,12 +197,12 @@ namespace EUFramework.Extension.EUUI
         }
 
         /// <summary>
-        /// 获取对象池根节点（业务层可用此节点管理对象池）
+        /// 获取 UI 缓存根节点
         /// </summary>
-        public static GameObject GetPoolRoot()
+        public static GameObject GetCacheRoot()
         {
             if (!_initialized) Initialize();
-            return _poolRoot;
+            return _euuiCacheRoot;
         }
 
         /// <summary>

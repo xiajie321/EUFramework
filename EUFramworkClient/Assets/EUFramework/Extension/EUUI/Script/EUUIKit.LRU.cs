@@ -11,7 +11,7 @@ namespace EUFramework.Extension.EUUI
     /// </summary>
     public static partial class EUUIKit
     {
-        // 缓存池：panelName → IEUUIPanel（面板在 PoolRoot 下，处于隐藏状态）
+        // 缓存池：panelName → IEUUIPanel（面板在 EUUICacheRoot 下，处于隐藏状态）
         private static Dictionary<string, IEUUIPanel> _lruCache
             = new Dictionary<string, IEUUIPanel>();
 
@@ -39,7 +39,7 @@ namespace EUFramework.Extension.EUUI
         // ── 内部核心方法 ──────────────────────────────────
 
         /// <summary>
-        /// 尝试将面板存入 LRU 缓存（移入 PoolRoot，不销毁）
+        /// 尝试将面板存入 LRU 缓存（移入 EUUICacheRoot，不销毁）
         /// 返回 true = 成功缓存；返回 false = 容量为 0 或面板非 MonoBehaviour，调用方需直接销毁
         /// </summary>
         private static bool TryCachePanel(string panelName, IEUUIPanel panel)
@@ -60,8 +60,8 @@ namespace EUFramework.Extension.EUUI
             if (_lruCache.Count >= capacity)
                 EvictLRUTail();
 
-            // 移入 PoolRoot（_poolRoot.SetActive(false)，面板自动隐藏）
-            mb.transform.SetParent(_poolRoot.transform, false);
+            // 移入 EUUICacheRoot（_euuiCacheRoot.SetActive(false)，面板自动隐藏）
+            mb.transform.SetParent(_euuiCacheRoot.transform, false);
 
             _lruCache[panelName]  = panel;
             _lruNodes[panelName]  = _lruOrder.AddFirst(panelName);

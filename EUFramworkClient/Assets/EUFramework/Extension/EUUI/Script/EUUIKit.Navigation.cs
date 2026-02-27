@@ -11,13 +11,11 @@ namespace EUFramework.Extension.EUUI
     /// </summary>
     public static partial class EUUIKit
     {
-        private static NavigationBehaviour _navBehaviour;
 
         // ── 由 EUUIKit.Initialize() 调用 ──────────────────
-
         private static void InitNavigation()
         {
-            _navBehaviour = _euuiRoot.AddComponent<NavigationBehaviour>();
+
         }
 
         // ── 公开 API ──────────────────────────────────────
@@ -82,19 +80,6 @@ namespace EUFramework.Extension.EUUI
             else
             {
                 BackAsync().Forget();
-            }
-        }
-
-        // ── 私有 MonoBehaviour（对外完全不可见）───────────
-        // 当前使用 Legacy Input 轮询 Escape 键
-        // 若项目引入 Input System，可通过 partial 扩展或直接在此添加绑定逻辑
-
-        private class NavigationBehaviour : MonoBehaviour
-        {
-            private void Update()
-            {
-                if (Input.GetKeyDown(KeyCode.Escape))
-                    SubmitOrCancel(false);
             }
         }
     }

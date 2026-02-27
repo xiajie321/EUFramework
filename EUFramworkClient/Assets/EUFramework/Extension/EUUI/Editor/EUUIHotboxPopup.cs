@@ -7,7 +7,7 @@ namespace EUFramework.Extension.EUUI.Editor
 {
     /// <summary>
     /// Scene 视图 Hotbox 弹出层。
-    /// 在 Scene 视图按住 Space 键显示，松开隐藏。
+    /// 在 Scene 视图按下 Space 键显示，再次按下隐藏。
     /// 内容由 EUHotboxConfigSO 配置，通过功能编排面板管理。
     /// </summary>
     [InitializeOnLoad]
@@ -97,8 +97,8 @@ namespace EUFramework.Extension.EUUI.Editor
                 return;
             }
 
-            // Space 松开：隐藏
-            if (e.type == EventType.KeyUp && e.keyCode == KeyCode.Space && _isShowing)
+            // Space 再次按下：隐藏
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Space && _isShowing)
             {
                 _isShowing = false;
                 e.Use();
@@ -192,7 +192,7 @@ namespace EUFramework.Extension.EUUI.Editor
 
             GUILayout.FlexibleSpace();
 
-            DrawCenteredLabel("松开 Space 关闭", FooterColor, 10, FontStyle.Italic);
+            DrawCenteredLabel("再按 Space 关闭", FooterColor, 10, FontStyle.Italic);
             GUILayout.Space(PaddingV);
 
             GUILayout.EndVertical();

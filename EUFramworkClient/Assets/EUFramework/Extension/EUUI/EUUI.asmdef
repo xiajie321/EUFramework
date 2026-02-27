@@ -3,6 +3,10 @@
     "rootNamespace": "EUFramework.Extension.EUUI",
     "references": [
         "UniTask"
+    ,
+        "EURes"
+    ,
+        "YooAsset"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
