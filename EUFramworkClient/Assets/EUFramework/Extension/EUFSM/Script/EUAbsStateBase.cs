@@ -11,6 +11,7 @@ namespace EUFramwork.Extension.EUFSMKit
     {
         private EUFSM<TStateId> _fsm;
         private TOwner _owner;
+        protected EUFSM<TStateId> FSM => _fsm;
         protected TOwner Owner => _owner;
 
         public EUAbsStateBase(EUFSM<TStateId> fsm, TOwner owner)

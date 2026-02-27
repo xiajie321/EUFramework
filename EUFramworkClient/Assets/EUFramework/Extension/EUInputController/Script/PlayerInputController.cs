@@ -22,11 +22,15 @@ namespace EUFramework.Extension.EUInputController
             get => _gamepad;
             internal set => BindGamepad(value);
         }
+
+        public InputController Controller => _controller;
         internal PlayerInputController()
         {
             _controller = new InputController();
+            BindGamepad(null);
             _controller.Player.SetCallbacks(this);
             _controller.Player.Enable();
+            _controller.UI.Enable();
         }
         /// <summary>
         /// 绑定游戏手柄
@@ -40,6 +44,7 @@ namespace EUFramework.Extension.EUInputController
                 {
                     Keyboard.current
                 };
+                return;
             }
             _gamepad = gamepad;
             _controller.devices= new[]
