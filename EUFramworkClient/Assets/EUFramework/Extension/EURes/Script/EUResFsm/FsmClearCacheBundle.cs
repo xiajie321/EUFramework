@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
+using UnityEngine;
 
 namespace EUFramework.Extension.EURes
 {
@@ -15,6 +16,7 @@ namespace EUFramework.Extension.EURes
         public void OnEnter()
         {
             var packageName = (string)_machine.GetBlackboardValue("PackageName");
+            Debug.Log($"[Fsm] FsmClearCacheBundle OnEnter package={packageName} 即将 ClearCacheFilesAsync");
             var package = YooAssets.GetPackage(packageName);
             var operation = package.ClearCacheFilesAsync(EFileClearMode.ClearUnusedBundleFiles);
             operation.Completed += Operation_Completed;
@@ -24,6 +26,7 @@ namespace EUFramework.Extension.EURes
 
         private void Operation_Completed(YooAsset.AsyncOperationBase obj)
         {
+            Debug.Log("[Fsm] FsmClearCacheBundle Operation_Completed，即将 ChangeState FsmStartGame");
             _machine.ChangeState<FsmStartGame>();
         }
 

@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "EUUI",
     "rootNamespace": "EUFramework.Extension.EUUI",
     "references": [
@@ -7,6 +7,8 @@
         "EURes"
     ,
         "YooAsset"
+    ,
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

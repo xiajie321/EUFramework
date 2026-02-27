@@ -307,7 +307,7 @@ namespace EUFramework.Extension.EURes
                 if (popup != null)
                 {
                     // 使用反射调用 Show 方法
-                    var showMethod = popup.GetType().GetMethod("Show", 
+                    var showMethod = popup.GetType().GetMethod("Show",
                         new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
                     if (showMethod != null)
                     {
@@ -315,10 +315,14 @@ namespace EUFramework.Extension.EURes
                             "初始化失败",
                             $"资源包 [{packageName}] 初始化失败\n是否重试？",
                             (Action)(() => patchOperation.UserRetryInitialize()),
-                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消初始化资源包: {packageName}"))
+                            (Action)(() => { Debug.LogError($"[EUResKit] 用户取消初始化资源包: {packageName}"); patchOperation.UserCancel(); })
                         });
                     }
+                    else
+                        patchOperation.UserCancel();
                 }
+                else
+                    patchOperation.UserCancel();
             };
             
             // 2. 版本请求失败回调
@@ -327,7 +331,7 @@ namespace EUFramework.Extension.EURes
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    var showMethod = popup.GetType().GetMethod("Show", 
+                    var showMethod = popup.GetType().GetMethod("Show",
                         new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
                     if (showMethod != null)
                     {
@@ -335,10 +339,14 @@ namespace EUFramework.Extension.EURes
                             "版本检查失败",
                             $"无法获取资源包 [{packageName}] 的版本信息\n请检查网络连接后重试",
                             (Action)(() => patchOperation.UserRetryRequestVersion()),
-                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消版本检查: {packageName}"))
+                            (Action)(() => { Debug.LogError($"[EUResKit] 用户取消版本检查: {packageName}"); patchOperation.UserCancel(); })
                         });
                     }
+                    else
+                        patchOperation.UserCancel();
                 }
+                else
+                    patchOperation.UserCancel();
             };
             
             // 3. 清单更新失败回调
@@ -347,7 +355,7 @@ namespace EUFramework.Extension.EURes
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    var showMethod = popup.GetType().GetMethod("Show", 
+                    var showMethod = popup.GetType().GetMethod("Show",
                         new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
                     if (showMethod != null)
                     {
@@ -355,10 +363,14 @@ namespace EUFramework.Extension.EURes
                             "更新失败",
                             $"资源包 [{packageName}] 清单更新失败\n是否重试？",
                             (Action)(() => patchOperation.UserRetryUpdateManifest()),
-                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消清单更新: {packageName}"))
+                            (Action)(() => { Debug.LogError($"[EUResKit] 用户取消清单更新: {packageName}"); patchOperation.UserCancel(); })
                         });
                     }
+                    else
+                        patchOperation.UserCancel();
                 }
+                else
+                    patchOperation.UserCancel();
             };
             
             // 4. 发现更新文件回调
@@ -368,7 +380,7 @@ namespace EUFramework.Extension.EURes
                 if (popup != null)
                 {
                     float sizeMB = totalBytes / (1024f * 1024f);
-                    var showMethod = popup.GetType().GetMethod("Show", 
+                    var showMethod = popup.GetType().GetMethod("Show",
                         new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
                     if (showMethod != null)
                     {
@@ -376,10 +388,14 @@ namespace EUFramework.Extension.EURes
                             "发现新版本",
                             $"需要下载 {totalCount} 个文件\n大小: {sizeMB:F2} MB\n是否开始下载？",
                             (Action)(() => patchOperation.UserBeginDownloadWebFiles()),
-                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消下载: {packageName}"))
+                            (Action)(() => { Debug.LogError($"[EUResKit] 用户取消下载: {packageName}"); patchOperation.UserCancel(); })
                         });
                     }
+                    else
+                        patchOperation.UserCancel();
                 }
+                else
+                    patchOperation.UserCancel();
             };
             
             // 5. 下载错误回调
@@ -388,7 +404,7 @@ namespace EUFramework.Extension.EURes
                 var popup = GetPopup();
                 if (popup != null)
                 {
-                    var showMethod = popup.GetType().GetMethod("Show", 
+                    var showMethod = popup.GetType().GetMethod("Show",
                         new System.Type[] { typeof(string), typeof(string), typeof(Action), typeof(Action) });
                     if (showMethod != null)
                     {
@@ -396,10 +412,14 @@ namespace EUFramework.Extension.EURes
                             "下载失败",
                             $"文件下载失败\n文件: {fileName}\n错误: {errorInfo}\n是否重试？",
                             (Action)(() => patchOperation.UserBeginDownloadWebFiles()),
-                            (Action)(() => Debug.LogError($"[EUResKit] 用户取消下载重试: {packageName}"))
+                            (Action)(() => { Debug.LogError($"[EUResKit] 用户取消下载重试: {packageName}"); patchOperation.UserCancel(); })
                         });
                     }
+                    else
+                        patchOperation.UserCancel();
                 }
+                else
+                    patchOperation.UserCancel();
             };
             
             // 6. 下载进度回调
@@ -430,7 +450,7 @@ namespace EUFramework.Extension.EURes
                 YooAssets.Initialize();
                 _isYooAssetInitialized = true;
             }
-            
+
             var config = LoadPackageConfig();
             if (config == null)
             {
@@ -438,7 +458,6 @@ namespace EUFramework.Extension.EURes
                 onAllCompleted?.Invoke(false);
                 return false;
             }
-            
             var packages = config.GetAllPackages();
             if (packages == null || packages.Count == 0)
             {
@@ -447,12 +466,12 @@ namespace EUFramework.Extension.EURes
                 return false;
             }           
             bool allSuccess = true;
-            
+
             foreach (var packageInfo in packages)
             {
+                if(packageInfo.packageName=="Builtin") continue;
                 // 调用 Generated 分部类的初始化方法
                 bool success = await InitPackageResAsync(packageInfo.packageName, packageInfo.playMode);
-                
                 if (success)
                 {
                     // 只设置配置中明确标记的默认包
@@ -473,13 +492,11 @@ namespace EUFramework.Extension.EURes
                     onPackageInitialized?.Invoke(packageInfo.packageName, false);
                 }
             }
-            
             // 回调：所有包初始化完成
             onAllCompleted?.Invoke(allSuccess);
             
             // 清理过程资源（下载进度回调、UI Canvas、Popup 实例等）
             ClearProcessResources();
-            
             return allSuccess;
         }
         

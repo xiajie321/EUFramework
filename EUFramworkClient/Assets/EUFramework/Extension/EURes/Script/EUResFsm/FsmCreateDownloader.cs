@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
+using UnityEngine;
 
 namespace EUFramework.Extension.EURes
 {
@@ -14,6 +15,7 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
+            Debug.Log("[Fsm] FsmCreateDownloader OnEnter");
             CreateDownloader();
         }
 
@@ -27,12 +29,14 @@ namespace EUFramework.Extension.EURes
             _machine.SetBlackboardValue("Downloader", downloader);
             if (downloader.TotalDownloadCount == 0)
             {
+                Debug.Log("[Fsm] FsmCreateDownloader 无待下载，即将 ChangeState FsmStartGame");
                 _machine.ChangeState<FsmStartGame>();
             }
             else
             {
                 int totalDownloadCount = downloader.TotalDownloadCount;
                 long totalDownloadBytes = downloader.TotalDownloadBytes;
+                Debug.Log($"[Fsm] FsmCreateDownloader 有待下载 count={totalDownloadCount} bytes={totalDownloadBytes}，触发 OnFoundUpdateFiles");
                 (_machine.Owner as EUResKitPatchOperation)?.OnFoundUpdateFiles?.Invoke(totalDownloadCount, totalDownloadBytes);
             }
 
