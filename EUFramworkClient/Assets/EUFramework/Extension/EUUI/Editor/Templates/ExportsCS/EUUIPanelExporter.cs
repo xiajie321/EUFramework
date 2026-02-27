@@ -317,7 +317,8 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                     is_gen = true,
                     namespace_name = ns,
                     class_name = className,
-                    members = members
+                    members = members,
+                    package_type = desc.PackageType.ToString()
                 });
                 EnsureDirectory(bindDir);
                 string genPath = Path.Combine(bindDir, className + ".Generated.cs").Replace("\\", "/");
@@ -429,9 +430,8 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             EnsureDirectory(folderPath);
             string prefabPath = $"{folderPath}/{panelName}.prefab".Replace("\\", "/");
 
-            PrefabUtility.SaveAsPrefabAsset(exportRoot, prefabPath);
-
-            if (AssetDatabase.LoadMainAssetAtPath(prefabPath) == null)
+            GameObject savedRoot = PrefabUtility.SaveAsPrefabAsset(exportRoot, prefabPath);
+            if (savedRoot == null)
             {
                 Debug.LogError($"[EUUI] Prefab 保存失败（路径: {prefabPath}）。若控制台提示「缺失脚本」，请先移除 UIRoot 上的缺失组件、确保生成脚本已编译，再重新执行「自动绑定并导出 Prefab」。");
                 return;
