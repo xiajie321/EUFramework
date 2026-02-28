@@ -43,7 +43,7 @@ namespace EUFramework.Extension.EUInputController
         private Action<InputDevice> _onAddedDevice;
         private Action<InputDevice> _onRemovedDevice;
         private Action<EUMainInputControllerChangeData> _onMainInputControllerChange;
-        private Action<EUPlayerInputOfDeviceChangeData> _onPlayerInputOfDeviceChange;
+        private Action<EUPlayerInputOfDeviceChangeData> _onPlayerInputControllerOfDeviceChange;
         private PlayerInputController _mainPlayerInputController; //主控玩家控制器
         private List<PlayerInputController> _playerInputControllerList; //用来记录玩家控制器进入的先后顺序
         private List<InputDevice> _playerInputDeviceList;//用来记录玩家控制设备进入的先后顺序
@@ -116,7 +116,7 @@ namespace EUFramework.Extension.EUInputController
             
             InputSystem.onDeviceChange += OnDeviceChange;
 #if UNITY_EDITOR
-            Debug.Log($"[EUInputController] 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+            LogDebugData("初始化");
 #endif
         }
 
@@ -127,7 +127,7 @@ namespace EUFramework.Extension.EUInputController
             {
                 AddPlayerInputDevice(inputDevice.deviceId, inputDevice);
 #if UNITY_EDITOR
-                Debug.Log($"[EUInputController] 接入手柄设备 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+                LogDebugData("设备加入");
 #endif
             }
 
@@ -135,7 +135,7 @@ namespace EUFramework.Extension.EUInputController
             {
                 RemovePlayerInputDevice(inputDevice.deviceId);
 #if UNITY_EDITOR
-                Debug.Log($"[EUInputController] 移除手柄设备 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+                LogDebugData("设备移除");
 #endif
             }
 
@@ -199,31 +199,46 @@ namespace EUFramework.Extension.EUInputController
         {
             if(playerInputController.Gamepad == inputDevice) return;
             int id = GetPlayerInputControllerId(playerInputController);
-            if (inputDevice is Gamepad device)
+            
+            if (inputDevice == null)
             {
-                _onPlayerInputOfDeviceChange?.Invoke(new()
+                _onPlayerInputControllerOfDeviceChange?.Invoke(new()
                 {
                     ChangeOfPlayerInputController = playerInputController,
                     LastGamepad = playerInputController.Gamepad,
-                    CurrentGamepad = (Gamepad)inputDevice
+                    CurrentGamepad = null
                 });
-                playerInputController.BindGamepad(device);
-                if (_devicesIdAndIdMap[inputDevice.deviceId] != -1)//该设备原先有对应的控制器
+                if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
                 {
-                    SetPlayerInputControllerOfDevice(_playerInputControllerMap[_devicesIdAndIdMap[inputDevice.deviceId]],null);//设置该设备原先的控制器为空
+                    _devicesIdAndIdMap[_idAndDevicesIdMap[id]] = -1;//将该设备原先的控制器标记为无对应引用
+                    _idAndDevicesIdMap[id] = -1;//标记当前控制器对应的设备为无对应引用
                 }
-                _idAndDevicesIdMap[id] = inputDevice.deviceId;
-                _devicesIdAndIdMap[inputDevice.deviceId] = id;
-                return;
+                playerInputController.BindGamepad(null);
+#if UNITY_EDITOR
+                LogDebugData("绑定设备.null");
+#endif
             }
 
-            if (inputDevice != null) return;
-            if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
+            if (inputDevice is not Gamepad device) return;
+            _onPlayerInputControllerOfDeviceChange?.Invoke(new()
             {
-                _devicesIdAndIdMap[_idAndDevicesIdMap[id]] = -1;//将该设备原先的控制器标记为无对应引用
-                _idAndDevicesIdMap[id] = -1;//标记当前控制器对应的设备为无对应引用
+                ChangeOfPlayerInputController = playerInputController,
+                LastGamepad = playerInputController.Gamepad,
+                CurrentGamepad = (Gamepad)inputDevice
+            });
+            playerInputController.BindGamepad(device);
+            if (_idAndDevicesIdMap[id] != -1)//该设备原先有对应的控制器
+            {
+                var lsId =  _idAndDevicesIdMap[id];
+                var lsPlayerInputController = GetPlayerInputController(_devicesIdAndIdMap[lsId]);
+                _devicesIdAndIdMap[lsId] = -1;
+                lsPlayerInputController.BindGamepad(null);
             }
-            playerInputController.BindGamepad(null);
+            _idAndDevicesIdMap[id] = inputDevice.deviceId;
+            _devicesIdAndIdMap[inputDevice.deviceId] = id;
+#if UNITY_EDITOR
+            LogDebugData("绑定设备");
+#endif
         }
         /// <summary>
         /// 绑定玩家输入控制器的输入设备
@@ -333,6 +348,24 @@ namespace EUFramework.Extension.EUInputController
         /// </summary>
         public void RemoveAllMainPlayerInputControllerChangeListener() => _onMainInputControllerChange = null;
 
+        /// <summary>
+        /// 添加玩家控制器的设备改变的事件
+        /// </summary>
+        public void AddPlayerInputControllerOfDeviceChangeListener(
+            Action<EUPlayerInputOfDeviceChangeData> onPlayerInputControllerOfDeviceChange) =>
+            _onPlayerInputControllerOfDeviceChange += onPlayerInputControllerOfDeviceChange;
+        
+        /// <summary>
+        /// 移除玩家控制器的设备改变的事件
+        /// </summary>
+        public void RemovePlayerInputControllerOfDeviceChangeListener(
+            Action<EUPlayerInputOfDeviceChangeData> onPlayerInputControllerOfDeviceChange) =>
+            _onPlayerInputControllerOfDeviceChange -= onPlayerInputControllerOfDeviceChange;
+        
+        /// <summary>
+        /// 移除所有玩家控制器的设备改变的事件
+        /// </summary>
+        public void RemoveAllPlayerInputControllerOfDeviceChangeListener() => _onPlayerInputControllerOfDeviceChange = null;
         #endregion
 
         #region 玩家输入控制器设备相关
@@ -433,5 +466,63 @@ namespace EUFramework.Extension.EUInputController
         public void RemoveAllPlayerInputDeviceRemovedListener() => _onRemovedDevice = null;
 
         #endregion
+
+#if UNITY_EDITOR
+        private void LogDebugData(string log = "")
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[EUInputController] {log}");
+            
+            sb.AppendLine($"[EUInputController] 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+            
+            sb.AppendLine("[EUInputController] 调试数据:");
+            
+            sb.AppendLine($"_mainPlayerInputController (主玩家控制器): {_mainPlayerInputController}");
+
+            sb.AppendLine($"_playerInputControllerList (玩家控制器列表) 数量: {_playerInputControllerList.Count}");
+            for(int i = 0; i < _playerInputControllerList.Count; i++)
+            {
+                sb.AppendLine($"  索引: {i}, 值: {_playerInputControllerList[i]}");
+            }
+
+            sb.AppendLine($"_playerInputDeviceList (玩家输入设备列表) 数量: {_playerInputDeviceList.Count}");
+            for(int i = 0; i < _playerInputDeviceList.Count; i++)
+            {
+                var device = _playerInputDeviceList[i];
+                sb.AppendLine($"  索引: {i}, 设备ID: {device.deviceId}, 设备名称: {device.name}");
+            }
+
+            sb.AppendLine($"_playerInputControllerMap 数量: {_playerInputControllerMap.Count}");
+            foreach(var kvp in _playerInputControllerMap)
+            {
+                sb.AppendLine($"  键: {kvp.Key}, 值: {kvp.Value}");
+            }
+
+            sb.AppendLine($"_playerInputControllerMapId 数量: {_playerInputControllerMapId.Count}");
+            foreach(var kvp in _playerInputControllerMapId)
+            {
+                sb.AppendLine($"  键: {kvp.Key}, 值: {kvp.Value}");
+            }
+
+            sb.AppendLine($"_playerInputDeviceMap 数量: {_playerInputDeviceMap.Count}");
+            foreach(var kvp in _playerInputDeviceMap)
+            {
+                sb.AppendLine($"  键: {kvp.Key}, 值: {kvp.Value.name}");
+            }
+
+            sb.AppendLine($"_idAndDevicesIdMap 数量: {_idAndDevicesIdMap.Count}");
+            foreach(var kvp in _idAndDevicesIdMap)
+            {
+                sb.AppendLine($"控制器ID: {kvp.Key}, 设备ID: {kvp.Value}");
+            }
+
+            sb.AppendLine($"_devicesIdAndIdMap 数量: {_devicesIdAndIdMap.Count}");
+            foreach(var kvp in _devicesIdAndIdMap)
+            {
+                sb.AppendLine($"设备ID: {kvp.Key}, 控制器ID: {kvp.Value}");
+            }
+            Debug.Log(sb.ToString());
+        }
+#endif
     }
 }
