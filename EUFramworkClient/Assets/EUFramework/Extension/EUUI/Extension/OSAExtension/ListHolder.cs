@@ -1,6 +1,7 @@
 using System;
 using Com.ForbiddenByte.OSA.Core;
 using Com.ForbiddenByte.OSA.CustomAdapters.GridView;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace EUUI.Extension
@@ -9,6 +10,12 @@ namespace EUUI.Extension
         where TData : class
     {
         public Action<int> OnClicked;
+
+        /// <summary>
+        /// 图集 Sprite 加载委托，由 Adapter 在 CreateViewsHolder 时注入
+        /// url 格式：atlasName/spriteName
+        /// </summary>
+        public Func<string, Sprite> SpriteLoader;
 
         public sealed override void CollectViews()
         {
@@ -31,6 +38,12 @@ namespace EUUI.Extension
         where TData : class
     {
         public Action<int> OnClicked;
+
+        /// <summary>
+        /// 图集 Sprite 加载委托，由 Adapter 在 OnCellViewsHolderCreated 时注入
+        /// url 格式：atlasName/spriteName
+        /// </summary>
+        public Func<string, Sprite> SpriteLoader;
 
         public sealed override void CollectViews()
         {

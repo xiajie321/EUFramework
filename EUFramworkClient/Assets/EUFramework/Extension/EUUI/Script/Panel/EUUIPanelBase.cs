@@ -11,7 +11,7 @@ namespace EUFramework.Extension.EUUI
     /// <summary>
     /// EUUI 面板基类（参考 Doc/UIPanelBase.cs.txt）
     /// </summary>
-    public abstract class EUUIPanelBase<TPanel> : MonoBehaviour, IEUUIPanel
+    public abstract partial class EUUIPanelBase<TPanel> : MonoBehaviour, IEUUIPanel
         where TPanel : EUUIPanelBase<TPanel>
     {
         public abstract string PackageName { get; }
@@ -104,8 +104,12 @@ namespace EUFramework.Extension.EUUI
             }
         }
 
+        partial void OnClear();
+
         private void Clear()
         {
+            OnClear();
+
             foreach (var button in _buttons)
                 button.onClick.RemoveAllListeners();
             _buttons.Clear();

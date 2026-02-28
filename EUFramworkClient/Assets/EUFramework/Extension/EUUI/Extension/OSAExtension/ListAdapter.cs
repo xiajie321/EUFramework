@@ -4,6 +4,7 @@ using Com.ForbiddenByte.OSA.Core;
 using Com.ForbiddenByte.OSA.CustomParams;
 using Com.ForbiddenByte.OSA.CustomAdapters.GridView;
 using Com.ForbiddenByte.OSA.DataHelpers;
+using UnityEngine;
 
 namespace EUUI.Extension
 {
@@ -15,7 +16,14 @@ namespace EUUI.Extension
         where TVH : FrameworkListViewsHolder<TData>, new()
     {
         public SimpleDataHelper<TData> Data { get; private set; }
-        public  Action<int, TData> OnItemClick;
+        public Action<int, TData> OnItemClick;
+
+        /// <summary>
+        /// 图集 Sprite 加载委托，由面板层赋值，创建 VH 时自动注入
+        /// url 格式：atlasName/spriteName
+        /// </summary>
+        public Func<string, Sprite> SpriteLoader;
+
         public int Count => Data?.Count ?? 0;
 
         protected override void Start()
@@ -29,6 +37,7 @@ namespace EUUI.Extension
             var vh = new TVH();
             vh.Init(_Params.ItemPrefab, _Params.Content, itemIndex);
             vh.OnClicked = idx => OnItemClick?.Invoke(idx, Data[idx]);
+            vh.SpriteLoader = SpriteLoader;
             return vh;
         }
 
@@ -75,6 +84,13 @@ namespace EUUI.Extension
     {
         public SimpleDataHelper<TData> Data { get; private set; }
         public event Action<int, TData> OnItemClick;
+
+        /// <summary>
+        /// 图集 Sprite 加载委托，由面板层赋值，创建 VH 时自动注入
+        /// url 格式：atlasName/spriteName
+        /// </summary>
+        public Func<string, Sprite> SpriteLoader;
+
         public int Count => Data?.Count ?? 0;
 
         protected override void Start()
@@ -87,6 +103,7 @@ namespace EUUI.Extension
         {
             base.OnCellViewsHolderCreated(cellVH, cellGroup);
             cellVH.OnClicked = idx => OnItemClick?.Invoke(idx, Data[idx]);
+            cellVH.SpriteLoader = SpriteLoader;
         }
 
         protected override void UpdateCellViewsHolder(TCellVH viewsHolder)
