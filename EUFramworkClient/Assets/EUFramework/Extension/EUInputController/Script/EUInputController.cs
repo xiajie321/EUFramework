@@ -76,7 +76,7 @@ namespace EUFramework.Extension.EUInputController
 
         private static int _id = 0;
         /// <summary>
-        /// 初始化
+        /// 初始化大部分情况下调用方法就会自动初始化
         /// </summary>
         public static void Init()
         {
@@ -210,6 +210,13 @@ namespace EUFramework.Extension.EUInputController
             }
 
             if (inputDevice is not Gamepad device) return;
+            
+            // 检查该设备是否已经被其他控制器绑定，如果是，则先解除绑定
+            if (_devicesIdAndIdMap.TryGetValue(device.deviceId, out int oldOwnerId) && oldOwnerId != -1 && oldOwnerId != id)
+            {
+                SetPlayerInputControllerOfDevice(GetPlayerInputController(oldOwnerId), null);
+            }
+
             _onPlayerInputControllerOfDeviceChange?.Invoke(new()
             {
                 ChangeOfPlayerInputController = playerInputController,
@@ -217,12 +224,10 @@ namespace EUFramework.Extension.EUInputController
                 CurrentGamepad = (Gamepad)inputDevice
             });
             playerInputController.BindGamepad(device);
-            if (_idAndDevicesIdMap[id] != -1)
+            if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
             {
-                var lsId =  _idAndDevicesIdMap[id];
-                var lsPlayerInputController = GetPlayerInputController(_devicesIdAndIdMap[lsId]);
-                _devicesIdAndIdMap[lsId] = -1;
-                lsPlayerInputController.BindGamepad(null);
+                var oldDeviceId =  _idAndDevicesIdMap[id];
+                _devicesIdAndIdMap[oldDeviceId] = -1;
             }
             _idAndDevicesIdMap[id] = inputDevice.deviceId;
             _devicesIdAndIdMap[inputDevice.deviceId] = id;

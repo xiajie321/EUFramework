@@ -1,11 +1,11 @@
 using EUFramework.Extension.EUInputController;
-using EUFramwork.Extension.EUFSMKit;
 using UnityEngine;
-
+#if UNITY_EDITOR
 public class InputTest : MonoBehaviour
 {
     private void Start()
     {
+        //----------回调注册可以在初始化前去提前注册,这样在调用非回调的方法时就会初始化已经接入的设备连接情况
         EUInputController.AddMainPlayerInputControllerChangeListener(v =>
         {
             //Debug.Log($"回调测试 {v.CurrentPlayerInputController}");
@@ -32,3 +32,4 @@ public class InputTest : MonoBehaviour
         Debug.Log(EUInputController.GetMainPlayerInputController());
     }
 }
+#endif
