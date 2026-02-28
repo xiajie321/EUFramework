@@ -15,7 +15,7 @@ namespace EUUI.Extension
         where TVH : FrameworkListViewsHolder<TData>, new()
     {
         public SimpleDataHelper<TData> Data { get; private set; }
-        public event Action<int, TData> OnItemClick;
+        public  Action<int, TData> OnItemClick;
         public int Count => Data?.Count ?? 0;
 
         protected override void Start()

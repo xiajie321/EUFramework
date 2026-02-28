@@ -293,14 +293,14 @@ namespace Framework.Editor
             string packageName = "Common";
             string namespaceName = "Game.UI";
 
-            if (Selection.activeGameObject != null)
+            EUUIPanelDescription desc = Selection.activeGameObject?.GetComponentInParent<EUUIPanelDescription>();
+            if (desc == null)
+                desc = UnityEngine.Object.FindObjectOfType<EUUIPanelDescription>();
+
+            if (desc != null)
             {
-                var desc = Selection.activeGameObject.GetComponentInParent<EUUIPanelDescription>();
-                if (desc != null)
-                {
-                    if (!string.IsNullOrEmpty(desc.PackageName)) packageName = desc.PackageName;
-                    if (!string.IsNullOrEmpty(desc.Namespace)) namespaceName = desc.Namespace;
-                }
+                if (!string.IsNullOrEmpty(desc.PackageName)) packageName = desc.PackageName;
+                if (!string.IsNullOrEmpty(desc.Namespace)) namespaceName = desc.Namespace;
             }
 
             ShowWindow(isGrid, packageName, namespaceName, null, null);
@@ -484,55 +484,132 @@ namespace Framework.Editor
     }
 
     /// <summary>
-    /// ViewsHolder 生成器弹窗 - 从 Prefab 分析 UI 组件，生成绑定代码
+    /// ViewsHolder 绑定生成器 - 扫描已有 VH 逻辑文件，仅生成 .Generated.cs 绑定部分
     /// </summary>
     public class ViewsHolderGeneratorWindow : EditorWindow
     {
         private GameObject _prefab;
-        private string _className = "";
-        private string _dataClassName = "";
         private string _namespace = "Game.UI";
         private string _packageName = "Common";
         private bool _isGrid = false;
         private List<ListViewEditor.UIComponentInfo> _components;
         private Vector2 _scrollPos;
 
+        // VH 类名选择
+        private List<string> _vhClassNames = new List<string>();
+        private int _selectedVhIndex = 0;
+        private string _manualClassName = "";
+
+        private string SelectedClassName =>
+            _vhClassNames.Count > 0 ? _vhClassNames[_selectedVhIndex] : _manualClassName;
+
         public static void ShowWindow(GameObject prefab, bool isGrid = false)
         {
-            var window = GetWindow<ViewsHolderGeneratorWindow>(true, "生成 ViewsHolder");
+            var window = GetWindow<ViewsHolderGeneratorWindow>(true, "生成 VH 绑定");
             window._prefab = prefab;
-            window._className = prefab.name + "VH";
-            window._dataClassName = prefab.name + "Data";
-            window._isGrid = isGrid;
             window._components = ListViewEditor.AnalyzePrefab(prefab);
 
-            var desc = prefab.GetComponentInParent<EUUIPanelDescription>();
+            EUUIPanelDescription desc = prefab.GetComponentInParent<EUUIPanelDescription>();
+            if (desc == null)
+                desc = UnityEngine.Object.FindObjectOfType<EUUIPanelDescription>();
             if (desc != null)
             {
                 if (!string.IsNullOrEmpty(desc.PackageName)) window._packageName = desc.PackageName;
                 if (!string.IsNullOrEmpty(desc.Namespace)) window._namespace = desc.Namespace;
             }
 
-            window.minSize = new Vector2(420, 430);
+            window.ScanVHFiles(prefab.name);
+            window.minSize = new Vector2(420, 380);
             window.CenterOnMainWin();
+        }
+
+        private void ScanVHFiles(string prefabName)
+        {
+            _vhClassNames.Clear();
+            _selectedVhIndex = 0;
+
+            var config = OSAListViewConfig.GetOrCreate();
+            string logicDir = ListViewEditor.ToFullPath(
+                Path.Combine(OSAListViewConfig.GetLogicScriptsRoot(), _packageName, config.listViewSubFolder));
+
+            if (!Directory.Exists(logicDir))
+            {
+                _manualClassName = prefabName + "VH";
+                return;
+            }
+
+            foreach (var file in Directory.GetFiles(logicDir, "*VH.cs"))
+                _vhClassNames.Add(Path.GetFileNameWithoutExtension(file));
+
+            if (_vhClassNames.Count == 0)
+            {
+                _manualClassName = prefabName + "VH";
+                return;
+            }
+
+            // 按 Prefab 名前缀自动匹配：去掉 Item 后缀再做前缀比较
+            string prefix = System.Text.RegularExpressions.Regex.Replace(prefabName, "(?i)item$", "").ToLower();
+            int bestIdx = 0, bestScore = -1;
+            for (int i = 0; i < _vhClassNames.Count; i++)
+            {
+                string lower = _vhClassNames[i].ToLower();
+                if (lower.StartsWith(prefix) && prefix.Length > bestScore)
+                {
+                    bestScore = prefix.Length;
+                    bestIdx = i;
+                }
+            }
+            _selectedVhIndex = bestIdx;
+
+            DetectIsGrid(logicDir);
+        }
+
+        private void DetectIsGrid(string logicDir)
+        {
+            if (_vhClassNames.Count == 0) return;
+            string file = Path.Combine(logicDir, $"{_vhClassNames[_selectedVhIndex]}.cs");
+            if (!File.Exists(file)) return;
+            _isGrid = File.ReadAllText(file).Contains("FrameworkGridViewsHolder");
         }
 
         private void OnGUI()
         {
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("基本设置", EditorStyles.boldLabel);
-            _className = EditorGUILayout.TextField("ViewsHolder 类名:", _className);
-            _dataClassName = EditorGUILayout.TextField("Data 类名:", _dataClassName);
-            _namespace = EditorGUILayout.TextField("命名空间:", _namespace);
-            _packageName = EditorGUILayout.TextField("PackageName:", _packageName);
-            _isGrid = EditorGUILayout.Toggle("Grid 模式:", _isGrid);
+            EditorGUILayout.LabelField("VH 绑定生成器", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.BeginVertical("box");
+
+            if (_vhClassNames.Count > 0)
+            {
+                int newIdx = EditorGUILayout.Popup("ViewsHolder 类名:", _selectedVhIndex, _vhClassNames.ToArray());
+                if (newIdx != _selectedVhIndex)
+                {
+                    _selectedVhIndex = newIdx;
+                    var config = OSAListViewConfig.GetOrCreate();
+                    string logicDir = ListViewEditor.ToFullPath(
+                        Path.Combine(OSAListViewConfig.GetLogicScriptsRoot(), _packageName, config.listViewSubFolder));
+                    DetectIsGrid(logicDir);
+                }
+            }
+            else
+            {
+                _manualClassName = EditorGUILayout.TextField("ViewsHolder 类名:", _manualClassName);
+            }
+
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.TextField("命名空间:", _namespace);
+            EditorGUILayout.Toggle("Grid 模式:", _isGrid);
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(8);
             EditorGUILayout.LabelField($"检测到 {_components?.Count ?? 0} 个 UI 组件:", EditorStyles.boldLabel);
 
             if (_components != null)
             {
-                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(150));
+                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(130));
                 foreach (var comp in _components)
                 {
                     EditorGUILayout.BeginHorizontal();
@@ -548,7 +625,7 @@ namespace Framework.Editor
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("刷新组件", GUILayout.Height(30)))
                 _components = ListViewEditor.AnalyzePrefab(_prefab);
-            if (GUILayout.Button("生成代码", GUILayout.Height(30)))
+            if (GUILayout.Button("生成绑定", GUILayout.Height(30)))
                 GenerateCode();
             EditorGUILayout.EndHorizontal();
 
@@ -557,18 +634,17 @@ namespace Framework.Editor
 
         private void GenerateCode()
         {
-            if (string.IsNullOrEmpty(_className) || string.IsNullOrEmpty(_dataClassName))
+            string className = SelectedClassName;
+            if (string.IsNullOrEmpty(className))
             {
                 EditorUtility.DisplayDialog("错误", "类名不能为空！", "确定");
                 return;
             }
 
             string genTplPath = ListViewEditor.GetTemplatePath("ViewsHolder.Generated.sbn");
-            string logicTplPath = ListViewEditor.GetTemplatePath("ViewsHolder.sbn");
-
-            if (!File.Exists(genTplPath) || !File.Exists(logicTplPath))
+            if (!File.Exists(genTplPath))
             {
-                EditorUtility.DisplayDialog("错误", "模板文件不存在", "确定");
+                EditorUtility.DisplayDialog("错误", $"模板文件不存在！\n{genTplPath}", "确定");
                 return;
             }
 
@@ -578,33 +654,19 @@ namespace Framework.Editor
                 var ctx = new
                 {
                     namespace_name = _namespace,
-                    class_name = _className,
-                    data_class_name = _dataClassName,
-                    base_class = _isGrid ? "FrameworkGridViewsHolder" : "FrameworkListViewsHolder",
+                    class_name = className,
                     views_property = _isGrid ? "views" : "root",
                     members = _components
                 };
 
-                // Generated 文件
                 string genDir = config.holderGeneratedOutputPath;
                 ListViewEditor.EnsureDirectory(genDir);
-                string genPath = Path.Combine(genDir, $"{_className}.Generated.cs");
+                string genPath = Path.Combine(genDir, $"{className}.Generated.cs");
                 File.WriteAllText(genPath, Template.Parse(File.ReadAllText(genTplPath)).Render(ctx), Encoding.UTF8);
-                Debug.Log($"<color=white>[ListView] Generated 已生成: {genPath}</color>");
-
-                // Logic 文件（不覆盖已有文件）
-                string logicDir = Path.Combine(OSAListViewConfig.GetLogicScriptsRoot(), _packageName, config.listViewSubFolder);
-                ListViewEditor.EnsureDirectory(logicDir);
-                string logicPath = Path.Combine(logicDir, $"{_className}.cs");
-                if (!File.Exists(logicPath))
-                {
-                    File.WriteAllText(logicPath, Template.Parse(File.ReadAllText(logicTplPath)).Render(ctx), Encoding.UTF8);
-                    Debug.Log($"<color=cyan>[ListView] Logic 已生成: {logicPath}</color>");
-                }
 
                 AssetDatabase.Refresh();
-                EditorUtility.DisplayDialog("成功",
-                    $"ViewsHolder 生成完成！\n\nGenerated: {genPath}\nLogic: {logicPath}", "确定");
+                Debug.Log($"<color=white>[ListView] VH 绑定已生成: {genPath}</color>");
+                EditorUtility.DisplayDialog("成功", $"VH 绑定生成完成！\n\n{genPath}", "确定");
                 Close();
             }
             catch (Exception e)
