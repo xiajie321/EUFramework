@@ -12,8 +12,8 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
     /// </summary>
     public class EUAudioConfigWindow : EditorWindow
     {
-        private const string CONFIG_PATH = "Assets/Resources/EUAudio/EUAudioConfig.asset";
-        private const string CONFIG_FOLDER = "Assets/Resources/EUAudio";
+        private string _configPath;
+        private string _configFolder;
         
         private EUAudioConfig _currentConfig;
         private Slider _soundVolumeSlider;
@@ -54,7 +54,12 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             var scriptPath = AssetDatabase.GetAssetPath(script);
             var scriptDirectory = Path.GetDirectoryName(scriptPath);
             
-            // 构建相对路径
+            // 计算配置文件的相对路径（Editor文件夹的上级目录/Resources/EUAudio）
+            var extensionDirectory = Path.GetDirectoryName(scriptDirectory); // 获取Extension/EUAudio目录
+            _configFolder = Path.Combine(extensionDirectory, "Resources", "EUAudio").Replace("\\", "/");
+            _configPath = Path.Combine(_configFolder, "EUAudioConfig.asset").Replace("\\", "/");
+            
+            // 构建UXML和USS路径
             var uxmlPath = Path.Combine(scriptDirectory, "EUAudioConfigPanel.uxml");
             var ussPath = Path.Combine(scriptDirectory, "EUAudioConfigPanel.uss");
             
@@ -118,7 +123,7 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
         private void LoadOrCreateConfig()
         {
             // 尝试加载现有配置
-            _currentConfig = AssetDatabase.LoadAssetAtPath<EUAudioConfig>(CONFIG_PATH);
+            _currentConfig = AssetDatabase.LoadAssetAtPath<EUAudioConfig>(_configPath);
             
             if (_currentConfig != null)
             {
@@ -188,9 +193,9 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             if (_currentConfig == null)
             {
                 // 确保目录存在
-                if (!AssetDatabase.IsValidFolder(CONFIG_FOLDER))
+                if (!AssetDatabase.IsValidFolder(_configFolder))
                 {
-                    string[] folders = CONFIG_FOLDER.Split('/');
+                    string[] folders = _configFolder.Split('/');
                     string currentPath = folders[0];
                     
                     for (int i = 1; i < folders.Length; i++)
@@ -206,7 +211,7 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
                 
                 // 创建配置文件
                 _currentConfig = CreateInstance<EUAudioConfig>();
-                AssetDatabase.CreateAsset(_currentConfig, CONFIG_PATH);
+                AssetDatabase.CreateAsset(_currentConfig, _configPath);
             }
             
             // 保存UI数据到配置
@@ -215,7 +220,7 @@ namespace EUFramwork.Extension.EUAudioKit.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             
-            ShowStatus($"配置已保存到: {CONFIG_PATH}", false);
+            ShowStatus($"配置已保存到: {_configPath}", false);
         }
         
         private void ShowStatus(string message, bool isError)
