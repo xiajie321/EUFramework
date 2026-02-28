@@ -4,32 +4,29 @@ using UnityEngine.InputSystem;
 
 namespace EUFramework.Extension.EUInputController
 {
-    public class PlayerInputController:InputController.IPlayerActions
+    
+    public sealed class PlayerInputController
     {
         private InputController _controller;//控制器
         private Gamepad _gamepad;//手柄绑定
-        private Action<InputAction.CallbackContext> _onMove;
-        private Action<InputAction.CallbackContext> _onJump;
-        private Action<InputAction.CallbackContext> _onInteraction;
-        private Action<InputAction.CallbackContext> _onRaise;
-        private Action<InputAction.CallbackContext> _onPickUp;
-        private Action<InputAction.CallbackContext> _onPushPull;
-        private Action<InputAction.CallbackContext> _onDiscard;
-        private Action<InputAction.CallbackContext> _onDisassemble;
-
-        //TODO 还需要处理按键映射
+        private PlayerInputEvent _playerInputEvent;
+        private UIInputEvent _uiInputEvent;
         public Gamepad Gamepad
         {
             get => _gamepad;
             internal set => BindGamepad(value);
         }
-
         public InputController Controller => _controller;
+        public PlayerInputEvent PlayerInputControllerEvent => _playerInputEvent;
+        public UIInputEvent UIInputControllerEvent => _uiInputEvent;
         internal PlayerInputController()
         {
             _controller = new InputController();
+            _playerInputEvent = new();
+            _uiInputEvent = new();
             BindGamepad(null);
-            _controller.Player.SetCallbacks(this);
+            _controller.Player.SetCallbacks(_playerInputEvent.Event);
+            _controller.UI.SetCallbacks(_uiInputEvent.Event);
             _controller.Player.Enable();
             _controller.UI.Enable();
         }
@@ -53,45 +50,6 @@ namespace EUFramework.Extension.EUInputController
             {
                 _gamepad
             };
-        }
-        public void OnMove(InputAction.CallbackContext context)
-        {
-            _onMove?.Invoke(context);
-        }
-
-        public void OnJump(InputAction.CallbackContext context)
-        {
-            _onJump?.Invoke(context);
-        }
-
-        public void OnInteraction(InputAction.CallbackContext context)
-        {
-            _onInteraction?.Invoke(context);
-        }
-
-        public void OnRaise(InputAction.CallbackContext context)
-        {
-            _onRaise?.Invoke(context);
-        }
-
-        public void OnPickUp(InputAction.CallbackContext context)
-        {
-            _onPickUp?.Invoke(context);
-        }
-
-        public void OnPushPull(InputAction.CallbackContext context)
-        {
-            _onPushPull?.Invoke(context);
-        }
-
-        public void OnDiscard(InputAction.CallbackContext context)
-        {
-            _onDiscard?.Invoke(context);
-        }
-
-        public void OnDisassemble(InputAction.CallbackContext context)
-        {
-            _onDisassemble?.Invoke(context);
         }
     }
 }
