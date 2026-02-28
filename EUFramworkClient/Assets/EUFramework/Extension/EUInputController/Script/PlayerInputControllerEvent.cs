@@ -31,7 +31,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         public void RemoveDisassembleListener(Action<InputAction.CallbackContext> action) => Event._onDisassemble -= action;
         public void RemoveAllDisassembleListener() => Event._onDisassemble = null;
     }
-    public sealed class PlayerInputControllerEvent:InputController.IPlayerActions
+    internal sealed class PlayerInputControllerEvent:InputController.IPlayerActions
     {
         internal PlayerInputControllerEvent(){}
         internal Action<InputAction.CallbackContext> _onMove;

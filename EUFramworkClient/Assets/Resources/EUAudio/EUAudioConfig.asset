@@ -19,3 +19,12 @@ MonoBehaviour:
   startSound: 10
   maxSound: 20
   soundDelayFrame: 10
+  soundPitch: 1
+  soundSpatialBlend: 0
+  soundPriority: 128
+  bgmPitch: 1
+  bgmSpatialBlend: 0
+  bgmPriority: 128
+  voicePitch: 1
+  voiceSpatialBlend: 0
+  voicePriority: 128

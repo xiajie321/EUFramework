@@ -5,7 +5,7 @@ public class InputTest : MonoBehaviour
 {
     private void Start()
     {
-        //----------回调注册可以在初始化前去提前注册,这样在调用非回调的方法时就会初始化已经接入的设备连接情况
+        //----------回调注册可以在初始化前去提前注册,这样在调用非回调的方法时就会初始化已经接入的设备连接情况----------
         EUInputController.AddMainPlayerInputControllerChangeListener(v =>
         {
             //Debug.Log($"回调测试 {v.CurrentPlayerInputController}");
@@ -30,6 +30,10 @@ public class InputTest : MonoBehaviour
             //Debug.Log($"回调测试 {v.deviceId}");
         });
         Debug.Log(EUInputController.GetMainPlayerInputController());
+        EUInputController.GetMainPlayerInputController().PlayerInputControllerEvent.AddMoveListener(v =>
+        {
+            Debug.Log(v.ReadValue<Vector2>());
+        });
     }
 }
 #endif

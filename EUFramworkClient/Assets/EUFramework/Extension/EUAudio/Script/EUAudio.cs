@@ -269,6 +269,7 @@ namespace EUFramwork.Extension.EUAudioKit
         /// 初始化音频系统
         /// 系统会在首次使用时自动初始化,也可以手动调用以控制初始化时机
         /// 如果存在配置文件,会自动加载配置
+        /// 添加事件不会触发初始化
         /// </summary>
         public static void Init()
         {

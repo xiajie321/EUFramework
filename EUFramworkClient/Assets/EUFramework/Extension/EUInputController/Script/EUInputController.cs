@@ -34,7 +34,8 @@ namespace EUFramework.Extension.EUInputControllerKit
         private static Dictionary<int, int> _idAndDevicesIdMap;//用于处理设备与控制器的映射关系方便通过控制器id快速找到对应设备
         private static Dictionary<int, int> _devicesIdAndIdMap;//用于处理设备与控制器的映射关系方便通过设备id快速找到对应控制器
         private static int _maxPlayerInputControllers = 4;
-
+        internal static Dictionary<PlayerInputController, int> PlayerInputControllerMapId  => _playerInputControllerMapId;
+        internal static Dictionary<int,InputDevice>  PlayerInputDeviceMap => _playerInputDeviceMap;
         public static int MaxPlayerInputControllers
         {
             get => _maxPlayerInputControllers;
@@ -76,7 +77,7 @@ namespace EUFramework.Extension.EUInputControllerKit
 
         private static int _id = 0;
         /// <summary>
-        /// 初始化大部分情况下调用方法就会自动初始化
+        /// 添加事件不会触发初始化
         /// </summary>
         public static void Init()
         {

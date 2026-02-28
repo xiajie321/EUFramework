@@ -38,7 +38,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         public void RemoveTrackedDeviceOrientationListener(Action<InputAction.CallbackContext> action) => Event._onTrackedDeviceOrientation -= action;
         public void RemoveAllTrackedDeviceOrientationListener() => Event._onTrackedDeviceOrientation = null;
     }
-    public sealed class UIInputControllerEvent:InputController.IUIActions
+    internal sealed class UIInputControllerEvent:InputController.IUIActions
     {
         internal Action<InputAction.CallbackContext> _onNavigate;
         internal Action<InputAction.CallbackContext> _onSubmit;
