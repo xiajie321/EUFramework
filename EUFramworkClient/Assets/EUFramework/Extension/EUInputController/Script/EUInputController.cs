@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,6 +9,13 @@ namespace EUFramework.Extension.EUInputController
     {
         public PlayerInputController LastPlayerInputController;
         public PlayerInputController CurrentPlayerInputController;
+    }
+
+    public struct EUPlayerInputOfDeviceChangeData
+    {
+        public PlayerInputController ChangeOfPlayerInputController;//改变的控制器
+        public Gamepad LastGamepad;
+        public Gamepad CurrentGamepad;
     }
 
     public class EUInputController
@@ -39,7 +43,7 @@ namespace EUFramework.Extension.EUInputController
         private Action<InputDevice> _onAddedDevice;
         private Action<InputDevice> _onRemovedDevice;
         private Action<EUMainInputControllerChangeData> _onMainInputControllerChange;
-        private Action<InputDevice> _onPlayerInputOfDeviceChange;//TODO 玩家控制器输入设备改变事件
+        private Action<EUPlayerInputOfDeviceChangeData> _onPlayerInputOfDeviceChange;
         private PlayerInputController _mainPlayerInputController; //主控玩家控制器
         private List<PlayerInputController> _playerInputControllerList; //用来记录玩家控制器进入的先后顺序
         private List<InputDevice> _playerInputDeviceList;//用来记录玩家控制设备进入的先后顺序
@@ -111,6 +115,9 @@ namespace EUFramework.Extension.EUInputController
             }
             
             InputSystem.onDeviceChange += OnDeviceChange;
+#if UNITY_EDITOR
+            Debug.Log($"[EUInputController] 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+#endif
         }
 
         private void OnDeviceChange(InputDevice inputDevice, InputDeviceChange change)
@@ -119,15 +126,19 @@ namespace EUFramework.Extension.EUInputController
             if (change == InputDeviceChange.Added)
             {
                 AddPlayerInputDevice(inputDevice.deviceId, inputDevice);
+#if UNITY_EDITOR
+                Debug.Log($"[EUInputController] 接入手柄设备 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+#endif
             }
 
             if (change == InputDeviceChange.Removed)
             {
                 RemovePlayerInputDevice(inputDevice.deviceId);
-            }
 #if UNITY_EDITOR
-            Debug.Log($"[EUInputController] 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
+                Debug.Log($"[EUInputController] 移除手柄设备 当前手柄设备数量:{GetPlayerInputDeviceCount()} ");
 #endif
+            }
+
         }
 
         #region 玩家输入控制器相关
@@ -186,9 +197,16 @@ namespace EUFramework.Extension.EUInputController
         /// <param name="inputDevice">输入设备的引用</param>
         public void SetPlayerInputControllerOfDevice(PlayerInputController playerInputController,InputDevice inputDevice)
         {
+            if(playerInputController.Gamepad == inputDevice) return;
             int id = GetPlayerInputControllerId(playerInputController);
             if (inputDevice is Gamepad device)
             {
+                _onPlayerInputOfDeviceChange?.Invoke(new()
+                {
+                    ChangeOfPlayerInputController = playerInputController,
+                    LastGamepad = playerInputController.Gamepad,
+                    CurrentGamepad = (Gamepad)inputDevice
+                });
                 playerInputController.BindGamepad(device);
                 if (_devicesIdAndIdMap[inputDevice.deviceId] != -1)//该设备原先有对应的控制器
                 {
