@@ -4,6 +4,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.U2D;
 using YooAsset;
@@ -12,8 +13,8 @@ using {{ eu_res_namespace }};
 namespace EUFramework.Extension.EUUI
 {
     /// <summary>
-    /// 静态图集资源加载器（按 Unity InstanceID 作用域管理 handle 生命周期）
-    /// 同一 ownerId 加载的图集 handle 统一缓存，调用 ReleaseScope 时统一释放
+    /// 静态资源加载器（按 Unity InstanceID 作用域管理 handle 生命周期）
+    /// 同一 ownerId 加载的所有 handle 统一缓存，调用 ReleaseScope 时统一释放
     /// </summary>
     public static class EUResLoader
     {
@@ -67,8 +68,83 @@ namespace EUFramework.Extension.EUUI
         }
 
         /// <summary>
-        /// 释放指定 owner 持有的所有图集 handle
-        /// 在面板/Adapter 关闭销毁时调用
+        /// 从 EURes 同步加载 Prefab，handle 归属指定 ownerId，随 ReleaseScope 一起释放
+        /// path 传入不含扩展名的相对路径（remotePrefabPath 为前缀）
+        /// </summary>
+        public static GameObject LoadPrefab(int ownerId, string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogWarning("[EUResLoader] Prefab path 为空");
+                return null;
+            }
+
+            var config = EUUIKit.Config;
+            string fullPath = $"{config.remotePrefabPath}/{path}.prefab";
+
+            var package = EUResKit.GetPackage();
+            if (package == null)
+            {
+                Debug.LogError("[EUResLoader] EUResKit 未初始化或未找到默认包");
+                return null;
+            }
+
+            if (!_scopedCache.TryGetValue(ownerId, out var cache))
+            {
+                cache = new Dictionary<string, AssetHandle>();
+                _scopedCache[ownerId] = cache;
+            }
+
+            if (!cache.TryGetValue(fullPath, out var handle))
+            {
+                handle = package.LoadAssetSync<GameObject>(fullPath);
+                cache[fullPath] = handle;
+            }
+
+            return handle.AssetObject as GameObject;
+        }
+
+        /// <summary>
+        /// 从 EURes 异步加载 Prefab，handle 归属指定 ownerId，随 ReleaseScope 一起释放
+        /// path 传入不含扩展名的相对路径（remotePrefabPath 为前缀）
+        /// </summary>
+        public static async UniTask<GameObject> LoadPrefabAsync(int ownerId, string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogWarning("[EUResLoader] Prefab path 为空");
+                return null;
+            }
+
+            var config = EUUIKit.Config;
+            string fullPath = $"{config.remotePrefabPath}/{path}.prefab";
+
+            var package = EUResKit.GetPackage();
+            if (package == null)
+            {
+                Debug.LogError("[EUResLoader] EUResKit 未初始化或未找到默认包");
+                return null;
+            }
+
+            if (!_scopedCache.TryGetValue(ownerId, out var cache))
+            {
+                cache = new Dictionary<string, AssetHandle>();
+                _scopedCache[ownerId] = cache;
+            }
+
+            if (!cache.TryGetValue(fullPath, out var handle))
+            {
+                handle = package.LoadAssetAsync<GameObject>(fullPath);
+                cache[fullPath] = handle;
+                await handle.ToUniTask();
+            }
+
+            return handle.AssetObject as GameObject;
+        }
+
+        /// <summary>
+        /// 释放指定 ownerId 持有的所有资源 handle（图集、Prefab 等）
+        /// 在面板关闭销毁时调用，传入 owner.GetInstanceID()
         /// </summary>
         public static void ReleaseScope(int ownerId)
         {
