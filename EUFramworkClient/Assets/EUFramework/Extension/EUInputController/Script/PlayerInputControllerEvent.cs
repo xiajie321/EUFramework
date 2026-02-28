@@ -27,8 +27,8 @@ namespace EUFramework.Extension.EUInputControllerKit
         public void AddDiscardListener(Action<InputAction.CallbackContext> action) => Event._onDiscard = action;
         public void RemoveDiscardListener(Action<InputAction.CallbackContext> action) => Event._onDiscard -= action;
         public void RemoveAllDiscardListener() => Event._onDiscard = null;
-        public void AddDisassmbleListener(Action<InputAction.CallbackContext> action) => Event._onDisassemble = action;
-        public void RemoveDisassmbleListener(Action<InputAction.CallbackContext> action) => Event._onDisassemble -= action;
+        public void AddDisassembleListener(Action<InputAction.CallbackContext> action) => Event._onDisassemble = action;
+        public void RemoveDisassembleListener(Action<InputAction.CallbackContext> action) => Event._onDisassemble -= action;
         public void RemoveAllDisassembleListener() => Event._onDisassemble = null;
     }
     public sealed class PlayerInputControllerEvent:InputController.IPlayerActions
