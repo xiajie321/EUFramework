@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
+using UnityEngine;
 
 namespace EUFramework.Extension.EURes
 {
@@ -14,6 +15,7 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
+            Debug.Log("[Fsm] FsmDownloadPackageOver OnEnter，即将 ChangeState FsmClearCacheBundle");
             // 下载完成，进入启动游戏状态
               _machine.ChangeState<FsmClearCacheBundle>();
         }

@@ -4,6 +4,7 @@ using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Rendering.Universal;
 
 namespace EUFramework.Extension.EUUI
 {
@@ -52,7 +53,6 @@ namespace EUFramework.Extension.EUUI
         /// </summary>
         public static void Initialize(GameObject gameRoot = null)
         {
-            Debug.LogWarning("[EUUIKit] 已经初始化过，跳过 11");
             if (_initialized)
             {
                 Debug.LogWarning("[EUUIKit] 已经初始化过，跳过");
@@ -134,6 +134,26 @@ namespace EUFramework.Extension.EUUI
             _uiCamera.depth = Config.uiCameraDepth;
             _uiCamera.cullingMask = Config.uiCullingMask;
             _uiCamera.orthographic = true;
+            // canvas.planeDistance = 100，PPU = 100，近裁剪面 0.3*100 = 30 units
+            // 将相机后退 planeDistance，使 canvas(Z=0) 正好在相机前方 planeDistance 处
+            const float planeDistance = 100f;
+            _uiCamera.transform.localPosition = new Vector3(0f, 0f, -planeDistance);
+            _uiCamera.nearClipPlane = 0.3f;
+            _uiCamera.farClipPlane = planeDistance * 2f;
+
+            // URP：将 UICamera 设为 Overlay 类型，并挂载到 MainCamera 的 Stack
+            var urpCamData = _uiCamera.GetUniversalAdditionalCameraData();
+            if (urpCamData != null)
+            {
+                urpCamData.renderType = CameraRenderType.Overlay;
+                var mainCam = Camera.main;
+                if (mainCam != null)
+                {
+                    var mainUrpData = mainCam.GetUniversalAdditionalCameraData();
+                    if (mainUrpData != null && !mainUrpData.cameraStack.Contains(_uiCamera))
+                        mainUrpData.cameraStack.Add(_uiCamera);
+                }
+            }
 
             _canvas.worldCamera = _uiCamera;
             _canvas.planeDistance = 100f;
@@ -253,13 +273,15 @@ namespace EUFramework.Extension.EUUI
 
             try
             {
-                // 从 Prefab 加载
-                GameObject panelGO = await LoadPanelPrefabAsync<T>();
-                if (panelGO == null)
+                // 从 Prefab 加载（返回的是 Prefab Asset，需要实例化后才能操作）
+                GameObject prefabAsset = await LoadPanelPrefabAsync<T>();
+                if (prefabAsset == null)
                 {
                     Debug.LogError($"[EUUIKit] 加载面板 Prefab 失败: {panelName}");
                     return null;
                 }
+
+                GameObject panelGO = UnityEngine.Object.Instantiate(prefabAsset);
 
                 var panel = panelGO.GetComponent<T>();
                 if (panel == null)

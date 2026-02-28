@@ -5,9 +5,9 @@
 //------------------------------------------------------------------------------
 #define EUUI_EXTENSIONS_GENERATED
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.U2D;
 using Cysharp.Threading.Tasks;
 using {{ eu_res_namespace }};
 using YooAsset;
@@ -20,6 +20,20 @@ namespace EUFramework.Extension.EUUI
     public static partial class EUUIKit
     {
         private static Dictionary<string, AssetHandle> _assetHandles = new Dictionary<string, AssetHandle>();
+        private static Dictionary<Type, EUUIPackageType> _packageTypeCache = new Dictionary<Type, EUUIPackageType>();
+
+        /// <summary>
+        /// 读取生成代码中的 k_PackageType 字段（结果缓存，避免重复反射）
+        /// </summary>
+        private static EUUIPackageType GetPanelPackageType<T>() where T : EUUIPanelBase<T>
+        {
+            var type = typeof(T);
+            if (_packageTypeCache.TryGetValue(type, out var cached)) return cached;
+            var field = type.GetField("k_PackageType", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            var pt = field != null ? (EUUIPackageType)field.GetValue(null) : EUUIPackageType.Remote;
+            _packageTypeCache[type] = pt;
+            return pt;
+        }
 
         /// <summary>
         /// 加载面板 Prefab（泛型方法，供 OpenAsync&lt;T&gt; 调用）
@@ -41,12 +55,10 @@ namespace EUFramework.Extension.EUUI
                 }
             }
 
-            // TODO: 从面板属性或配置中获取 PackageType
-            // 这里暂时默认使用 Remote
-            EUUIPackageType packageType = EUUIPackageType.Remote;
+            // PackageType 由生成时从 EUUIPanelDescription 写入 Attribute
+            EUUIPackageType packageType = GetPanelPackageType<T>();
             string prefabPath = Config.GetPrefabPath(panelName, packageType);
 
-            // 调用实际加载方法
             var go = await LoadPanelPrefabAsync(prefabPath, packageType == EUUIPackageType.Remote, panelName);
             return go;
         }
@@ -66,12 +78,10 @@ namespace EUFramework.Extension.EUUI
                 return null;
             }
 
-            // 先尝试远程包
+            // Remote 包找不到时降级到首包
             if (isRemote && !package.CheckLocationValid(prefabPath))
             {
-                // 远程包找不到，尝试首包
-                var config = Config;
-                prefabPath = config.GetPrefabPath(panelName.Replace(config.remotePrefabPath, config.builtinPrefabPath), EUUIPackageType.Builtin);
+                prefabPath = Config.GetPrefabPath(panelName, EUUIPackageType.Builtin);
             }
 
             var handle = package.LoadAssetAsync<GameObject>(prefabPath);
@@ -117,8 +127,6 @@ namespace EUFramework.Extension.EUUI
             {
                 ReleasePanelAsset(key);
             }
-
-            Debug.Log($"[EUUIKit] 释放了 {toRemove.Count} 个未使用的面板资源");
         }
 
         /// <summary>
@@ -129,111 +137,5 @@ namespace EUFramework.Extension.EUUI
             ReleasePanelAsset(panelName);
         }
 
-        /// <summary>
-        /// 从 EURes 异步加载 UI Prefab（公开方法，供外部使用）
-        /// </summary>
-        /// <param name="packageName">包名（对应 UI 子目录）</param>
-        /// <param name="panelName">面板名</param>
-        /// <param name="isRemote">是否为远程资源</param>
-        public static async UniTask<GameObject> LoadUIPrefabAsync(string packageName, string panelName, bool isRemote)
-        {
-            var config = Config;
-            string prefix = isRemote ? config.remotePrefabPath : config.builtinPrefabPath;
-            string fullPath = $"{prefix}/{packageName}/{panelName}.prefab";
-
-            var package = EUResKit.GetPackage();
-            if (package == null)
-            {
-                Debug.LogError("[EUUIKit] EUResKit 未初始化或未找到默认包");
-                return null;
-            }
-
-            var handle = package.LoadAssetAsync<GameObject>(fullPath);
-            await handle.ToUniTask();
-            return handle.AssetObject as GameObject;
-        }
-
-        /// <summary>
-        /// 从 EURes 同步加载 UI Prefab
-        /// </summary>
-        /// <param name="packageName">包名（对应 UI 子目录）</param>
-        /// <param name="panelName">面板名</param>
-        /// <param name="isRemote">是否为远程资源</param>
-        public static GameObject LoadUIPrefab(string packageName, string panelName, bool isRemote)
-        {
-            var config = Config;
-            string prefix = isRemote ? config.remotePrefabPath : config.builtinPrefabPath;
-            string fullPath = $"{prefix}/{packageName}/{panelName}.prefab";
-
-            var package = EUResKit.GetPackage();
-            if (package == null)
-            {
-                Debug.LogError("[EUUIKit] EUResKit 未初始化或未找到默认包");
-                return null;
-            }
-
-            var handle = package.LoadAssetSync<GameObject>(fullPath);
-            return handle.AssetObject as GameObject;
-        }
-
-        /// <summary>
-        /// 从 EURes 加载图集
-        /// </summary>
-        /// <param name="atlasName">图集名</param>
-        /// <param name="isRemote">是否为远程资源</param>
-        public static SpriteAtlas LoadAtlas(string atlasName, bool isRemote)
-        {
-            var config = Config;
-            string prefix = isRemote ? config.remoteAtlasPath : config.builtinAtlasPath;
-            string atlasPath = $"{prefix}/{atlasName}.spriteatlas";
-
-            var package = EUResKit.GetPackage();
-            if (package == null)
-            {
-                Debug.LogError("[EUUIKit] EUResKit 未初始化或未找到默认包");
-                return null;
-            }
-
-            var handle = package.LoadAssetSync<SpriteAtlas>(atlasPath);
-            return handle.AssetObject as SpriteAtlas;
-        }
-
-        /// <summary>
-        /// 从 EURes 异步加载图集
-        /// </summary>
-        /// <param name="atlasName">图集名</param>
-        /// <param name="isRemote">是否为远程资源</param>
-        public static async UniTask<SpriteAtlas> LoadAtlasAsync(string atlasName, bool isRemote)
-        {
-            var config = Config;
-            string prefix = isRemote ? config.remoteAtlasPath : config.builtinAtlasPath;
-            string atlasPath = $"{prefix}/{atlasName}.spriteatlas";
-
-            var package = EUResKit.GetPackage();
-            if (package == null)
-            {
-                Debug.LogError("[EUUIKit] EUResKit 未初始化或未找到默认包");
-                return null;
-            }
-
-            var handle = package.LoadAssetAsync<SpriteAtlas>(atlasPath);
-            await handle.ToUniTask();
-            return handle.AssetObject as SpriteAtlas;
-        }
-
-        /// <summary>
-        /// 释放 UI Prefab 资源
-        /// </summary>
-        /// <param name="packageName">包名</param>
-        /// <param name="panelName">面板名</param>
-        public static void ReleaseUIPrefab(string packageName, string panelName)
-        {
-            // TODO: 实现资源释放逻辑（根据 EURes 的资源管理策略）
-            var package = EUResKit.GetPackage();
-            if (package == null) return;
-            
-            // 示例：package.UnloadUnusedAssets();
-            Debug.Log($"[EUUIKit] 释放 UI Prefab: {packageName}/{panelName}");
-        }
     }
 }

@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using YooAsset;
+using UnityEngine;
 
 namespace EUFramework.Extension.EURes
 {
@@ -14,6 +15,7 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
+            Debug.Log("[Fsm] FsmStartGame OnEnter, SetFinish");
             (_machine.Owner as EUResKitPatchOperation)?.SetFinish();
         }
 

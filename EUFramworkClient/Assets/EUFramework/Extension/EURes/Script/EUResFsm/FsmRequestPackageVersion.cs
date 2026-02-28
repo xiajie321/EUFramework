@@ -1,6 +1,7 @@
 
 using Cysharp.Threading.Tasks;
 using YooAsset;
+using UnityEngine;
 
 namespace EUFramework.Extension.EURes
 {
@@ -16,17 +17,21 @@ namespace EUFramework.Extension.EURes
 
         public void OnEnter()
         {
-            throw new System.NotImplementedException();
+            Debug.Log("[Fsm] FsmRequestPackageVersion OnEnter");
+            UpdatePackageVersionAsync().Forget();
         }
 
         private async UniTask UpdatePackageVersionAsync()
         {
             var packageName = (string)_machine.GetBlackboardValue("PackageName");
+            Debug.Log($"[Fsm] FsmRequestPackageVersion 即将 RequestPackageVersionAsync package={packageName}");
             var package = YooAssets.GetPackage(packageName);
             var operation = package.RequestPackageVersionAsync();
             await operation;
+            Debug.Log($"[Fsm] FsmRequestPackageVersion await 返回 Status={operation.Status}");
             if (operation.Status != EOperationStatus.Succeed)
             {
+                Debug.Log("[Fsm] FsmRequestPackageVersion 版本请求失败，触发 OnPackageVersionRequestFailed");
                 (_machine.Owner as EUResKitPatchOperation)?.OnPackageVersionRequestFailed?.Invoke();
             }
             else
@@ -34,6 +39,7 @@ namespace EUFramework.Extension.EURes
                 // 版本请求成功，清零重试计数器
                 (_machine.Owner as EUResKitPatchOperation)?.ResetVersionRetryCount();
                 _machine.SetBlackboardValue("PackageVersion", operation.PackageVersion);
+                Debug.Log("[Fsm] FsmRequestPackageVersion 成功，即将 ChangeState FsmUpdatePackageManifest");
                 _machine.ChangeState<FsmUpdatePackageManifest>();
             }
         }

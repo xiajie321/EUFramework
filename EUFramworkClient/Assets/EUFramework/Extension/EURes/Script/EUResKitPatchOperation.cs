@@ -91,6 +91,12 @@ namespace EUFramework.Extension.EURes
             _machine = new StateMachine(this);
             _machine.AddNode<FsmInitializePackage>();
             _machine.AddNode<FsmRequestPackageVersion>();
+            _machine.AddNode<FsmUpdatePackageManifest>();
+            _machine.AddNode<FsmCreateDownloader>();
+            _machine.AddNode<FsmStartGame>();
+            _machine.AddNode<FsmDownloadPackageFiles>();
+            _machine.AddNode<FsmDownloadPackageOver>();
+            _machine.AddNode<FsmClearCacheBundle>();
 
             // 设置黑板数据
             _machine.SetBlackboardValue("PackageName", packageName);
@@ -177,6 +183,15 @@ namespace EUFramework.Extension.EURes
         public void UserBeginDownloadWebFiles()
         {
             _machine.ChangeState<FsmDownloadPackageFiles>();
+        }
+
+        /// <summary>
+        /// 用户取消当前流程，终止操作并使 await 返回（Status 为 Failed）
+        /// </summary>
+        /// <remarks>在弹窗“取消”按钮或无法弹窗时调用，避免 await patchOperation 永远不返回</remarks>
+        public void UserCancel()
+        {
+            Abort();
         }
 
         #endregion

@@ -2,6 +2,7 @@
 using System.IO;
 using UnityEditor;
 using UnityEditor.U2D;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.U2D;
 using EUFramework.Extension.EUUI;
@@ -20,6 +21,7 @@ namespace EUFramework.Extension.EUUI.Editor
         }
 
         [EUHotboxEntry("生成图集", "图集", "从选中文件夹一键生成 SpriteAtlas")]
+        [Shortcut("EUUI/生成图集", KeyCode.G, ShortcutModifiers.Control | ShortcutModifiers.Alt)]
         public static void GenerateAtlasFromFolder()
         {
             Debug.Log("[EUUISpriteEditor] ---> 开始执行图集生成流程 <---");

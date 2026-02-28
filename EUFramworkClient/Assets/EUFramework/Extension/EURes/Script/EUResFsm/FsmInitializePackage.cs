@@ -21,6 +21,7 @@ namespace EUFramework.Extension.EURes
         {
             var playMode = (EPlayMode)_machine.GetBlackboardValue("PlayMode");
             var packageName = (string)_machine.GetBlackboardValue("PackageName");
+            Debug.Log($"[Fsm] FsmInitializePackage OnEnter package={packageName} playMode={playMode}");
 
             // 创建资源包裹类
             var package = YooAssets.TryGetPackage(packageName);
@@ -32,6 +33,7 @@ namespace EUFramework.Extension.EURes
             //编辑器模式
             if (playMode == EPlayMode.EditorSimulateMode)
             {
+                Debug.Log($"[Fsm] FsmInitializePackage EditorSimulateMode SimulateBuild");
                 var buildResult = EditorSimulateModeHelper.SimulateBuild(packageName);
                 var packageRoot = buildResult.PackageRootDirectory;
                 var createParameters = new EditorSimulateModeParameters();
@@ -42,6 +44,7 @@ namespace EUFramework.Extension.EURes
             // 单机运行模式
             if (playMode == EPlayMode.OfflinePlayMode)
             {
+                Debug.Log($"[Fsm] FsmInitializePackage OfflinePlayMode");
                 var createParameters = new OfflinePlayModeParameters();
                 createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters();
                 initializationOperation = package.InitializeAsync(createParameters);
@@ -50,6 +53,7 @@ namespace EUFramework.Extension.EURes
             // WebGL运行模式
             if (playMode == EPlayMode.WebPlayMode)
             {
+                Debug.Log($"[Fsm] FsmInitializePackage WebPlayMode");
 #if UNITY_WEBGL && WEIXINMINIGAME && !UNITY_EDITOR
             var createParameters = new WebPlayModeParameters();
 			string defaultHostServer = GetHostServerURL();
@@ -69,23 +73,24 @@ namespace EUFramework.Extension.EURes
             var owner = _machine.Owner as EUResKitPatchOperation;
             if (initializationOperation == null)
             {
-
+                Debug.Log("[Fsm] FsmInitializePackage initializationOperation==null, SetFinish并return");
                 owner?.SetFinish();
                 return;
             }
 
+            Debug.Log($"[Fsm] FsmInitializePackage 即将 await initializationOperation");
             await initializationOperation;
+            Debug.Log($"[Fsm] FsmInitializePackage await 返回 Status={initializationOperation.Status}");
 
-            owner?.SetFinish();
-            // 如果初始化失败弹出提示界面
             if (initializationOperation.Status != EOperationStatus.Succeed)
             {
+                Debug.Log("[Fsm] FsmInitializePackage 初始化失败，触发 OnInitializePackageFailed");
                 owner?.OnInitializePackageFailed?.Invoke();
             }
             else
             {
-                // 初始化成功，清零重试计数器
                 owner?.ResetInitRetryCount();
+                Debug.Log("[Fsm] FsmInitializePackage 成功，即将 ChangeState FsmRequestPackageVersion");
                 _machine.ChangeState<FsmRequestPackageVersion>();
             }
         }

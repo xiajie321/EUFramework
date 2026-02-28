@@ -6,11 +6,14 @@
 //------------------------------------------------------------------------------
 using UnityEngine;
 using UnityEngine.UI;
+using EUFramework.Extension.EUUI;
 
 namespace {{ namespace_name }}
 {
     public partial class {{ class_name }}
     {
+        public static readonly EUUIPackageType k_PackageType = EUUIPackageType.{{ package_type }};
+
         {{~ if (members && members.size > 0) ~}}
         [Header("Auto Generated Bindings")]
         {{~ end ~}}
