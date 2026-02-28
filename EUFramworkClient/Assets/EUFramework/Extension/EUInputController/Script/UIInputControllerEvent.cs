@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine.InputSystem;
 
-namespace EUFramework.Extension.EUInputController
+namespace EUFramework.Extension.EUInputControllerKit
 {
     
     public sealed class UIInputEvent

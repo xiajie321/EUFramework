@@ -1,4 +1,4 @@
-using EUFramework.Extension.EUInputController;
+using EUFramework.Extension.EUInputControllerKit;
 using UnityEngine;
 #if UNITY_EDITOR
 public class InputTest : MonoBehaviour

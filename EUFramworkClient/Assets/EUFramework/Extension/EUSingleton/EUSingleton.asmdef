@@ -1,0 +1,14 @@
+{
+    "name": "EUSingleton",
+    "rootNamespace": "EUFramework.Extension.SingletonKit",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
