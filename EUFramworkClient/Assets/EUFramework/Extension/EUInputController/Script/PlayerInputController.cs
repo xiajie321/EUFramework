@@ -41,6 +41,7 @@ namespace EUFramework.Extension.EUInputController
         {
             if (gamepad == null)
             {
+                _gamepad = null;
                 _controller.devices = new[]
                 {
                     Keyboard.current

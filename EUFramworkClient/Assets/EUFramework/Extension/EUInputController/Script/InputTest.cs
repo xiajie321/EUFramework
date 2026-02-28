@@ -6,28 +6,29 @@ public class InputTest : MonoBehaviour
 {
     private void Start()
     {
-        EUInputController.Instance.AddMainPlayerInputControllerChangeListener(v =>
+        EUInputController.AddMainPlayerInputControllerChangeListener(v =>
         {
-            Debug.Log($"回调测试 {v.CurrentPlayerInputController}");
+            //Debug.Log($"回调测试 {v.CurrentPlayerInputController}");
         });
-        EUInputController.Instance.AddPlayerInputControllerOfDeviceChangeListener(v =>
+        EUInputController.AddPlayerInputControllerOfDeviceChangeListener(v =>
         {
-            Debug.Log($"回调测试 {v.ChangeOfPlayerInputController}");
+            //Debug.Log($"回调测试 {v.ChangeOfPlayerInputController}");
         });
-        EUInputController.Instance.AddPlayerInputDeviceAddedListener(v=>
+        EUInputController.AddPlayerInputDeviceAddedListener(v=>
         {
-            var ls = EUInputController.Instance.GetIdlePlayerInputControllerList();
+            var ls = EUInputController.GetIdlePlayerInputControllerList();
+            //Debug.Log(ls.Length);
             if (ls.Length != 0)
             {
-                EUInputController.Instance.SetPlayerInputControllerOfDevice(ls[0],v);
-                Debug.Log($"回调测试 {v.deviceId}");
+                EUInputController.SetPlayerInputControllerOfDevice(ls[0],v);
+                //Debug.Log($"回调测试 {v.deviceId}");
             }
-            Debug.Log($"回调测试 {v.deviceId}");
+            //Debug.Log($"回调测试 {v.deviceId}");
         });
-        EUInputController.Instance.AddPlayerInputDeviceRemovedListener(v=>
+        EUInputController.AddPlayerInputDeviceRemovedListener(v=>
         {
-            Debug.Log($"回调测试 {v.deviceId}");
+            //Debug.Log($"回调测试 {v.deviceId}");
         });
-        EUInputController.Instance.GetMainPlayerInputController();
+        Debug.Log(EUInputController.GetMainPlayerInputController());
     }
 }
