@@ -199,14 +199,17 @@ namespace EUFramwork.Extension.EUAudioKit
         /// 获取是否循环播放
         /// </summary>
         public bool Loop => _source.loop;
-        private void Awake()
-        {
-            Init();
-        }
+        
         public void Init()
         {
-            _source ??= GetComponent<AudioSource>();
-            _source ??= gameObject.AddComponent<AudioSource>();
+            if (_source == null)
+            {
+                _source = GetComponent<AudioSource>();
+                if (_source == null)
+                {
+                    _source = gameObject.AddComponent<AudioSource>();
+                }
+            }
         }
         private int _playVersion; // 新增版本号字段
         /// <summary>

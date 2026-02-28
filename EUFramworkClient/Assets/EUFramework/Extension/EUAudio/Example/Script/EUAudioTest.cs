@@ -9,6 +9,8 @@ namespace EUFramwork.Extension.EUAudioKit
         public AudioClip audioClip;
         void Start()
         {
+            EUAudio.PlayBGM(audioClip);
+            EUAudio.PlayVoice(audioClip);
             EUAudio.PlaySound(audioClip);
         }
         void Update()

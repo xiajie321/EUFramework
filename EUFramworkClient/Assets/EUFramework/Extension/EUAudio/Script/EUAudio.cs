@@ -283,6 +283,9 @@ namespace EUFramwork.Extension.EUAudioKit
             Object.DontDestroyOnLoad(_root);
             NativeInit();
             EUAudioSourceInit();
+            
+            // 注册应用程序退出事件，确保Native资源被释放
+            Application.quitting += NativeDisposable;
         }
 
         /// <summary>
@@ -343,6 +346,10 @@ namespace EUFramwork.Extension.EUAudioKit
             _bgm.transform.SetParent(_root.transform);
             _voice.transform.SetParent(_root.transform);
 
+            // 初始化AudioSource组件
+            _bgm.Init();
+            _voice.Init();
+
             // 应用BGM的AudioSource参数
             _bgm.Source.pitch = _bgmPitch;
             _bgm.Source.spatialBlend = _bgmSpatialBlend;
@@ -396,6 +403,9 @@ namespace EUFramwork.Extension.EUAudioKit
             ls.transform.SetParent(_root.transform);
             ls.Init();
             ls.Index = index;
+#if UNITY_EDITOR
+            ls.gameObject.SetActive(false);
+#endif
             _sound.Add(ls);
             _soundPool.Push(index);
         }
