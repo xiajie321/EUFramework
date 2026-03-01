@@ -43,7 +43,15 @@ namespace EUFramework.Core.MVC.CoreTool
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void DoClear()
             {
-                Array.Clear(EventCache<T>.Handlers, 0, EventCache<T>.Count);
+                // 如果数组扩容过大，清理时重置回小数组以释放内存
+                if (EventCache<T>.Handlers.Length > 64)
+                {
+                    EventCache<T>.Handlers = new Action<T>[4];
+                }
+                else
+                {
+                    Array.Clear(EventCache<T>.Handlers, 0, EventCache<T>.Count);
+                }
                 EventCache<T>.Count = 0;
                 EventCache<T>.IsTracked = false;
             }

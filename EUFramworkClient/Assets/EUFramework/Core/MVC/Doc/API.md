@@ -80,6 +80,9 @@ this.GetModel<TCaller, MyModel>(ref this);
 ### AbsArchitectureBase<T>
 架构抽象基类，实现了单例模式 (`Instance` 属性) 和 `IArchitecture` 接口。
 - `protected abstract void Init()`: 子类必须实现此方法来注册模块。
+- **生命周期顺序**：
+  - `Init()`: 依次初始化 Utility, Model, System。
+  - `Dispose()`: 依次销毁 System, Model, Utility。
 
 ### AbsModelBase / AbsSystemBase / AbsUtilityBase
 各层级的抽象基类，提供了基础的 `Init` 和 `Dispose` 虚方法。建议继承这些基类而非直接实现接口。

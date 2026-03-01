@@ -23,7 +23,7 @@ namespace EUFramework.Core.MVC.Example.Script
         private void Awake()
         {
             // 初始化架构
-            EUCore.SetArchitecture(TestAbsArchitectureBase.Instance);
+            EUCore.SetArchitecture<TestAbsArchitectureBase>();
         }
 
         private void Start()
@@ -34,7 +34,7 @@ namespace EUFramework.Core.MVC.Example.Script
 
         private void RunPerformanceTest()
         {
-            const int testCount = 1000;
+            const int testCount = 10000;
             const int listenerCount = 100; // 模拟高压力多播情况：100个监听者
             Debug.Log($"<color=cyan>--- 开始性能对比测试 (执行次数: {testCount}) ---</color>");
 
@@ -47,7 +47,7 @@ namespace EUFramework.Core.MVC.Example.Script
                 qfSystem.Register<TestEvent>(m => { });
 
                 // 预热
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 1000000; i++)
                 {
                     TypeEventSystem.Send(new TestEvent());
                     qfSystem.Send(new TestEvent());

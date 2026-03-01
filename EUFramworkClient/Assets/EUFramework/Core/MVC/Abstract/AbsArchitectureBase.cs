@@ -13,6 +13,7 @@ namespace EUFramework.Core.MVC.Abstract
     /// <typeparam name="T">具体的架构类型</typeparam>
     public abstract class AbsArchitectureBase<T>:IArchitecture where T: AbsArchitectureBase<T>,new()
     {
+        protected AbsArchitectureBase(){}
         private static T _instance;
         private static HashSet<Type> _hashSet = new();//用于检查重复注册
         private static List<ISystem> _systems = new();
@@ -23,7 +24,7 @@ namespace EUFramework.Core.MVC.Abstract
         /// <summary>
         /// 获取架构实例（单例）
         /// </summary>
-        public static IArchitecture Instance
+        public static T Instance
         {
             get
             {
@@ -39,9 +40,12 @@ namespace EUFramework.Core.MVC.Abstract
         {
             if (_instance != null) return;
             _instance = new T();
-            CoreExtension.SetArchitecture(_instance);
             _instance.Init();
             int i;
+            for (i = 0; i < _utilities.Count; i++)
+            {
+                _utilities[i].Init();
+            }
             for (i = 0; i < _models.Count; i++)
             {
                 _models[i].Init();
@@ -49,10 +53,6 @@ namespace EUFramework.Core.MVC.Abstract
             for (i = 0; i < _systems.Count; i++)
             {
                 _systems[i].Init();
-            }
-            for (i = 0; i < _utilities.Count; i++)
-            {
-                _utilities[i].Init();
             }
         }
 
@@ -63,13 +63,13 @@ namespace EUFramework.Core.MVC.Abstract
         {
             OnDispose();
             int i;
-            for (i = 0; i < _models.Count; i++)
-            {
-                _models[i].Dispose();
-            }
             for (i = 0; i < _systems.Count; i++)
             {
                 _systems[i].Dispose();
+            }
+            for (i = 0; i < _models.Count; i++)
+            {
+                _models[i].Dispose();
             }
             for (i = 0; i < _utilities.Count; i++)
             {
