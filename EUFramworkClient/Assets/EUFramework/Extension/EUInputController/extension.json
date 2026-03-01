@@ -1,0 +1,8 @@
+{
+  "name": "com.eu.inputcontroller",
+  "displayName": "EU 输入控制设备管理",
+  "version": "1.0.0",
+  "description": "基于 Unity Input System 的输入管理扩展，支持多玩家手柄/键盘自动绑定、热插拔与事件分发。",
+  "author": "没有名字的丑兔子",
+  "category": "工具"
+}
