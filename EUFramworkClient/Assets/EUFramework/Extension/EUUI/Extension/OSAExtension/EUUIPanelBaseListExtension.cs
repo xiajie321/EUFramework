@@ -1,5 +1,4 @@
 using EUFramework.Extension.EUUI;
-using UnityEngine;
 
 namespace EUUI.Extension
 {
@@ -20,8 +19,8 @@ namespace EUUI.Extension
             where TData : class
             where TVH : FrameworkListViewsHolder<TData>, new()
         {
-            int id = panel.GetInstanceID();
-            adapter.SpriteLoader = url => EUResLoader.LoadSprite(id, url);
+            if (panel is IEUSpriteProvider provider)
+                adapter.SpriteLoader = (url) => provider.GetSprite(url);
         }
 
         /// <summary>
@@ -35,8 +34,8 @@ namespace EUUI.Extension
             where TData : class
             where TCellVH : FrameworkGridViewsHolder<TData>, new()
         {
-            int id = panel.GetInstanceID();
-            adapter.SpriteLoader = url => EUResLoader.LoadSprite(id, url);
+            if (panel is IEUSpriteProvider provider)
+                adapter.SpriteLoader = (url) => provider.GetSprite(url);
         }
     }
 }

@@ -9,8 +9,11 @@ using UnityEngine.UI;
 
 namespace EUFramework.Extension.EUUI
 {
-    public abstract partial class EUUIPanelBase<TPanel>
+    public abstract partial class EUUIPanelBase<TPanel> : IEUSpriteProvider
     {
+        Sprite IEUSpriteProvider.GetSprite(string url, bool isRemote)
+            => EUResLoader.LoadSprite(GetInstanceID(), url, isRemote);
+
         partial void OnClear()
             => EUResLoader.ReleaseScope(GetInstanceID());
 
