@@ -74,7 +74,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _soundVolume;
             set
             {
-                if (!_init) Init();
                 _soundVolume = math.clamp(value, 0, 1);
                 float ls = _soundVolume * _globalVolume;
                 for (int i = 0; i < _useSound.Length; i++)
@@ -95,7 +94,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _bgmVolume;
             set
             {
-                if (!_init) Init();
                 _bgmVolume = math.clamp(value, 0, 1);
                 _bgm.Source.volume = _bgmVolume * _globalVolume;
                 _onBgmVolumeChange?.Invoke(_bgmVolume);
@@ -111,7 +109,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _voiceVolume;
             set
             {
-                if (!_init) Init();
                 _voiceVolume = math.clamp(value, 0, 1);
                 _voice.Source.volume = _voiceVolume * _globalVolume;
                 _onVoiceVolumeChange?.Invoke(_voiceVolume);
@@ -127,7 +124,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _globalVolume;
             set
             {
-                if (!_init) Init();
                 _globalVolume = math.clamp(value, 0, 1);
                 UpdateAllVolume();
                 _onGlobalVolumeChange?.Invoke(_globalVolume);
@@ -189,7 +185,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _bgmPitch;
             set
             {
-                if (!_init) Init();
                 _bgmPitch = value;
                 _bgm.Source.pitch = _bgmPitch;
             }
@@ -203,7 +198,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _bgmSpatialBlend;
             set
             {
-                if (!_init) Init();
                 _bgmSpatialBlend = value;
                 _bgm.Source.spatialBlend = _bgmSpatialBlend;
             }
@@ -217,7 +211,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _bgmPriority;
             set
             {
-                if (!_init) Init();
                 _bgmPriority = value;
                 _bgm.Source.priority = _bgmPriority;
             }
@@ -231,7 +224,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _voicePitch;
             set
             {
-                if (!_init) Init();
                 _voicePitch = value;
                 _voice.Source.pitch = _voicePitch;
             }
@@ -245,7 +237,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _voiceSpatialBlend;
             set
             {
-                if (!_init) Init();
                 _voiceSpatialBlend = value;
                 _voice.Source.spatialBlend = _voiceSpatialBlend;
             }
@@ -259,7 +250,6 @@ namespace EUFramwork.Extension.EUAudioKit
             get => _voicePriority;
             set
             {
-                if (!_init) Init();
                 _voicePriority = value;
                 _voice.Source.priority = _voicePriority;
             }
@@ -267,11 +257,11 @@ namespace EUFramwork.Extension.EUAudioKit
 
         /// <summary>
         /// 初始化音频系统
-        /// 系统会在首次使用时自动初始化,也可以手动调用以控制初始化时机
         /// 如果存在配置文件,会自动加载配置
         /// 添加事件不会触发初始化
         /// </summary>
-        public static void Init()
+        [RuntimeInitializeOnLoadMethod]
+        private static void Init()
         {
             if (_init) return;
             _init = true;
@@ -285,6 +275,7 @@ namespace EUFramwork.Extension.EUAudioKit
             EUAudioSourceInit();
             
             // 注册应用程序退出事件，确保Native资源被释放
+            Application.quitting -= NativeDisposable;//确保事件唯一
             Application.quitting += NativeDisposable;
         }
 
@@ -326,7 +317,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="config">要加载的配置文件</param>
         public static void LoadConfig(EUAudioConfig config)
         {
-            if (!_init) Init();
             if (config != null)
             {
                 config.ApplyConfig();
@@ -412,7 +402,6 @@ namespace EUFramwork.Extension.EUAudioKit
 
         private static bool GetSound(out EUAudioSource euAudioSource)
         {
-            if (!_init) Init();
             bool poolHave = _soundPool.Count <= 0; //对象池没有对象闲置时该参数为真
             if (poolHave && _createObjectSum >= _maxSound)
             {
@@ -437,7 +426,6 @@ namespace EUFramwork.Extension.EUAudioKit
 
         internal static void ReleaseSound(int index)
         {
-            if (!_init) Init();
 #if UNITY_EDITOR
             _sound[index].gameObject.SetActive(false);
 #endif
@@ -509,7 +497,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="loop">是否循环播放,默认为true</param>
         public static void SetBGM(AudioClip clip, float fadeTime = 0, bool loop = true)
         {
-            if (!_init) Init();
             if (fadeTime > 0 && _bgm.Source.isPlaying)
             {
                 SetBGMWithFade(clip, fadeTime, loop).Forget();
@@ -529,7 +516,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="loop">是否循环播放,默认为true</param>
         public static void PlayBGM(AudioClip clip, float fadeTime = 0, bool loop = true)
         {
-            if (!_init) Init();
             if (fadeTime <= 0)
             {
                 _bgm.SetClip(clip);
@@ -547,7 +533,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// </summary>
         public static void PlayBGM()
         {
-            if (!_init) Init();
             _bgm.Play();
         }
 
@@ -557,7 +542,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="fadeTime">淡出时间(秒),默认为0</param>
         public static void StopBGM(float fadeTime = 0)
         {
-            if (!_init) Init();
             if (fadeTime <= 0)
             {
                 _bgm.Stop();
@@ -577,7 +561,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="loop">是否循环播放,默认为false</param>
         public static void SetVoice(AudioClip clip, float fadeTime = 0, bool loop = false)
         {
-            if (!_init) Init();
             if (fadeTime > 0 && _voice.Source.isPlaying)
             {
                 SetVoiceWithFade(clip, fadeTime, loop).Forget();
@@ -597,7 +580,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="loop">是否循环播放,默认为false</param>
         public static void PlayVoice(AudioClip clip, float fadeTime = 0, bool loop = false)
         {
-            if (!_init) Init();
             if (fadeTime <= 0)
             {
                 _voice.SetClip(clip);
@@ -615,7 +597,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// </summary>
         public static void PlayVoice()
         {
-            if (!_init) Init();
             _voice.Play();
         }
 
@@ -625,7 +606,6 @@ namespace EUFramwork.Extension.EUAudioKit
         /// <param name="fadeTime">淡出时间(秒),默认为0</param>
         public static void StopVoice(float fadeTime = 0)
         {
-            if (!_init) Init();
             if (fadeTime <= 0)
             {
                 _voice.Stop();

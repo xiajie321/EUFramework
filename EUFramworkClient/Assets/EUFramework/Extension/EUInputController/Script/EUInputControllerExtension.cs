@@ -38,5 +38,24 @@ namespace EUFramework.Extension.EUInputControllerKit
         {
             return EUInputController.PlayerInputDeviceMap.ContainsKey(inputDevice.deviceId);
         }
+
+        public static PlayerInputController GetPlayerInputController(this InputDevice inputDevice)
+        {
+            return EUInputController.GetPlayerInputDeviceOfPlayerInputController(inputDevice.deviceId);
+        }
+        /// <summary>
+        /// 获取按键映射Json文件(注意:这部分会有直接的序列化操作)
+        /// </summary>
+        public static string GetBindingsJson(this PlayerInputController playerInputController)
+        {
+            return playerInputController.Controller.SaveBindingOverridesAsJson();
+        }
+        /// <summary>
+        /// 设置按键映射文件(注意:这部分会有直接的反序列化操作)
+        /// </summary>
+        public static void SetBindings(this PlayerInputController playerInputController,string bindingsJson,bool removeExisting)
+        {
+            playerInputController.Controller.LoadBindingOverridesFromJson(bindingsJson,removeExisting);
+        }
     }
 }

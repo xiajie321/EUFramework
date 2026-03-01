@@ -225,8 +225,30 @@ namespace EUFramework.Extension.EUInputControllerKit
                 },
                 {
                     ""name"": """",
+                    ""id"": ""7224868b-e09c-4afb-a42b-9805c1c55237"",
+                    ""path"": ""<Gamepad>/leftStick"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Move"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""e80a2510-9474-49ef-a183-81149ea890ce"",
                     ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Jump"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""1fd40fd8-1f5d-4c5c-81be-bded768504ea"",
+                    ""path"": ""<Gamepad>/buttonSouth"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -247,6 +269,17 @@ namespace EUFramework.Extension.EUInputControllerKit
                 },
                 {
                     ""name"": """",
+                    ""id"": ""c7475ff5-ef12-40b5-b45d-f145a33673b8"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Raise"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""0a75c74a-5b39-42cd-b509-d2ef59f6845e"",
                     ""path"": ""<Keyboard>/r"",
                     ""interactions"": """",
@@ -257,7 +290,18 @@ namespace EUFramework.Extension.EUInputControllerKit
                     ""isPartOfComposite"": false
                 },
                 {
-                    ""name"": ""One Modifier"",
+                    ""name"": """",
+                    ""id"": ""3449c6eb-1e54-4062-988e-40c571acdd66"",
+                    ""path"": ""<Gamepad>/buttonWest"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Interaction"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""Keyboard"",
                     ""id"": ""6a566879-cff6-433f-897c-2ef458232149"",
                     ""path"": ""OneModifier"",
                     ""interactions"": """",
@@ -290,9 +334,53 @@ namespace EUFramework.Extension.EUInputControllerKit
                     ""isPartOfComposite"": true
                 },
                 {
+                    ""name"": ""Gamepad"",
+                    ""id"": ""d57a7b31-2f59-44c6-87b1-c5ba593ead9f"",
+                    ""path"": ""OneModifier"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PickUp"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""modifier"",
+                    ""id"": ""8377fed6-09c1-4e2f-b1b7-35230d0f2b77"",
+                    ""path"": ""<Gamepad>/leftStick/down"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PickUp"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""binding"",
+                    ""id"": ""2b41d347-e40a-486e-b3f2-bd6002f08b59"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PickUp"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
                     ""name"": """",
                     ""id"": ""4f21d0f6-04e7-4f4a-ad60-f157e16231cd"",
                     ""path"": ""<Keyboard>/f"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PushPull"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""1c71c209-f5ee-42c2-b50a-e0e17fa6a5c6"",
+                    ""path"": ""<Gamepad>/buttonEast"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -313,8 +401,30 @@ namespace EUFramework.Extension.EUInputControllerKit
                 },
                 {
                     ""name"": """",
+                    ""id"": ""ccf5d7dc-84bd-4446-b6e8-5adb1cd85ecc"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Discard"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""01860fa3-0c2b-499a-8c62-c9ddd0cc3ca1"",
                     ""path"": ""<Keyboard>/g"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Disassemble"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9cd2a1d6-5c83-4d1f-98eb-116b44d24872"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",

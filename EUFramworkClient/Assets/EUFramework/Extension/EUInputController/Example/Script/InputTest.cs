@@ -1,39 +1,51 @@
 using EUFramework.Extension.EUInputControllerKit;
 using UnityEngine;
+using UnityEngine.InputSystem;
+
 #if UNITY_EDITOR
 public class InputTest : MonoBehaviour
 {
     private void Start()
     {
-        //----------回调注册可以在初始化前去提前注册,这样在调用非回调的方法时就会初始化已经接入的设备连接情况----------
-        EUInputController.AddMainPlayerInputControllerChangeListener(v =>
+        var ls = EUInputController.GetIdlePlayerInputControllerList();
+        var ls2 = EUInputController.GetIdlePlayerInputDeviceList();
+        int inputControllerCount = ls.Length;
+        int inputControllerIndex = 0;
+        for (int i = 0; i < ls2.Length; i++)
         {
-            //Debug.Log($"回调测试 {v.CurrentPlayerInputController}");
-        });
-        EUInputController.AddPlayerInputControllerOfDeviceChangeListener(v =>
-        {
-            //Debug.Log($"回调测试 {v.ChangeOfPlayerInputController}");
-        });
-        EUInputController.AddPlayerInputDeviceAddedListener(v=>
-        {
-            var ls = EUInputController.GetIdlePlayerInputControllerList();
-            //Debug.Log(ls.Length);
-            if (ls.Length != 0)
+            PlayerInputController v;
+            if (inputControllerCount == 0)
             {
-                EUInputController.SetPlayerInputControllerOfDevice(ls[0],v);
-                //Debug.Log($"回调测试 {v.deviceId}");
+                v = EUInputController.GetPlayerInputController(EUInputController.AddPlayerInputController());
             }
-            //Debug.Log($"回调测试 {v.deviceId}");
-        });
-        EUInputController.AddPlayerInputDeviceRemovedListener(v=>
-        {
-            //Debug.Log($"回调测试 {v.deviceId}");
-        });
-        Debug.Log(EUInputController.GetMainPlayerInputController());
-        EUInputController.GetMainPlayerInputController().PlayerInputControllerEvent.AddMoveListener(v =>
-        {
-            Debug.Log(v.ReadValue<Vector2>());
-        });
+            else
+            {
+                v = ls[inputControllerIndex];
+                inputControllerIndex++;
+                inputControllerCount--;
+            }
+            EUInputController.SetPlayerInputControllerOfDevice(v,ls2[i]);
+            v.PlayerInputControllerEvent.AddMoveListener(Move);
+        }
+        EUInputController.AddPlayerInputDeviceAddedListener(PlayerInputDeviceAdded);
+        EUInputController.AddPlayerInputDeviceRemovedListener(PlayerInputControllerRemoved);
+    }
+
+    private void PlayerInputDeviceAdded(InputDevice inputDevice)
+    {
+        var ls = EUInputController.GetIdlePlayerInputControllerList();
+        if(ls.Length == 0) return;
+        EUInputController.SetPlayerInputControllerOfDevice(ls[0],inputDevice);
+    }
+
+    private void PlayerInputControllerRemoved(InputDevice inputDevice)
+    {
+        
+    }
+    
+    private void Move(InputAction.CallbackContext context)
+    {
+        Debug.Log($"{context.ToString()} : {context.ReadValue<Vector2>()}");
     }
 }
 #endif

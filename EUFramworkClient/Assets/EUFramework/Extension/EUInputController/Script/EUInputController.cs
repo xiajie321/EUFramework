@@ -77,12 +77,14 @@ namespace EUFramework.Extension.EUInputControllerKit
 
         private static int _id = 0;
         /// <summary>
-        /// 添加事件不会触发初始化
+        /// 初始化
         /// </summary>
-        public static void Init()
+        [RuntimeInitializeOnLoadMethod]
+        private static void Init()
         {
             if(_isInit) return;
             _isInit = true;
+            _id = 0;
             _playerInputControllerList = new(_maxPlayerInputControllers);
             _playerInputDeviceList = new(_maxPlayerInputControllers);
             _playerInputControllerMap = new(_maxPlayerInputControllers);
@@ -100,7 +102,8 @@ namespace EUFramework.Extension.EUInputControllerKit
                     AddPlayerInputDevice(device.deviceId, device);
                 }
             }
-            
+
+            InputSystem.onDeviceChange -= OnDeviceChange;//注销事件以确保事件唯一
             InputSystem.onDeviceChange += OnDeviceChange;
 #if UNITY_EDITOR
             LogDebugData("初始化");
@@ -150,8 +153,8 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="playerId"></param>
         public static void RemovePlayerInputController(int playerId)
         {
-            if(!_isInit) Init();
             if(CurrentPlayerInputControllerCount <= 1) return;
+            if(playerId == _mainPlayerInputController.GetPlayerInputControllerId()) return;
             if (!_playerInputControllerMap.TryGetValue(playerId, out var ls)) return;
             _playerInputControllerMapId.Remove(ls);
             _playerInputControllerMap.Remove(playerId);
@@ -167,7 +170,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="playerInputController"></param>
         public static void RemovePlayerInputController(PlayerInputController playerInputController)
         {
-            if(!_isInit) Init();
             RemovePlayerInputController(GetPlayerInputControllerId(playerInputController));
         }
         /// <summary>
@@ -176,9 +178,9 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns></returns>
         public static int AddPlayerInputController()
         {
-            if(!_isInit) Init();
-            AddPlayerInputController(_id++);
-            return _id;
+            int id = _id++;
+            AddPlayerInputController(id);
+            return id;
         }
         /// <summary>
         /// 绑定玩家输入控制器的输入设备
@@ -187,7 +189,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="inputDevice">输入设备的引用</param>
         public static void SetPlayerInputControllerOfDevice(PlayerInputController playerInputController,InputDevice inputDevice)
         {
-            if(!_isInit) Init();
             if(playerInputController.Gamepad == inputDevice) return;
             int id = GetPlayerInputControllerId(playerInputController);
             
@@ -243,7 +244,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="inputDevice">输入设备的引用</param>
         public static void SetPlayerInputControllerOfDevice(int playerId, InputDevice inputDevice)
         {
-            if(!_isInit) Init();
             PlayerInputController playerInputController = GetPlayerInputController(playerId);
             SetPlayerInputControllerOfDevice(playerInputController, inputDevice);
         }
@@ -253,7 +253,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns></returns>
         public static PlayerInputController GetMainPlayerInputController()
         {
-            if(!_isInit) Init();
             return _mainPlayerInputController;
         }
 
@@ -263,7 +262,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="playerInputController"></param>
         public static void SetMainPlayerInputController(PlayerInputController playerInputController)
         {
-            if(!_isInit) Init();
             if(playerInputController == _mainPlayerInputController) return;
             if (!_playerInputControllerMapId.ContainsKey(playerInputController)) return;
             var last = _mainPlayerInputController;
@@ -281,7 +279,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <param name="playerId"></param>
         public static void SetMainPlayerInputController(int playerId)
         {
-            if(!_isInit) Init();
             if (!_playerInputControllerMap.TryGetValue(playerId, out var value)) return;
             if(value == _mainPlayerInputController) return;
             SetMainPlayerInputController(value);
@@ -294,7 +291,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns></returns>
         public static PlayerInputController GetPlayerInputController(int playerId)
         {
-            if(!_isInit) Init();
             return _playerInputControllerMap[playerId];
         }
 
@@ -303,7 +299,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static PlayerInputController[] GetPlayerInputControllerList()
         {
-            if(!_isInit) Init();
             return new List<PlayerInputController>(_playerInputControllerList).ToArray();
         }
         
@@ -312,7 +307,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static PlayerInputController[] GetIdlePlayerInputControllerList()
         {
-            if(!_isInit) Init();
             var ls = new List<PlayerInputController>();
             foreach (var value in _idAndDevicesIdMap.Keys)
             {
@@ -332,7 +326,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns></returns>
         public static int GetPlayerInputControllerId(PlayerInputController playerInputController)
         {
-            if(!_isInit) Init();
             return _playerInputControllerMapId[playerInputController];
         }
 
@@ -396,6 +389,22 @@ namespace EUFramework.Extension.EUInputControllerKit
             _devicesIdAndIdMap.Remove(inputDevice.deviceId);//移除映射关系
             _onRemovedDevice?.Invoke(inputDevice);
         }
+        /// <summary>
+        /// 获取设备对应的角色控制器
+        /// </summary>
+        public static PlayerInputController GetPlayerInputDeviceOfPlayerInputController(int deviceId)
+        {
+            if (_devicesIdAndIdMap[deviceId] == -1) return null;
+            return _playerInputControllerMap[_devicesIdAndIdMap[deviceId]];
+        }
+        
+        /// <summary>
+        /// 获取设备对应的角色控制器
+        /// </summary>
+        public static PlayerInputController GetPlayerInputDeviceOfPlayerInputController(InputDevice inputDevice)
+        {
+            return GetPlayerInputDeviceOfPlayerInputController(inputDevice.deviceId);
+        }
 
         /// <summary>
         /// 获取设备数量
@@ -403,7 +412,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns>设备数量</returns>
         public static int GetPlayerInputDeviceCount()
         {
-            if(!_isInit) Init();
             return _playerInputDeviceMap.Count;
         } 
 
@@ -412,7 +420,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static InputDevice[] GetPlayerInputDeviceList()
         {
-            if(!_isInit) Init();
             return new List<InputDevice>(_playerInputDeviceList).ToArray();
         } 
         /// <summary>
@@ -421,7 +428,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <returns></returns>
         public static InputDevice[] GetIdlePlayerInputDeviceList()
         {
-            if(!_isInit) Init();
             List<InputDevice> inputDevices = new List<InputDevice>();
             foreach (var value in _devicesIdAndIdMap.Keys)
             {
@@ -438,7 +444,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static Dictionary<int, InputDevice> GetPlayerInputDeviceDictionary()
         {
-            if(!_isInit) Init();
             return new Dictionary<int, InputDevice>(_playerInputDeviceMap);
         }//确保外部不会直接修改原先的字典
 
