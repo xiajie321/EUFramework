@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 
@@ -87,11 +88,13 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
         // 段落合并缓冲
         private string pendingParagraphContent = "";
         private int pendingParagraphStartLine = -1;
+        private bool isPendingParagraphListContinuation = false;
 
         // 表格渲染状态
         private bool renderInTable = false;
-        private VisualElement currentTable;
         private List<TextAnchor> tableAlignments;
+        private List<string[]> currentTableData = new List<string[]>();
+        private List<int> currentTableLineIndices = new List<int>();
         
         // 预读缓冲，用于检测表格头
         private string potentialTableHeader = null;
@@ -103,11 +106,16 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             {
                 // 创建段落时，使用 buffered content
                 var paragraph = CreateParagraph(pendingParagraphContent, pendingParagraphStartLine);
+                if (isPendingParagraphListContinuation)
+                {
+                    paragraph.AddToClassList("markdown-list-continuation");
+                }
                 contentPanel.Add(paragraph);
                 
                 // 重置 buffer
                 pendingParagraphContent = "";
                 pendingParagraphStartLine = -1;
+                isPendingParagraphListContinuation = false;
             }
         }
         
@@ -593,16 +601,50 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             });
         }
 
+        private Font customFont;
+
         private void LoadSettings()
         {
             currentReadMode = (DocReadMode)EditorPrefs.GetInt(PREF_READ_MODE, (int)DocReadMode.Default);
             universalPath = EditorPrefs.GetString(PREF_UNIVERSAL_PATH, "");
+            
+            string fontPath = EditorPrefs.GetString("EUMarkdownDoc_CustomFontPath", "");
+            if (!string.IsNullOrEmpty(fontPath))
+            {
+                customFont = AssetDatabase.LoadAssetAtPath<Font>(fontPath);
+            }
+            else
+            {
+                customFont = null;
+            }
+            
+            ApplyCustomFont();
         }
 
-        public static void SaveSettings(DocReadMode mode, string path)
+        private void ApplyCustomFont()
+        {
+            if (rootContainer != null)
+            {
+                if (customFont != null)
+                {
+                    rootContainer.style.unityFont = customFont;
+                    rootContainer.style.unityFontDefinition = new StyleFontDefinition(StyleKeyword.None);
+                }
+                else
+                {
+                    rootContainer.style.unityFont = new StyleFont(StyleKeyword.Null);
+                    rootContainer.style.unityFontDefinition = new StyleFontDefinition(StyleKeyword.Null);
+                }
+            }
+        }
+
+        public static void SaveSettings(DocReadMode mode, string path, Font font)
         {
             EditorPrefs.SetInt(PREF_READ_MODE, (int)mode);
             EditorPrefs.SetString(PREF_UNIVERSAL_PATH, path);
+            
+            string fontPath = font != null ? AssetDatabase.GetAssetPath(font) : "";
+            EditorPrefs.SetString("EUMarkdownDoc_CustomFontPath", fontPath);
         }
 
         private void LoadDocuments()
@@ -1380,8 +1422,8 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             renderInList = false;
             pendingParagraphContent = "";
             pendingParagraphStartLine = -1;
+            isPendingParagraphListContinuation = false;
             renderInTable = false;
-            currentTable = null;
             tableAlignments = null;
             potentialTableHeader = null;
             potentialTableHeaderLineIndex = -1;
@@ -1420,6 +1462,11 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             {
                 FlushParagraph(pendingContentPanel);
                 FlushPotentialTableHeader(pendingContentPanel);
+                
+                if (renderInTable)
+                {
+                    RenderTable(pendingContentPanel);
+                }
             }
 
             isRendering = false;
@@ -1480,14 +1527,13 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             {
                 if (line.Trim().StartsWith("|"))
                 {
-                    AddTableRow(currentTable, line, false, index);
+                    CacheTableRow(line, index);
                     return;
                 }
                 else
                 {
+                    RenderTable(contentPanel);
                     renderInTable = false;
-                    currentTable = null;
-                    tableAlignments = null;
                 }
             }
             
@@ -1501,15 +1547,14 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
                     FlushParagraph(contentPanel); // 清空之前的段落
                     
                     renderInTable = true;
-                    currentTable = new VisualElement();
-                    currentTable.AddToClassList("markdown-table");
-                    contentPanel.Add(currentTable);
+                    currentTableData.Clear();
+                    currentTableLineIndices.Clear();
                     
                     // 解析对齐方式
                     tableAlignments = ParseTableAlignments(line);
                     
-                    // 添加表头
-                    AddTableRow(currentTable, potentialTableHeader, true, potentialTableHeaderLineIndex);
+                    // 缓存表头
+                    CacheTableRow(potentialTableHeader, potentialTableHeaderLineIndex);
                     
                     potentialTableHeader = null;
                     potentialTableHeaderLineIndex = -1;
@@ -1536,12 +1581,12 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             
             // 图片 (简单匹配)
             if (Regex.Match(line, @"!\[(.*?)\]\((.*?)\)").Success) isBlockElement = true;
-            // 分割线
-            else if (Regex.IsMatch(line, @"^(\*{3,}|-{3,}|_{3,})$")) isBlockElement = true;
+            // 分割线 (支持带空格的 ---, ***, ___)
+            else if (Regex.IsMatch(line, @"^\s*([-*_])\s*(?:\1\s*){2,}$")) isBlockElement = true;
             // 引用
             else if (line.TrimStart().StartsWith(">")) isBlockElement = true;
             // 标题
-            else if (line.StartsWith("#")) isBlockElement = true;
+            else if (line.TrimStart().StartsWith("#")) isBlockElement = true;
             // 列表
             else if (Regex.IsMatch(line, @"^\s*[-*+]\s+") || Regex.IsMatch(line, @"^\s*\d+\.\s+")) isBlockElement = true;
             // 空行
@@ -1572,7 +1617,7 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             }
 
             // 分割线处理
-            if (Regex.IsMatch(line, @"^(\*{3,}|-{3,}|_{3,})$"))
+            if (Regex.IsMatch(line, @"^\s*([-*_])\s*(?:\1\s*){2,}$"))
             {
                 var separator = new VisualElement();
                 separator.AddToClassList("markdown-separator");
@@ -1590,10 +1635,10 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             }
 
             // 标题处理
-            if (line.StartsWith("#"))
+            if (line.TrimStart().StartsWith("#"))
             {
                 renderInList = false;
-                var header = CreateHeader(line, contentPanel, index);
+                var header = CreateHeader(line.TrimStart(), contentPanel, index);
                 contentPanel.Add(header);
                 return;
             }
@@ -1620,6 +1665,22 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
                 contentPanel.Add(listItem);
                 return;
             }
+            else if (renderInList && (Regex.IsMatch(line, @"^\s{2,}") || line.StartsWith("\t")))
+            {
+                // 列表项的延续行
+                if (string.IsNullOrEmpty(pendingParagraphContent))
+                {
+                    pendingParagraphContent = line.Trim();
+                    pendingParagraphStartLine = index;
+                    isPendingParagraphListContinuation = true;
+                }
+                else
+                {
+                    // 合并逻辑
+                    pendingParagraphContent += " " + line.Trim();
+                }
+                return;
+            }
             else
             {
                 renderInList = false;
@@ -1640,24 +1701,30 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
 
         private void ProcessParagraphLine(string line, int index, VisualElement contentPanel)
         {
+            bool isHardBreak = line.EndsWith("  ");
             string trimmedLine = line.Trim();
             if (string.IsNullOrEmpty(trimmedLine)) return; 
 
             if (string.IsNullOrEmpty(pendingParagraphContent))
             {
                 pendingParagraphContent = trimmedLine;
+                if (isHardBreak) pendingParagraphContent += "\n";
                 pendingParagraphStartLine = index;
             }
             else
             {
                 // 简单的合并策略：加空格
                 // 优化：检测中英文边界
-                char lastChar = pendingParagraphContent[pendingParagraphContent.Length - 1];
+                char lastChar = pendingParagraphContent.Length > 0 ? pendingParagraphContent[pendingParagraphContent.Length - 1] : ' ';
                 char firstChar = trimmedLine.Length > 0 ? trimmedLine[0] : ' ';
                 bool lastIsChinese = lastChar >= 0x4e00 && lastChar <= 0x9fa5;
                 bool firstIsChinese = firstChar >= 0x4e00 && firstChar <= 0x9fa5;
                 
-                if (lastIsChinese && firstIsChinese)
+                if (lastChar == '\n')
+                {
+                    pendingParagraphContent += trimmedLine;
+                }
+                else if (lastIsChinese && firstIsChinese)
                 {
                     pendingParagraphContent += trimmedLine;
                 }
@@ -1665,6 +1732,8 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
                 {
                     pendingParagraphContent += " " + trimmedLine;
                 }
+                
+                if (isHardBreak) pendingParagraphContent += "\n";
             }
         }
 
@@ -1699,41 +1768,97 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             return alignments;
         }
 
-        private void AddTableRow(VisualElement table, string line, bool isHeader, int index)
+        private void CacheTableRow(string line, int index)
         {
-            var row = new VisualElement();
-            row.AddToClassList("markdown-table-row");
-            
             var cells = line.Split('|');
             int start = line.Trim().StartsWith("|") ? 1 : 0;
             int end = line.Trim().EndsWith("|") ? cells.Length - 1 : cells.Length;
             
-            int colIndex = 0;
-            for (int i = start; i < end; i++)
+            int colCount = tableAlignments != null ? tableAlignments.Count : (end - start);
+            string[] rowData = new string[colCount];
+            
+            for (int i = 0; i < colCount; i++)
             {
-                var cell = new VisualElement();
-                cell.AddToClassList("markdown-table-cell");
-                if (isHeader) cell.AddToClassList("markdown-table-header-cell");
-                
-                var content = cells[i].Trim();
-                var label = new Label(ProcessInlineMarkdown(content));
-                label.AddToClassList("markdown-table-cell-label");
-                if (isHeader) label.AddToClassList("markdown-table-header-label");
-                label.enableRichText = true;
-                
-                if (tableAlignments != null && colIndex < tableAlignments.Count)
-                {
-                    label.style.unityTextAlign = tableAlignments[colIndex];
-                }
-                
-                CheckAndRegisterSearchMatch(content, label, index);
-                
-                cell.Add(label);
-                row.Add(cell);
-                colIndex++;
+                int cellIndex = start + i;
+                rowData[i] = cellIndex < end ? cells[cellIndex].Trim() : "";
             }
             
-            table.Add(row);
+            currentTableData.Add(rowData);
+            currentTableLineIndices.Add(index);
+        }
+
+        private void RenderTable(VisualElement contentPanel)
+        {
+            if (currentTableData.Count == 0) return;
+
+            var table = new VisualElement();
+            table.AddToClassList("markdown-table");
+            // 使用按列布局
+            table.style.flexDirection = FlexDirection.Row;
+            
+            int colCount = currentTableData[0].Length;
+            int rowCount = currentTableData.Count;
+
+            for (int col = 0; col < colCount; col++)
+            {
+                var columnContainer = new VisualElement();
+                columnContainer.AddToClassList("markdown-table-column");
+                columnContainer.style.flexDirection = FlexDirection.Column;
+                // 让列根据内容自适应宽度，但如果需要可以设置 flex-grow
+                // columnContainer.style.flexGrow = 1; 
+
+                for (int row = 0; row < rowCount; row++)
+                {
+                    bool isHeader = row == 0;
+                    string content = currentTableData[row][col];
+                    int lineIndex = currentTableLineIndices[row];
+
+                    var cell = new VisualElement();
+                    cell.AddToClassList("markdown-table-cell");
+                    if (isHeader) cell.AddToClassList("markdown-table-header-cell");
+                    
+                    if (col == colCount - 1) cell.AddToClassList("markdown-table-cell-last-col");
+                    if (row == rowCount - 1) cell.AddToClassList("markdown-table-cell-last-row");
+
+                    var contentContainer = new VisualElement();
+                    contentContainer.style.flexDirection = FlexDirection.Row;
+                    contentContainer.style.flexWrap = Wrap.Wrap;
+                    contentContainer.style.alignItems = Align.Center;
+                    
+                    if (tableAlignments != null && col < tableAlignments.Count)
+                    {
+                        var align = tableAlignments[col];
+                        if (align == TextAnchor.MiddleCenter) contentContainer.style.justifyContent = Justify.Center;
+                        else if (align == TextAnchor.MiddleRight) contentContainer.style.justifyContent = Justify.FlexEnd;
+                        else contentContainer.style.justifyContent = Justify.FlexStart;
+                    }
+                    else
+                    {
+                        contentContainer.style.justifyContent = Justify.Center;
+                    }
+                    
+                    ParseAndAddContent(contentContainer, content, lineIndex);
+                    
+                    foreach (var child in contentContainer.Children())
+                    {
+                        if (child is Label lbl)
+                        {
+                            lbl.AddToClassList("markdown-table-cell-label");
+                            if (isHeader) lbl.AddToClassList("markdown-table-header-label");
+                        }
+                    }
+                    
+                    cell.Add(contentContainer);
+                    columnContainer.Add(cell);
+                }
+                table.Add(columnContainer);
+            }
+
+            contentPanel.Add(table);
+            
+            currentTableData.Clear();
+            currentTableLineIndices.Clear();
+            tableAlignments = null;
         }
 
         private VisualElement CreateTaskItem(string text, bool isChecked, int lineNumber)
@@ -2249,15 +2374,29 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             var container = new VisualElement();
             container.AddToClassList("markdown-list-item-container");
             
-            // 列表标记
-            var bullet = new Label("•");
+            // 提取列表标记
+            var match = Regex.Match(line, @"^\s*([-*+]|\d+\.)\s+");
+            string bulletText = "•";
+            string text = line;
+            
+            if (match.Success)
+            {
+                string marker = match.Groups[1].Value;
+                if (Regex.IsMatch(marker, @"\d+\."))
+                {
+                    bulletText = marker;
+                }
+                text = line.Substring(match.Length);
+            }
+            
+            var bullet = new Label(bulletText);
             bullet.AddToClassList("markdown-list-bullet");
             container.Add(bullet);
-
-            // 移除列表标记（无序列表的 -、*、+ 或有序列表的数字.）
-            string text = Regex.Replace(line, @"^\s*([-*+]|\d+\.)\s+", "");
             
-            ParseAndAddContent(container, text, lineNumber);
+            var contentContainer = new VisualElement();
+            contentContainer.AddToClassList("markdown-list-content");
+            ParseAndAddContent(contentContainer, text, lineNumber);
+            container.Add(contentContainer);
             
             return container;
         }
@@ -2331,7 +2470,7 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
 
         private void AddStrikethroughSegment(VisualElement container, string text, int lineNumber)
         {
-            var label = new Label(ProcessInlineMarkdown(text));
+            var label = new Label($"<s>{ProcessInlineMarkdown(text)}</s>");
             label.AddToClassList("markdown-paragraph");
             label.AddToClassList("markdown-strikethrough");
             label.enableRichText = true;
@@ -2587,16 +2726,18 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
         private Action m_OnClose;
         private EUMarkdownDocReaderWindow.DocReadMode m_ReadMode;
         private string m_UniversalPath;
+        private Font m_CustomFont;
         
         private PopupField<string> m_ModeField;
         private TextField m_PathField;
         private Button m_SelectPathBtn;
+        private ObjectField m_FontField;
 
         public static void ShowWindow(Action onClose = null)
         {
             var wnd = GetWindow<EUMarkdownDocSettingsWindow>(true, "文档阅读器设置", true);
-            wnd.minSize = new Vector2(400, 200);
-            wnd.maxSize = new Vector2(400, 250);
+            wnd.minSize = new Vector2(450, 420);
+            wnd.maxSize = new Vector2(450, 420);
             wnd.m_OnClose = onClose;
             wnd.Show();
         }
@@ -2606,78 +2747,150 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
             // 加载设置
             m_ReadMode = (EUMarkdownDocReaderWindow.DocReadMode)EditorPrefs.GetInt("EUMarkdownDoc_ReadMode", 0);
             m_UniversalPath = EditorPrefs.GetString("EUMarkdownDoc_UniversalPath", "");
+            
+            string fontPath = EditorPrefs.GetString("EUMarkdownDoc_CustomFontPath", "");
+            if (!string.IsNullOrEmpty(fontPath))
+            {
+                m_CustomFont = AssetDatabase.LoadAssetAtPath<Font>(fontPath);
+            }
         }
 
         private void CreateGUI()
         {
-            var root = rootVisualElement;
-            root.style.paddingTop = 20;
-            root.style.paddingBottom = 20;
-            root.style.paddingLeft = 20;
-            root.style.paddingRight = 20;
+            // 加载样式
+            StyleSheet styleSheet = null;
+            string[] guids = AssetDatabase.FindAssets("EUMarkdownDocReader t:StyleSheet");
+            if (guids.Length > 0)
+            {
+                foreach (var guid in guids)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (path.EndsWith("ConfigPanel/EUMarkdownDocReader.uss"))
+                    {
+                        styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                        break;
+                    }
+                }
+                if (styleSheet == null) styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            }
 
-            var title = new Label("设置");
-            title.style.fontSize = 18;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.marginBottom = 15;
-            root.Add(title);
+            var root = rootVisualElement;
+            if (styleSheet != null) root.styleSheets.Add(styleSheet);
+            
+            root.AddToClassList("settings-window");
+
+            var content = new VisualElement();
+            content.AddToClassList("settings-content");
+            root.Add(content);
+
+            var title = new Label("阅读器设置");
+            title.AddToClassList("settings-title");
+            content.Add(title);
+
+            // Group 1: 基础设置
+            var group1 = new VisualElement();
+            group1.AddToClassList("settings-group");
+            content.Add(group1);
+
+            var group1Label = new Label("基础设置");
+            group1Label.AddToClassList("settings-group-label");
+            group1.Add(group1Label);
+
+            // 字体设置
+            var rowFont = new VisualElement();
+            rowFont.AddToClassList("settings-row");
+            group1.Add(rowFont);
+
+            var labelFont = new Label("自定义字体");
+            labelFont.AddToClassList("settings-label");
+            rowFont.Add(labelFont);
+
+            m_FontField = new ObjectField();
+            m_FontField.objectType = typeof(Font);
+            m_FontField.value = m_CustomFont;
+            m_FontField.AddToClassList("settings-object-field");
+            m_FontField.RegisterValueChangedCallback(evt => {
+                m_CustomFont = evt.newValue as Font;
+            });
+            rowFont.Add(m_FontField);
+
+            var helpFont = new Label("选择用于显示 Markdown 文本的字体。留空则使用默认字体。");
+            helpFont.AddToClassList("settings-help-text");
+            rowFont.Add(helpFont);
+
+            // Group 2: 文档源设置
+            var group2 = new VisualElement();
+            group2.AddToClassList("settings-group");
+            content.Add(group2);
+
+            var group2Label = new Label("文档源设置");
+            group2Label.AddToClassList("settings-group-label");
+            group2.Add(group2Label);
 
             // 模式选择
+            var rowMode = new VisualElement();
+            rowMode.AddToClassList("settings-row");
+            group2.Add(rowMode);
+
+            var labelMode = new Label("读取模式");
+            labelMode.AddToClassList("settings-label");
+            rowMode.Add(labelMode);
+
             var modeOptions = new List<string> { "默认模式", "通用模式" };
             int index = (int)m_ReadMode;
             if (index < 0 || index >= modeOptions.Count) index = 0;
             
-            m_ModeField = new PopupField<string>("读取模式", modeOptions, index);
+            m_ModeField = new PopupField<string>(modeOptions, index);
+            m_ModeField.AddToClassList("settings-text-field");
             m_ModeField.RegisterValueChangedCallback(evt => {
                 m_ReadMode = evt.newValue == "通用模式" 
                     ? EUMarkdownDocReaderWindow.DocReadMode.Universal 
                     : EUMarkdownDocReaderWindow.DocReadMode.Default;
                 UpdateUIState();
             });
-            root.Add(m_ModeField);
+            rowMode.Add(m_ModeField);
 
-            // 路径选择容器
-            var pathContainer = new VisualElement();
-            pathContainer.style.marginTop = 10;
-            pathContainer.name = "path-container";
-            
-            var pathRow = new VisualElement();
-            pathRow.style.flexDirection = FlexDirection.Row;
-            
-            m_PathField = new TextField("文档路径");
+            var helpMode = new Label("默认模式：自动扫描框架内的 Doc 文件夹。\n通用模式：读取指定文件夹下的所有 Markdown 文档。");
+            helpMode.AddToClassList("settings-help-text");
+            rowMode.Add(helpMode);
+
+            // 路径选择
+            var rowPath = new VisualElement();
+            rowPath.AddToClassList("settings-row");
+            rowPath.name = "path-container";
+            group2.Add(rowPath);
+
+            var labelPath = new Label("文档路径");
+            labelPath.AddToClassList("settings-label");
+            rowPath.Add(labelPath);
+
+            var inputRow = new VisualElement();
+            inputRow.AddToClassList("settings-input-row");
+            rowPath.Add(inputRow);
+
+            m_PathField = new TextField();
             m_PathField.value = m_UniversalPath;
-            m_PathField.style.flexGrow = 1;
+            m_PathField.AddToClassList("settings-text-field");
             m_PathField.RegisterValueChangedCallback(evt => m_UniversalPath = evt.newValue);
-            pathRow.Add(m_PathField);
+            inputRow.Add(m_PathField);
             
             m_SelectPathBtn = new Button(OnSelectPath) { text = "..." };
-            m_SelectPathBtn.style.width = 30;
-            pathRow.Add(m_SelectPathBtn);
-            
-            pathContainer.Add(pathRow);
-            
-            var helpBox = new Label("选择包含Markdown文档的文件夹。");
-            helpBox.style.fontSize = 10;
-            helpBox.style.color = new Color(0.6f, 0.6f, 0.6f);
-            helpBox.style.marginTop = 2;
-            helpBox.style.marginLeft = 120; // 对齐输入框
-            pathContainer.Add(helpBox);
-            
-            root.Add(pathContainer);
+            m_SelectPathBtn.AddToClassList("settings-icon-btn");
+            inputRow.Add(m_SelectPathBtn);
 
-            // 底部按钮
+            var helpPath = new Label("选择包含 Markdown 文档的文件夹。");
+            helpPath.AddToClassList("settings-help-text");
+            rowPath.Add(helpPath);
+
+            // Footer
             var footer = new VisualElement();
-            footer.style.flexDirection = FlexDirection.Row;
-            footer.style.justifyContent = Justify.FlexEnd;
-            footer.style.marginTop = 20;
-            
-            var saveBtn = new Button(OnSave) { text = "保存并关闭" };
-            saveBtn.style.height = 30;
-            saveBtn.style.paddingLeft = 20;
-            saveBtn.style.paddingRight = 20;
-            footer.Add(saveBtn);
-            
+            footer.AddToClassList("settings-footer");
             root.Add(footer);
+
+            var saveBtn = new Button(OnSave) { text = "保存并关闭" };
+            saveBtn.AddToClassList("settings-btn");
+            saveBtn.AddToClassList("btn-action");
+            footer.Add(saveBtn);
 
             UpdateUIState();
         }
@@ -2711,7 +2924,7 @@ namespace EUFramework.Extension.MarkdownDocManagerKit.Editor
 
         private void OnSave()
         {
-            EUMarkdownDocReaderWindow.SaveSettings(m_ReadMode, m_UniversalPath);
+            EUMarkdownDocReaderWindow.SaveSettings(m_ReadMode, m_UniversalPath, m_CustomFont);
             m_OnClose?.Invoke();
             Close();
         }
