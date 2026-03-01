@@ -1,17 +1,17 @@
 /* Table */
 .markdown-table {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin-top: 24px;
+    margin-bottom: 24px;
     margin-left: 0;
     margin-right: 0;
     border-width: 1px;
-    border-color: #444;
+    border-color: #333;
     background-color: #1e1e1e;
     width: 100%;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
-    border-bottom-left-radius: 4px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
     overflow: hidden;
     flex-direction: row;
 }
@@ -28,9 +28,9 @@
     padding-left: 16px;
     padding-right: 16px;
     border-right-width: 1px;
-    border-right-color: #444;
+    border-right-color: #333;
     border-bottom-width: 1px;
-    border-bottom-color: #444;
+    border-bottom-color: #333;
     min-width: 80px;
     justify-content: center;
 }
@@ -44,7 +44,7 @@
 }
 
 .markdown-table-header-cell {
-    background-color: #2d2d2d;
+    background-color: #252526;
 }
 
 .markdown-table-cell-label {
@@ -306,9 +306,9 @@
 
 .doc-tree-container {
     width: 260px;
-    background-color: #202020;
-    border-right-width: 2px;
-    border-right-color: #000000;
+    background-color: #252526;
+    border-right-width: 1px;
+    border-right-color: #111111;
     flex-direction: column;
     flex-shrink: 0;
     overflow: hidden;
@@ -376,7 +376,7 @@
 /* Search Result List Styling */
 .search-result-list {
     flex-grow: 1;
-    background-color: #202020;
+    background-color: #252526;
 }
 
 .search-result-item {
@@ -558,33 +558,33 @@
     font-size: 32px;
     -unity-font-style: bold;
     color: #ffffff;
-    margin-bottom: 24px;
-    padding-bottom: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
     border-bottom-width: 1px;
     border-bottom-color: #444;
     white-space: normal;
 }
 
 .markdown-header {
-    color: #ffffff;
-    margin-top: 24px;
+    color: #eeeeee;
+    margin-top: 32px;
     margin-bottom: 16px;
     -unity-font-style: bold;
     white-space: normal;
 }
 
-.markdown-h1 { font-size: 28px; border-bottom-width: 1px; border-bottom-color: #444; padding-bottom: 8px; margin-top: 32px; margin-bottom: 20px; }
-.markdown-h2 { font-size: 24px; border-bottom-width: 1px; border-bottom-color: #333; padding-bottom: 6px; margin-top: 28px; margin-bottom: 16px; }
-.markdown-h3 { font-size: 20px; margin-top: 24px; margin-bottom: 12px; }
-.markdown-h4 { font-size: 18px; margin-top: 20px; margin-bottom: 12px; }
-.markdown-h5 { font-size: 16px; margin-top: 20px; margin-bottom: 12px; }
-.markdown-h6 { font-size: 14px; color: #888; margin-top: 20px; margin-bottom: 12px; }
+.markdown-h1 { font-size: 28px; color: #ffffff; border-bottom-width: 1px; border-bottom-color: #444; padding-bottom: 10px; margin-top: 40px; margin-bottom: 24px; }
+.markdown-h2 { font-size: 24px; color: #eeeeee; border-bottom-width: 1px; border-bottom-color: #333; padding-bottom: 8px; margin-top: 36px; margin-bottom: 20px; }
+.markdown-h3 { font-size: 20px; color: #dddddd; margin-top: 28px; margin-bottom: 16px; }
+.markdown-h4 { font-size: 18px; color: #cccccc; margin-top: 24px; margin-bottom: 16px; }
+.markdown-h5 { font-size: 16px; color: #bbbbbb; margin-top: 24px; margin-bottom: 12px; }
+.markdown-h6 { font-size: 14px; color: #999999; margin-top: 24px; margin-bottom: 12px; }
 
 /* Paragraphs */
 .markdown-paragraph-container {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     align-items: center;
 }
 
@@ -605,7 +605,7 @@
 /* Lists */
 .markdown-list-item-container {
     flex-direction: row;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     margin-left: 20px;
     align-items: flex-start;
 }
@@ -634,8 +634,8 @@
 /* Blockquote */
 .markdown-blockquote {
     border-left-width: 4px;
-    border-left-color: #0078d4;
-    background-color: rgba(0, 120, 212, 0.1);
+    border-left-color: #569cd6;
+    background-color: rgba(86, 156, 214, 0.1);
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 16px;
@@ -651,7 +651,7 @@
 }
 
 .markdown-blockquote .markdown-paragraph {
-    color: #a0a0a0;
+    color: #b0b0b0;
 }
 
 /* Links */
@@ -691,7 +691,7 @@
     border-bottom-right-radius: 6px;
     border-bottom-left-radius: 6px;
     border-width: 1px;
-    border-color: #333;
+    border-color: #2d2d2d;
     margin-top: 20px;
     margin-bottom: 20px;
     margin-left: 0;
@@ -703,9 +703,9 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    background-color: #2d2d2d;
+    background-color: #252526;
     border-bottom-width: 1px;
-    border-bottom-color: #333;
+    border-bottom-color: #2d2d2d;
     padding-top: 6px;
     padding-bottom: 6px;
     padding-left: 12px;
@@ -962,9 +962,9 @@
 
 .nav-panel {
     width: 200px;
-    background-color: #202020;
-    border-left-width: 2px;
-    border-left-color: #000000;
+    background-color: #252526;
+    border-left-width: 1px;
+    border-left-color: #111111;
     flex-shrink: 0;
     padding-top: 16px;
     overflow: hidden;
@@ -1025,20 +1025,20 @@
 }
 
 .nav-item:hover {
-    color: #fff;
+    color: #d4d4d4;
     background-color: #2a2d2e;
     border-left-color: #555;
 }
 
 .nav-item:active {
     background-color: #37373d;
-    border-left-color: #0078d4;
+    border-left-color: #569cd6;
 }
 
 .nav-item-active {
     color: #ffffff;
     background-color: #37373d;
-    border-left-color: #0078d4;
+    border-left-color: #569cd6;
     -unity-font-style: bold;
 }
 
@@ -1047,7 +1047,7 @@
     color: #e0e0e0; 
     font-size: 13px;
     padding-left: 12px;
-    margin-top: 4px;
+    margin-top: 6px;
     margin-bottom: 2px;
 }
 
@@ -1058,25 +1058,25 @@
 
 .nav-item-h3 { 
     padding-left: 42px; 
-    color: #b0b0b0;
-    font-size: 11px;
+    color: #aaaaaa;
+    font-size: 12px;
 }
 
 .nav-item-h4 { 
     padding-left: 60px; 
-    color: #999999;
+    color: #888888;
     font-size: 11px;
 }
 
 .nav-item-h5 { 
     padding-left: 78px; 
-    color: #888888;
+    color: #777777;
     font-size: 11px;
 }
 
 .nav-item-h6 { 
     padding-left: 96px; 
-    color: #777777;
+    color: #666666;
     font-size: 11px;
 }
 
