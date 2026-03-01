@@ -49,8 +49,8 @@
 
 - [NuGetForUnity][GlitchEnzo/NuGetForUnity: A NuGet Package Manager for Unity](https://github.com/GlitchEnzo/NuGetForUnity)
 
-- [PrimeTween][KyryloKuzyk/PrimeTween：用于 Unity 的高性能、免分配补间库。在一行代码中创建动画、延迟和序列。](https://github.com/KyryloKuzyk/PrimeTween)
-
 - [UniTask][Cysharp/UniTask: Provides an efficient allocation free async/await integration for Unity.](https://github.com/Cysharp/UniTask)
 
 - [Scriban] [scriban/scriban：一种快速、强大、安全且轻量级的.NET脚本语言和引擎](https://github.com/scriban/scriban)
+## 推荐仓库
+- [PrimeTween][KyryloKuzyk/PrimeTween：用于 Unity 的高性能、免分配补间库。在一行代码中创建动画、延迟和序列。](https://github.com/KyryloKuzyk/PrimeTween)
