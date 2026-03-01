@@ -1,7 +1,10 @@
 {
-    "name": "EUMemo.Editor",
-    "rootNamespace": "EUFramework.Extension.MemoKit.Editor ",
-    "references": [],
+    "name": "EUInputController.Editor",
+    "rootNamespace": "EUFramework.Extension.EUInputController.Editor",
+    "references": [
+        "EUInputController",
+        "Unity.InputSystem"
+    ],
     "includePlatforms": [
         "Editor"
     ],

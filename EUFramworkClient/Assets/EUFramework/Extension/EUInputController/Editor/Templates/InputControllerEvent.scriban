@@ -1,0 +1,36 @@
+// =============================================
+// 此文件由 InputControllerCodeGenerator 自动生成
+// 请勿手动修改此文件，修改将在下次生成时被覆盖
+// =============================================
+using System;
+using UnityEngine.InputSystem;
+
+namespace EUFramework.Extension.EUInputControllerKit
+{
+    
+    public sealed class {{ event_class_name }}
+    {
+        internal readonly {{ callback_class_name }} Event = new {{ callback_class_name }}();
+{{~ for action in actions ~}}
+        public void Add{{ action.name }}Listener(Action<InputAction.CallbackContext> action) => Event._on{{ action.name }} {{ if use_assign }}={{ else }}+={{ end }} action;
+        public void Remove{{ action.name }}Listener(Action<InputAction.CallbackContext> action) => Event._on{{ action.name }} -= action;
+        public void RemoveAll{{ action.name }}Listener() => Event._on{{ action.name }} = null;
+{{~ end ~}}
+    }
+    internal sealed class {{ callback_class_name }}:InputController.{{ interface_name }}
+    {
+        internal {{ callback_class_name }}(){}
+{{~ for action in actions ~}}
+        internal Action<InputAction.CallbackContext> _on{{ action.name }};
+{{~ end ~}}
+{{~ for action in actions ~}}
+        public void On{{ action.name }}(InputAction.CallbackContext context)
+        {
+            _on{{ action.name }}?.Invoke(context);
+        }
+{{~ if !for.last ~}}
+
+{{~ end ~}}
+{{~ end ~}}
+    }
+}

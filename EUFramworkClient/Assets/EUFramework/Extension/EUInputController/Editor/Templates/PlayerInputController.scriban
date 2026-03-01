@@ -13,26 +13,29 @@ namespace EUFramework.Extension.EUInputControllerKit
     {
         private InputController _controller;//控制器
         private Gamepad _gamepad;//手柄绑定
-        private PlayerInputEvent _playerInputEvent;
-        private UIInputEvent _uiInputEvent;
+{{~ for map in maps ~}}
+        private {{ map.event_class_name }} _{{ map.event_field_name }};
+{{~ end ~}}
         public Gamepad Gamepad
         {
             get => _gamepad;
             internal set => BindGamepad(value);
         }
         public InputController Controller => _controller;
-        public PlayerInputEvent PlayerInputControllerEvent => _playerInputEvent;
-        public UIInputEvent UIInputControllerEvent => _uiInputEvent;
+{{~ for map in maps ~}}
+        public {{ map.event_class_name }} {{ map.event_property_name }} => _{{ map.event_field_name }};
+{{~ end ~}}
         internal PlayerInputController()
         {
             _controller = new InputController();
-            _playerInputEvent = new();
-            _uiInputEvent = new();
+{{~ for map in maps ~}}
+            _{{ map.event_field_name }} = new();
+{{~ end ~}}
             BindGamepad(null);
-            _controller.Player.SetCallbacks(_playerInputEvent.Event);
-            _controller.Player.Enable();
-            _controller.UI.SetCallbacks(_uiInputEvent.Event);
-            _controller.UI.Enable();
+{{~ for map in maps ~}}
+            _controller.{{ map.name }}.SetCallbacks(_{{ map.event_field_name }}.Event);
+            _controller.{{ map.name }}.Enable();
+{{~ end ~}}
         }
         /// <summary>
         /// 绑定游戏手柄

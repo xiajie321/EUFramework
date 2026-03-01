@@ -1,4 +1,8 @@
-﻿using System;
+// =============================================
+// 此文件由 InputControllerCodeGenerator 自动生成
+// 请勿手动修改此文件，修改将在下次生成时被覆盖
+// =============================================
+using System;
 using UnityEngine.InputSystem;
 
 namespace EUFramework.Extension.EUInputControllerKit
@@ -6,7 +10,7 @@ namespace EUFramework.Extension.EUInputControllerKit
     
     public sealed class UIInputEvent
     {
-        internal readonly UIInputControllerEvent Event = new();
+        internal readonly UIInputControllerEvent Event = new UIInputControllerEvent();
         public void AddNavigateListener(Action<InputAction.CallbackContext> action) => Event._onNavigate += action;
         public void RemoveNavigateListener(Action<InputAction.CallbackContext> action) => Event._onNavigate -= action;
         public void RemoveAllNavigateListener() => Event._onNavigate = null;
@@ -22,16 +26,16 @@ namespace EUFramework.Extension.EUInputControllerKit
         public void AddClickListener(Action<InputAction.CallbackContext> action) => Event._onClick += action;
         public void RemoveClickListener(Action<InputAction.CallbackContext> action) => Event._onClick -= action;
         public void RemoveAllClickListener() => Event._onClick = null;
-        public void AddScrollListener(Action<InputAction.CallbackContext> action) => Event._onScrollWheel += action;
-        public void RemoveScrollListener(Action<InputAction.CallbackContext> action) => Event._onScrollWheel -= action;
-        public void RemoveAllScrollListener() => Event._onScrollWheel = null;
+        public void AddScrollWheelListener(Action<InputAction.CallbackContext> action) => Event._onScrollWheel += action;
+        public void RemoveScrollWheelListener(Action<InputAction.CallbackContext> action) => Event._onScrollWheel -= action;
+        public void RemoveAllScrollWheelListener() => Event._onScrollWheel = null;
         public void AddMiddleClickListener(Action<InputAction.CallbackContext> action) => Event._onMiddleClick += action;
         public void RemoveMiddleClickListener(Action<InputAction.CallbackContext> action) => Event._onMiddleClick -= action;
         public void RemoveAllMiddleClickListener() => Event._onMiddleClick = null;
-        public void AddRightClickListener(Action<InputAction.CallbackContext> action) => Event._onClick += action;
-        public void RemoveRightClickListener(Action<InputAction.CallbackContext> action) => Event._onClick -= action;
-        public void RemoveAllRightClickListener() => Event._onClick = null;
-        public void AddTrackedDevicePositionListener(Action<InputAction.CallbackContext> action)  => Event._onTrackedDevicePosition += action;
+        public void AddRightClickListener(Action<InputAction.CallbackContext> action) => Event._onRightClick += action;
+        public void RemoveRightClickListener(Action<InputAction.CallbackContext> action) => Event._onRightClick -= action;
+        public void RemoveAllRightClickListener() => Event._onRightClick = null;
+        public void AddTrackedDevicePositionListener(Action<InputAction.CallbackContext> action) => Event._onTrackedDevicePosition += action;
         public void RemoveTrackedDevicePositionListener(Action<InputAction.CallbackContext> action) => Event._onTrackedDevicePosition -= action;
         public void RemoveAllTrackedDevicePositionListener() => Event._onTrackedDevicePosition = null;
         public void AddTrackedDeviceOrientationListener(Action<InputAction.CallbackContext> action) => Event._onTrackedDeviceOrientation += action;
@@ -40,6 +44,7 @@ namespace EUFramework.Extension.EUInputControllerKit
     }
     internal sealed class UIInputControllerEvent:InputController.IUIActions
     {
+        internal UIInputControllerEvent(){}
         internal Action<InputAction.CallbackContext> _onNavigate;
         internal Action<InputAction.CallbackContext> _onSubmit;
         internal Action<InputAction.CallbackContext> _onCancel;

@@ -2,7 +2,9 @@
     "name": "NewAssembly",
     "rootNamespace": "EUFramework.Extension.MarkdownDocManagerKit.Editor",
     "references": [],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

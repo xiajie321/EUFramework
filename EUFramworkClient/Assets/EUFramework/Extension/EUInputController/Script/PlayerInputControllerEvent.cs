@@ -1,15 +1,20 @@
-﻿using System;
+// =============================================
+// 此文件由 InputControllerCodeGenerator 自动生成
+// 请勿手动修改此文件，修改将在下次生成时被覆盖
+// =============================================
+using System;
 using UnityEngine.InputSystem;
 
 namespace EUFramework.Extension.EUInputControllerKit
 {
+    
     public sealed class PlayerInputEvent
     {
         internal readonly PlayerInputControllerEvent Event = new PlayerInputControllerEvent();
-        public void AddMoveListener(Action<InputAction.CallbackContext> action) => Event._onMove =  action;
+        public void AddMoveListener(Action<InputAction.CallbackContext> action) => Event._onMove = action;
         public void RemoveMoveListener(Action<InputAction.CallbackContext> action) => Event._onMove -= action;
         public void RemoveAllMoveListener() => Event._onMove = null;
-        public void AddJumpListener(Action<InputAction.CallbackContext> action) => Event._onJump =  action;
+        public void AddJumpListener(Action<InputAction.CallbackContext> action) => Event._onJump = action;
         public void RemoveJumpListener(Action<InputAction.CallbackContext> action) => Event._onJump -= action;
         public void RemoveAllJumpListener() => Event._onJump = null;
         public void AddInteractionListener(Action<InputAction.CallbackContext> action) => Event._onInteraction = action;
