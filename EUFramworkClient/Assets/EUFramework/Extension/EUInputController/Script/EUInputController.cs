@@ -135,7 +135,13 @@ namespace EUFramework.Extension.EUInputControllerKit
         
         private static void AddPlayerInputController(int playerId)
         {
-            if(CurrentPlayerInputControllerCount >= _maxPlayerInputControllers) return;
+            if (CurrentPlayerInputControllerCount >= _maxPlayerInputControllers)
+            {
+#if UNITY_EDITOR
+                LogDebugData($"<color=red>已超过当前所能容纳的最大玩家控制器数量:{_maxPlayerInputControllers} , 当前数量:{CurrentPlayerInputControllerCount}</color>");
+                return;
+#endif
+            }
             if (_playerInputControllerMap.ContainsKey(playerId)) return;
             var ls = new PlayerInputController();
             _playerInputControllerMap.Add(playerId, ls);
@@ -150,7 +156,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 移除玩家输入控制器
         /// </summary>
-        /// <param name="playerId"></param>
         public static void RemovePlayerInputController(int playerId)
         {
             if(CurrentPlayerInputControllerCount <= 1) return;
@@ -167,7 +172,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 移除玩家输入控制器
         /// </summary>
-        /// <param name="playerInputController"></param>
         public static void RemovePlayerInputController(PlayerInputController playerInputController)
         {
             RemovePlayerInputController(GetPlayerInputControllerId(playerInputController));
@@ -175,7 +179,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 添加玩家输入控制器
         /// </summary>
-        /// <returns></returns>
         public static int AddPlayerInputController()
         {
             int id = _id++;
@@ -191,21 +194,23 @@ namespace EUFramework.Extension.EUInputControllerKit
         {
             if(playerInputController.Gamepad == inputDevice) return;
             int id = GetPlayerInputControllerId(playerInputController);
-            
-            if (inputDevice == null)
+            Gamepad lsGamepad;
+            if (inputDevice is null or Keyboard)
             {
-                _onPlayerInputControllerOfDeviceChange?.Invoke(new()
-                {
-                    ChangeOfPlayerInputController = playerInputController,
-                    LastGamepad = playerInputController.Gamepad,
-                    CurrentGamepad = null
-                });
+                lsGamepad = playerInputController.Gamepad;
                 if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
                 {
                     _devicesIdAndIdMap[_idAndDevicesIdMap[id]] = -1;//将该设备原先的控制器标记为无对应引用
                     _idAndDevicesIdMap[id] = -1;//标记当前控制器对应的设备为无对应引用
                 }
                 playerInputController.BindGamepad(null);
+                
+                _onPlayerInputControllerOfDeviceChange?.Invoke(new()
+                {
+                    ChangeOfPlayerInputController = playerInputController,
+                    LastGamepad = lsGamepad,
+                    CurrentGamepad = null
+                });
 #if UNITY_EDITOR
                 LogDebugData("绑定设备.null");
 #endif
@@ -218,14 +223,9 @@ namespace EUFramework.Extension.EUInputControllerKit
             {
                 SetPlayerInputControllerOfDevice(GetPlayerInputController(oldOwnerId), null);
             }
-
-            _onPlayerInputControllerOfDeviceChange?.Invoke(new()
-            {
-                ChangeOfPlayerInputController = playerInputController,
-                LastGamepad = playerInputController.Gamepad,
-                CurrentGamepad = (Gamepad)inputDevice
-            });
+            
             playerInputController.BindGamepad(device);
+            lsGamepad = playerInputController.Gamepad;
             if (_idAndDevicesIdMap[id] != -1)//该控制器原先有对应的设备
             {
                 var oldDeviceId =  _idAndDevicesIdMap[id];
@@ -233,6 +233,13 @@ namespace EUFramework.Extension.EUInputControllerKit
             }
             _idAndDevicesIdMap[id] = inputDevice.deviceId;
             _devicesIdAndIdMap[inputDevice.deviceId] = id;
+            
+            _onPlayerInputControllerOfDeviceChange?.Invoke(new()
+            {
+                ChangeOfPlayerInputController = playerInputController,
+                LastGamepad = lsGamepad,
+                CurrentGamepad = (Gamepad)inputDevice
+            });
 #if UNITY_EDITOR
             LogDebugData($"绑定设备.{inputDevice.deviceId}");
 #endif
@@ -259,7 +266,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 设置主玩家控制器
         /// </summary>
-        /// <param name="playerInputController"></param>
         public static void SetMainPlayerInputController(PlayerInputController playerInputController)
         {
             if(playerInputController == _mainPlayerInputController) return;
@@ -275,8 +281,6 @@ namespace EUFramework.Extension.EUInputControllerKit
 
         /// <summary>
         /// 设置主玩家控制器
-        /// </summary>
-        /// <param name="playerId"></param>
         public static void SetMainPlayerInputController(int playerId)
         {
             if (!_playerInputControllerMap.TryGetValue(playerId, out var value)) return;
@@ -287,8 +291,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 获取玩家控制器引用
         /// </summary>
-        /// <param name="playerId"></param>
-        /// <returns></returns>
         public static PlayerInputController GetPlayerInputController(int playerId)
         {
             return _playerInputControllerMap[playerId];
@@ -322,8 +324,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 获取玩家控制器Id
         /// </summary>
-        /// <param name="playerInputController"></param>
-        /// <returns></returns>
         public static int GetPlayerInputControllerId(PlayerInputController playerInputController)
         {
             return _playerInputControllerMapId[playerInputController];
@@ -381,16 +381,16 @@ namespace EUFramework.Extension.EUInputControllerKit
         private static void RemovePlayerInputDevice(int deviceId)
         {
             if (!_playerInputDeviceMap.Remove(deviceId, out var inputDevice)) return;
+            _onRemovedDevice?.Invoke(inputDevice);
             if (_devicesIdAndIdMap[deviceId] != -1)
             {
                 SetPlayerInputControllerOfDevice(_devicesIdAndIdMap[deviceId],null);
             }
             _playerInputDeviceList.Remove(inputDevice);
             _devicesIdAndIdMap.Remove(inputDevice.deviceId);//移除映射关系
-            _onRemovedDevice?.Invoke(inputDevice);
         }
         /// <summary>
-        /// 获取设备对应的角色控制器
+        /// 获取设备对应的角色控制器(如果返回值为空表示没有设备没有对应的角色控制器)
         /// </summary>
         public static PlayerInputController GetPlayerInputDeviceOfPlayerInputController(int deviceId)
         {

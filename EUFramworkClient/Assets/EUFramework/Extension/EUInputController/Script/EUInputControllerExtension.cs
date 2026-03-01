@@ -8,8 +8,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 设置玩家输入控制器的输入设备
         /// </summary>
-        /// <param name="playerInputController"></param>
-        /// <param name="inputDevice"></param>
         public static void SetPlayerInputControllerOfDevice(this PlayerInputController playerInputController,
             InputDevice inputDevice)
         {
@@ -18,8 +16,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 获取玩家输入控制器的Id
         /// </summary>
-        /// <param name="playerInputController"></param>
-        /// <returns></returns>
         public static int GetPlayerInputControllerId(this PlayerInputController playerInputController)
         {
             return EUInputController.GetPlayerInputControllerId(playerInputController);
@@ -38,7 +34,9 @@ namespace EUFramework.Extension.EUInputControllerKit
         {
             return EUInputController.PlayerInputDeviceMap.ContainsKey(inputDevice.deviceId);
         }
-
+        /// <summary>
+        /// 获取设备对应的角色控制器(如果返回值为空表示没有设备没有对应的角色控制器)
+        /// </summary>
         public static PlayerInputController GetPlayerInputController(this InputDevice inputDevice)
         {
             return EUInputController.GetPlayerInputDeviceOfPlayerInputController(inputDevice.deviceId);
