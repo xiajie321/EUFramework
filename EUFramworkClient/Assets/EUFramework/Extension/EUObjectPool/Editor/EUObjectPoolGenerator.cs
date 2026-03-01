@@ -9,7 +9,7 @@ namespace EUFramework.Extension.EUObjectPoolKit.Editor
 {
     public class EUObjectPoolGenerator
     {
-        [MenuItem("EUFramework/生成/EU对象池注册信息")]
+        [MenuItem("EUFramework/生成/生成EU对象池注册代码")]
         public static void Generate()
         {
             // Find all classes with EUObjectPoolAttribute

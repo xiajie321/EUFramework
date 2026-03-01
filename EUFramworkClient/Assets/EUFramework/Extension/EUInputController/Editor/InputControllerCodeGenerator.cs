@@ -494,7 +494,7 @@ namespace EUFramework.Extension.EUInputController.Editor
         /// <summary>
         /// 菜单项：手动触发代码生成
         /// </summary>
-        [MenuItem("Tools/EUInputController/生成输入控制器代码")]
+        [MenuItem("EUFramework/生成/生成InputController代码")]
         public static void GenerateFromMenu()
         {
             Debug.Log("[EUInputController] 手动触发代码生成...");
