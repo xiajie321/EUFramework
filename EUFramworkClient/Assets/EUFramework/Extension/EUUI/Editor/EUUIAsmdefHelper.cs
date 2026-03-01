@@ -445,9 +445,9 @@ namespace EUFramework.Extension.EUUI.Editor
 
         internal static string GetPanelBaseOutputDirectory()
         {
-            string[] guids = AssetDatabase.FindAssets("EUUIPanelBase t:MonoScript");
-            if (guids == null || guids.Length == 0) return null;
-            string scriptDir   = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guids[0]))?.Replace("\\", "/");
+            string scriptPath = FindScriptExact("EUUIPanelBase");
+            if (string.IsNullOrEmpty(scriptPath)) return null;
+            string scriptDir   = Path.GetDirectoryName(scriptPath)?.Replace("\\", "/");
             string generateDir = Path.Combine(scriptDir, "Generate", "PanelBase").Replace("\\", "/");
             EnsureDirectory(generateDir);
             return generateDir;
@@ -455,12 +455,29 @@ namespace EUFramework.Extension.EUUI.Editor
 
         internal static string GetUIKitOutputDirectory()
         {
-            string[] guids = AssetDatabase.FindAssets("EUUIKit t:MonoScript");
-            if (guids == null || guids.Length == 0) return null;
-            string scriptDir   = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guids[0]))?.Replace("\\", "/");
+            string scriptPath = FindScriptExact("EUUIKit");
+            if (string.IsNullOrEmpty(scriptPath)) return null;
+            string scriptDir   = Path.GetDirectoryName(scriptPath)?.Replace("\\", "/");
             string generateDir = Path.Combine(scriptDir, "Generate", "UIKit").Replace("\\", "/");
             EnsureDirectory(generateDir);
             return generateDir;
+        }
+
+        /// <summary>
+        /// 通过精确文件名（不含扩展名）定位脚本资源路径
+        /// 避免 FindAssets 子字符串匹配导致命中同名前缀的其他脚本（如 EUUIPanelBaseListExtension）
+        /// </summary>
+        private static string FindScriptExact(string scriptName)
+        {
+            string[] guids = AssetDatabase.FindAssets($"{scriptName} t:MonoScript");
+            if (guids == null) return null;
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileNameWithoutExtension(path) == scriptName)
+                    return path;
+            }
+            return null;
         }
 
         internal static void EnsureDirectory(string assetRelDir)
