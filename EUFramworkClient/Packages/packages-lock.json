@@ -12,12 +12,6 @@
       "source": "embedded",
       "dependencies": {}
     },
-    "com.kyrylokuzyk.primetween": {
-      "version": "file:../Assets/Plugins/PrimeTween/internal/com.kyrylokuzyk.primetween.tgz",
-      "depth": 0,
-      "source": "local-tarball",
-      "dependencies": {}
-    },
     "com.tuyoogame.yooasset": {
       "version": "file:YooAsset-2.3.18/Assets/YooAsset",
       "depth": 0,
