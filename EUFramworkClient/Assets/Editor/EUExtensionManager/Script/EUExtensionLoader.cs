@@ -1337,7 +1337,9 @@ namespace EUFramework.Extension.ExtensionManagerKit.Editor
                     
                     EditorUtility.DisplayProgressBar("下载中", "正在解压...", 0.5f);
                     
-                    tempDir = Path.Combine(Application.temporaryCachePath, "eu_temp_" + Guid.NewGuid().ToString());
+                    // 使用更短的临时路径，避免 Windows 260 字符 MAX_PATH 限制
+                    // Application.temporaryCachePath 路径过长，改用系统临时目录 + 短名称
+                    tempDir = Path.Combine(Path.GetTempPath(), "eu_" + Guid.NewGuid().ToString("N").Substring(0, 8));
                     Directory.CreateDirectory(tempDir);
                     
                     zipPath = Path.Combine(tempDir, "download.zip");
