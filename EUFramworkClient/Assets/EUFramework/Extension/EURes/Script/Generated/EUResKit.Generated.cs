@@ -37,10 +37,12 @@ namespace EUFramework.Extension.EURes
 
             // 执行热更新初始化流程
             var patchOperation = new EUResKitPatchOperation(packageName, playMode);
-            
+
             // 配置用户交互回调
             SetupPatchOperationCallbacks(patchOperation, packageName);
-            
+
+            // 必须启动操作，状态机才会运行（OnStart -> FsmInitializePackage）
+            YooAssets.StartOperation(patchOperation);
             await patchOperation;
 
             if (patchOperation.Status == EOperationStatus.Succeed)
