@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-namespace EUFramwork.Extension.EUFSMKit
+namespace EUFramework.Extension.EUFSMKit
 {
     /// <summary>
 /// EUFSM 状态机

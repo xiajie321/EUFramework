@@ -1,6 +1,6 @@
 {
     "name": "EUFSM",
-    "rootNamespace": "EUFramwork.Extension.EUFSMKit",
+    "rootNamespace": "EUFramework.Extension.EUFSMKit",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
