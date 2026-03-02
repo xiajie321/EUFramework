@@ -101,7 +101,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送命令（无返回值）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<T>(this ICanSendCommand canSendCommand, in T command) 
+        public static void SendCommand<T>(this ICanSendCommand canSendCommand, ref T command) 
             where T : struct, ICommand
         {
             _architecture.SendCommand(command);
@@ -113,7 +113,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Command 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<TCaller,T>(this TCaller caller, in T command) 
+        public static void SendCommand<TCaller,T>(this TCaller caller, ref T command) 
             where TCaller : struct,ICanSendCommand
             where T : struct, ICommand
         {
@@ -124,7 +124,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送命令（有返回值）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendCommand<TCommand, T>(this ICanSendCommand canSendCommand, in TCommand command)
+        public static T SendCommand<TCommand, T>(this ICanSendCommand canSendCommand, ref TCommand command)
             where TCommand : struct, ICommand<T>
         {
             return _architecture.SendCommand<TCommand, T>(command);
@@ -137,7 +137,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCommand">要发送的 Command 类型</typeparam>
         /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendCommand<TCaller, TCommand, T>(ref this TCaller caller, in TCommand command)
+        public static T SendCommand<TCaller, TCommand, T>(ref this TCaller caller, ref TCommand command)
         where TCaller : struct,ICanSendCommand
         where TCommand : struct,ICommand<T>
         {

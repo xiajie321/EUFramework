@@ -36,7 +36,7 @@
     border-left-width: 3px;
     border-left-color: transparent;
     cursor: link;
-    transition-property: background-color, border-left-color, padding-left;
+    transition-property: background-color, border-left-color, padding;
     transition-duration: 0.2s;
 }
 
@@ -112,7 +112,7 @@
     background-color: #444;
 }
 
-.search-field > TextInput {
+.search-field > .unity-text-field__input {
     background-color: transparent;
     border-width: 0;
 }
@@ -122,7 +122,7 @@
     left: 10px;
     top: 6px;
     color: #888;
-    font-style: italic;
+    -unity-font-style: italic;
 }
 
 .search-clear-button {
@@ -367,7 +367,6 @@
     font-size: 11px;
     color: #666;
     margin-bottom: 2px;
-    text-transform: uppercase;
 }
 
 .info-card-value {
@@ -387,7 +386,6 @@
 .detail-description {
     font-size: 13px;
     color: #ccc;
-    line-height: 20px;
     white-space: normal;
     margin-bottom: 30px;
 }
@@ -478,7 +476,6 @@
     -unity-font-style: bold;
     color: #858585;
     margin-bottom: 12px;
-    text-transform: uppercase;
     letter-spacing: 1px;
 }
 
