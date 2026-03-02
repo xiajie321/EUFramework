@@ -149,7 +149,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送查询
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendQuery<TQuery, T>(this ICanSendQuery canSendQuery, in TQuery query)
+        public static T SendQuery<TQuery, T>(this ICanSendQuery canSendQuery, ref TQuery query)
             where TQuery : struct, IQuery<T>
         {
             return _architecture.SendQuery<TQuery, T>(query);
@@ -162,7 +162,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TQuery">要发送的 Query 类型</typeparam>
         /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendQuery<TCaller, TQuery, T>(ref this TCaller caller, in TQuery query)
+        public static T SendQuery<TCaller, TQuery, T>(ref this TCaller caller, ref TQuery query)
         where TQuery : struct, IQuery<T>
         where TCaller :struct,ICanSendQuery
         {
@@ -174,7 +174,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送事件
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<T>(this ICanSendEvent canSendEvent,in T Tevent) 
+        public static void SendEvent<T>(this ICanSendEvent canSendEvent,ref T Tevent) 
             where T : struct
         {
             _architecture.SendEvent(Tevent);
@@ -186,7 +186,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Event 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<TCaller,T>(ref this TCaller caller, in T Tevent) 
+        public static void SendEvent<TCaller,T>(ref this TCaller caller, ref T Tevent) 
             where T : struct
             where TCaller : struct,ICanSendEvent
         {
