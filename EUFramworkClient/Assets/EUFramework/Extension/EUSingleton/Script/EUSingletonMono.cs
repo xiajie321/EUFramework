@@ -4,39 +4,39 @@ namespace EUFramework.Extension.SingletonKit
 {
     public abstract class EUSingletonMono<T> : MonoBehaviour where T : EUSingletonMono<T>
     {
-        private static T mInstance;
-        private static bool mIsApplicationQuitting = false;
+        private static T _instance;
+        private static bool _isApplicationQuitting = false;
 
         public static T Instance
         {
             get
             {
-                if (mIsApplicationQuitting)
+                if (_isApplicationQuitting)
                 {
                     return null;
                 }
 
-                if (mInstance == null)
+                if (_instance == null)
                 {
-                    mInstance = FindObjectOfType<T>();
-                    if (mInstance == null)
+                    _instance = FindObjectOfType<T>();
+                    if (_instance == null)
                     {
                         GameObject go = new GameObject(typeof(T).Name);
-                        mInstance = go.AddComponent<T>();
+                        _instance = go.AddComponent<T>();
                     }
                 }
-                return mInstance;
+                return _instance;
             }
         }
 
         protected virtual void Awake()
         {
-            if (mInstance == null)
+            if (_instance == null)
             {
-                mInstance = this as T;
+                _instance = this as T;
                 Init();
             }
-            else if (mInstance == this)
+            else if (_instance == this)
             {
                 Init();
             }
@@ -58,14 +58,14 @@ namespace EUFramework.Extension.SingletonKit
 
         protected virtual void OnApplicationQuit()
         {
-            mIsApplicationQuitting = true;
+            _isApplicationQuitting = true;
         }
 
         protected virtual void OnDestroy()
         {
-            if (mInstance == this)
+            if (_instance == this)
             {
-                mInstance = null;
+                _instance = null;
             }
         }
 

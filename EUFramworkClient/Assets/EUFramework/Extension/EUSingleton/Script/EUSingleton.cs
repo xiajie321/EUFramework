@@ -4,18 +4,18 @@ namespace EUFramework.Extension.SingletonKit
 {
     public abstract class EUSingleton<T> where T : EUSingleton<T>
     {
-        private static T mInstance;
+        private static T _instance;
 
         public static T Instance
         {
             get
             {
-                if (mInstance == null)
+                if (_instance == null)
                 {
-                    mInstance = Activator.CreateInstance(typeof(T), true) as T;
-                    mInstance?.OnCreate();
+                    _instance = Activator.CreateInstance(typeof(T), true) as T;
+                    _instance?.OnCreate();
                 }
-                return mInstance;
+                return _instance;
             }
         }
 
