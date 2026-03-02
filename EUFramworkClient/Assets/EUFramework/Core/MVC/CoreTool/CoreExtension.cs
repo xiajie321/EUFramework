@@ -33,7 +33,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：获取数据模型
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetModel<T>(this ICanGetModel canGetModel) 
+        public static T GetModel<T>(this ICanGetModel canGetModel)
         where T : class, IModel
         {
             return _architecture.GetModel<T>();
@@ -55,7 +55,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：获取系统
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetSystem<T>(this ICanGetSystem canGetSystem) 
+        public static T GetSystem<T>(this ICanGetSystem canGetSystem)
             where T : class, ISystem
         {
             return _architecture.GetSystem<T>();
@@ -89,9 +89,9 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要获取的 Utility 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetUtility<TCaller,T>(ref this TCaller caller) 
+        public static T GetUtility<TCaller, T>(ref this TCaller caller)
             where T : class, IUtility
-            where TCaller : struct,ICanGetUtility
+            where TCaller : struct, ICanGetUtility
         {
             return _architecture.GetUtility<T>();
         }
@@ -101,7 +101,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送命令（无返回值）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<T>(this ICanSendCommand canSendCommand, ref T command) 
+        public static void SendCommand<T>(this ICanSendCommand canSendCommand, T command)
             where T : struct, ICommand
         {
             _architecture.SendCommand(command);
@@ -113,8 +113,8 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Command 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendCommand<TCaller,T>(this TCaller caller, ref T command) 
-            where TCaller : struct,ICanSendCommand
+        public static void SendCommand<TCaller, T>(this TCaller caller, T command)
+            where TCaller : struct, ICanSendCommand
             where T : struct, ICommand
         {
             _architecture.SendCommand(command);
@@ -124,7 +124,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送命令（有返回值）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendCommand<TCommand, T>(this ICanSendCommand canSendCommand, ref TCommand command)
+        public static T SendCommand<TCommand, T>(this ICanSendCommand canSendCommand, TCommand command)
             where TCommand : struct, ICommand<T>
         {
             return _architecture.SendCommand<TCommand, T>(command);
@@ -137,19 +137,19 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCommand">要发送的 Command 类型</typeparam>
         /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendCommand<TCaller, TCommand, T>(ref this TCaller caller, ref TCommand command)
-        where TCaller : struct,ICanSendCommand
-        where TCommand : struct,ICommand<T>
+        public static T SendCommand<TCaller, TCommand, T>(ref this TCaller caller, TCommand command)
+        where TCaller : struct, ICanSendCommand
+        where TCommand : struct, ICommand<T>
         {
             return _architecture.SendCommand<TCommand, T>(command);
         }
-        
-        
+
+
         /// <summary>
         /// 扩展方法：发送查询
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendQuery<TQuery, T>(this ICanSendQuery canSendQuery, ref TQuery query)
+        public static T SendQuery<TQuery, T>(this ICanSendQuery canSendQuery, TQuery query)
             where TQuery : struct, IQuery<T>
         {
             return _architecture.SendQuery<TQuery, T>(query);
@@ -162,19 +162,19 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TQuery">要发送的 Query 类型</typeparam>
         /// <typeparam name="T">返回值的类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T SendQuery<TCaller, TQuery, T>(ref this TCaller caller, ref TQuery query)
+        public static T SendQuery<TCaller, TQuery, T>(ref this TCaller caller, TQuery query)
         where TQuery : struct, IQuery<T>
-        where TCaller :struct,ICanSendQuery
+        where TCaller : struct, ICanSendQuery
         {
             return _architecture.SendQuery<TQuery, T>(query);
         }
-        
+
 
         /// <summary>
         /// 扩展方法：发送事件
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<T>(this ICanSendEvent canSendEvent,ref T Tevent) 
+        public static void SendEvent<T>(this ICanSendEvent canSendEvent, ref T Tevent)
             where T : struct
         {
             _architecture.SendEvent(Tevent);
@@ -186,9 +186,9 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Event 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<TCaller,T>(ref this TCaller caller, ref T Tevent) 
+        public static void SendEvent<TCaller, T>(ref this TCaller caller, ref T Tevent)
             where T : struct
-            where TCaller : struct,ICanSendEvent
+            where TCaller : struct, ICanSendEvent
         {
             _architecture.SendEvent(Tevent);
         }
@@ -197,7 +197,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：注册事件
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RegisterEvent<T>(this ICanRegisterEvent canRegisterEvent, Action<T> onEvent) 
+        public static void RegisterEvent<T>(this ICanRegisterEvent canRegisterEvent, Action<T> onEvent)
             where T : struct
         {
             _architecture.RegisterEvent(onEvent);
