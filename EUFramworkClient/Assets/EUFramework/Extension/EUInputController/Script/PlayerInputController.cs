@@ -28,7 +28,6 @@ namespace EUFramework.Extension.EUInputControllerKit
             BindGamepad(null);
             _controller.Player.SetCallbacks(_playerInputEvent.Event);
             _controller.Player.Enable();
-            _controller.UI.Enable();
         }
         /// <summary>
         /// 绑定游戏手柄
@@ -50,7 +49,7 @@ namespace EUFramework.Extension.EUInputControllerKit
             _controller.devices= new InputDevice[]
             {
                 _gamepad,
-                Keyboard.current,
+                Mouse.current
             };
         }
     }

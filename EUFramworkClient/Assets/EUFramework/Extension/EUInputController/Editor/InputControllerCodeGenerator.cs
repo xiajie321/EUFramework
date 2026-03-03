@@ -18,6 +18,10 @@ namespace EUFramework.Extension.EUInputController.Editor
     {
         private const string InputActionsFileName = "InputController.inputactions";
         private const string GeneratorScriptName = "InputControllerCodeGenerator.cs";
+        private static HashSet<string> ExcludeOfMapAction = new()//排除InputSystem生成模板
+        {
+            "UI",
+        };
 
         #region 数据模型（用于解析 .inputactions JSON）
 
@@ -415,6 +419,7 @@ namespace EUFramework.Extension.EUInputController.Editor
             var mapConfigs = new List<MapGenerationConfig>();
             for (int i = 0; i < inputActionsData.maps.Count; i++)
             {
+                if(ExcludeOfMapAction.Contains(inputActionsData.maps[i].name)) continue;
                 bool useAssign = (i == 0); // 第一个 map 使用赋值模式
                 mapConfigs.Add(CreateMapConfig(inputActionsData.maps[i], useAssign));
             }
