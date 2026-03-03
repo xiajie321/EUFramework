@@ -37,6 +37,8 @@ namespace EUFramework.Extension.EUInputControllerKit
         private static int _maxPlayerInputControllers = 4;
         internal static Dictionary<PlayerInputController, int> PlayerInputControllerMapId  => _playerInputControllerMapId;
         internal static Dictionary<int,InputDevice>  PlayerInputDeviceMap => _playerInputDeviceMap;
+        private static Action<PlayerInputController> _onAddPlayerInputController;
+        private static Action<PlayerInputController> _onRemovePlayerInputController;
         public static int MaxPlayerInputControllers
         {
             get => _maxPlayerInputControllers;
@@ -160,6 +162,7 @@ namespace EUFramework.Extension.EUInputControllerKit
             {
                 SetMainPlayerInputController(ls);
             }
+            _onAddPlayerInputController?.Invoke(ls);
         }
         /// <summary>
         /// 移除玩家输入控制器
@@ -169,12 +172,14 @@ namespace EUFramework.Extension.EUInputControllerKit
             if(CurrentPlayerInputControllerCount <= 1) return;
             if(playerId == _mainPlayerInputController.GetPlayerInputControllerId()) return;
             if (!_playerInputControllerMap.TryGetValue(playerId, out var ls)) return;
+            var lsC = ls;
             _playerInputControllerMapId.Remove(ls);
             _playerInputControllerMap.Remove(playerId);
             _playerInputControllerList.Remove(ls);
             if (_idAndDevicesIdMap[playerId] != -1)
                 _devicesIdAndIdMap[_idAndDevicesIdMap[playerId]] = -1;
             _idAndDevicesIdMap.Remove(playerId);
+            _onRemovePlayerInputController?.Invoke(lsC);
         }
 
         /// <summary>
@@ -343,6 +348,18 @@ namespace EUFramework.Extension.EUInputControllerKit
         {
             return _playerInputControllerMapId[playerInputController];
         }
+        /// <summary>
+        /// 添加玩家控制器添加事件
+        /// </summary>
+        public static void AddPlayerInputControllerAddListener(Action<PlayerInputController> onAddPlayerInputController) => _onAddPlayerInputController += onAddPlayerInputController;
+        /// <summary>
+        /// 移除玩家控制器添加事件
+        /// </summary>
+        public static void RemovePlayerInputControllerAddListener(Action<PlayerInputController> onAddPlayerInputController) => _onAddPlayerInputController -= onAddPlayerInputController;
+        /// <summary>
+        /// 移除全部玩家控制器添加事件
+        /// </summary>
+        public static void RemoveAllPlayerInputControllerAddListener() => _onAddPlayerInputController = null;
 
         /// <summary>
         /// 添加主玩家控制器改变事件
@@ -381,6 +398,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// 移除所有玩家控制器的设备改变的事件
         /// </summary>
         public static void RemoveAllPlayerInputControllerOfDeviceChangeListener() => _onPlayerInputControllerOfDeviceChange = null;
+        
         #endregion
 
         #region 玩家输入控制器设备相关
