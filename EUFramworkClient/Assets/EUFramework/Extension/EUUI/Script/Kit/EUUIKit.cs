@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
 namespace EUFramework.Extension.EUUI
 {
@@ -182,10 +182,18 @@ namespace EUFramework.Extension.EUUI
             }
         }
 
+        /// <summary>
+        /// 提供个性化实现，在确保 EventSystem 存在前调用
+        /// </summary>
+        static partial void OnBeforeEnsureEventSystem();
+        static partial void OnAfterEnsureEventSystem();
         private static void EnsureEventSystem()
         {
+            OnBeforeEnsureEventSystem();
+
             if (UnityEngine.EventSystems.EventSystem.current == null)
             {
+                Debug.Log("[EUUIKit] 未找到 EventSystem，创建新实例");
                 var es = new GameObject("EventSystem");
                 es.AddComponent<UnityEngine.EventSystems.EventSystem>();
 
@@ -207,6 +215,8 @@ namespace EUFramework.Extension.EUUI
 
                 UnityEngine.Object.DontDestroyOnLoad(es);
             }
+
+            OnAfterEnsureEventSystem();
         }
 
         private static T GetOrAddComponent<T>(GameObject go) where T : Component
