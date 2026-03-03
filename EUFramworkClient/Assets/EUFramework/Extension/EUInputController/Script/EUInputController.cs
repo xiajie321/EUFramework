@@ -36,6 +36,8 @@ namespace EUFramework.Extension.EUInputControllerKit
         private static int _maxPlayerInputControllers = 4;
         internal static Dictionary<PlayerInputController, int> PlayerInputControllerMapId  => _playerInputControllerMapId;
         internal static Dictionary<int,InputDevice>  PlayerInputDeviceMap => _playerInputDeviceMap;
+        private static Action<PlayerInputController> _onAddPlayerInputController;
+        private static Action<PlayerInputController> _onRemovePlayerInputController;
         public static int MaxPlayerInputControllers
         {
             get => _maxPlayerInputControllers;
@@ -79,7 +81,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// <summary>
         /// 初始化
         /// </summary>
-        [RuntimeInitializeOnLoadMethod]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Init()
         {
             if(_isInit) return;
@@ -103,11 +105,18 @@ namespace EUFramework.Extension.EUInputControllerKit
                 }
             }
 
+            Application.quitting -= OnQuitting;//注销事件以确保事件唯一
+            Application.quitting += OnQuitting;
             InputSystem.onDeviceChange -= OnDeviceChange;//注销事件以确保事件唯一
             InputSystem.onDeviceChange += OnDeviceChange;
 #if UNITY_EDITOR
             LogDebugData("初始化");
 #endif
+        }
+
+        private static void OnQuitting()
+        {
+            InputSystem.onDeviceChange -= OnDeviceChange; //注销事件以确保事件唯一
         }
 
         private static void OnDeviceChange(InputDevice inputDevice, InputDeviceChange change)
@@ -152,6 +161,7 @@ namespace EUFramework.Extension.EUInputControllerKit
             {
                 SetMainPlayerInputController(ls);
             }
+            _onAddPlayerInputController?.Invoke(ls);
         }
         /// <summary>
         /// 移除玩家输入控制器
@@ -161,12 +171,14 @@ namespace EUFramework.Extension.EUInputControllerKit
             if(CurrentPlayerInputControllerCount <= 1) return;
             if(playerId == _mainPlayerInputController.GetPlayerInputControllerId()) return;
             if (!_playerInputControllerMap.TryGetValue(playerId, out var ls)) return;
+            var lsC = ls;
             _playerInputControllerMapId.Remove(ls);
             _playerInputControllerMap.Remove(playerId);
             _playerInputControllerList.Remove(ls);
             if (_idAndDevicesIdMap[playerId] != -1)
                 _devicesIdAndIdMap[_idAndDevicesIdMap[playerId]] = -1;
             _idAndDevicesIdMap.Remove(playerId);
+            _onRemovePlayerInputController?.Invoke(lsC);
         }
 
         /// <summary>
@@ -181,6 +193,13 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static int AddPlayerInputController()
         {
+            if (CurrentPlayerInputControllerCount >= _maxPlayerInputControllers)
+            {
+#if UNITY_EDITOR
+                LogDebugData($"<color=red>已超过当前所能容纳的最大玩家控制器数量:{_maxPlayerInputControllers} , 当前数量:{CurrentPlayerInputControllerCount}</color>");
+                return -1;
+#endif
+            }
             int id = _id++;
             AddPlayerInputController(id);
             return id;
@@ -268,6 +287,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static void SetMainPlayerInputController(PlayerInputController playerInputController)
         {
+            if(playerInputController == null) return;
             if(playerInputController == _mainPlayerInputController) return;
             if (!_playerInputControllerMapId.ContainsKey(playerInputController)) return;
             var last = _mainPlayerInputController;
@@ -293,7 +313,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static PlayerInputController GetPlayerInputController(int playerId)
         {
-            return _playerInputControllerMap[playerId];
+            return _playerInputControllerMap.GetValueOrDefault(playerId);
         }
 
         /// <summary>
@@ -305,7 +325,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         }
         
         /// <summary>
-        /// 获取空闲玩家输入控制器列表(注意:该方法会产生少量GC高频调用慎用)
+        /// 获取空闲玩家输入控制器列表,空闲指的是该控制器没有对应的独立输入设备(注意:该方法会产生少量GC高频调用慎用)
         /// </summary>
         public static PlayerInputController[] GetIdlePlayerInputControllerList()
         {
@@ -328,6 +348,18 @@ namespace EUFramework.Extension.EUInputControllerKit
         {
             return _playerInputControllerMapId[playerInputController];
         }
+        /// <summary>
+        /// 添加玩家控制器添加事件
+        /// </summary>
+        public static void AddPlayerInputControllerAddListener(Action<PlayerInputController> onAddPlayerInputController) => _onAddPlayerInputController += onAddPlayerInputController;
+        /// <summary>
+        /// 移除玩家控制器添加事件
+        /// </summary>
+        public static void RemovePlayerInputControllerAddListener(Action<PlayerInputController> onAddPlayerInputController) => _onAddPlayerInputController -= onAddPlayerInputController;
+        /// <summary>
+        /// 移除全部玩家控制器添加事件
+        /// </summary>
+        public static void RemoveAllPlayerInputControllerAddListener() => _onAddPlayerInputController = null;
 
         /// <summary>
         /// 添加主玩家控制器改变事件
@@ -366,6 +398,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// 移除所有玩家控制器的设备改变的事件
         /// </summary>
         public static void RemoveAllPlayerInputControllerOfDeviceChangeListener() => _onPlayerInputControllerOfDeviceChange = null;
+        
         #endregion
 
         #region 玩家输入控制器设备相关
@@ -423,7 +456,7 @@ namespace EUFramework.Extension.EUInputControllerKit
             return new List<InputDevice>(_playerInputDeviceList).ToArray();
         } 
         /// <summary>
-        /// 获取空闲玩家输入设备列表(注意:该方法会产生少量GC高频调用慎用)
+        /// 获取空闲玩家输入设备列表,空闲指的是该设备已经连接,但没有对应的控制器(注意:该方法会产生少量GC高频调用慎用)
         /// </summary>
         /// <returns></returns>
         public static InputDevice[] GetIdlePlayerInputDeviceList()
