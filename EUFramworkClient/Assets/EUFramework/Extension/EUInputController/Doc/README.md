@@ -75,11 +75,9 @@ private void OnMove(InputAction.CallbackContext context)
 **监听 UI 操作 (UI Map)：**
 ```csharp
 // 监听 Submit (确认) 事件
-mainController.UIInputControllerEvent.AddSubmitListener(context => {
-    if (context.performed) {
-        Debug.Log("UI Submit");
-    }
-});
+// 注意：UI 事件通常在 UIInputControllerEvent 中
+// (假设您的 Input Actions 中定义了 UI Map)
+// mainController.UIInputControllerEvent.AddSubmitListener(...) 
 ```
 
 ### 4. 处理设备变更

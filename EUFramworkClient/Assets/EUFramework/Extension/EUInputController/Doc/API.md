@@ -1,161 +1,194 @@
 # EUInputController API 参考文档
 
-本文档详细列出了 `EUInputController` 模块中各类、属性及方法的说明。所有类均位于 `EUFramework.Extension.EUInputControllerKit` 命名空间下。
-
-## 1. EUInputController (静态类)
-
-核心管理类，负责全局的控制器管理、设备映射与热插拔逻辑。
-
-### 属性
-
-| 属性名 | 类型 | 读写 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `MaxPlayerInputControllers` | `int` | get/set | 设置或获取系统支持的最大玩家控制器数量。默认为 4，最少为 1。设置较小值时会自动移除多余的控制器。 |
-| `CurrentPlayerInputControllerCount` | `int` | get | 获取当前已创建并活跃的玩家控制器数量。 |
-| `CurrentPlayerInputDeviceCount` | `int` | get | 获取当前已连接的输入设备（Gamepad）数量。 |
-| `PlayerInputControllerMapId` | `Dictionary<PlayerInputController, int>` | internal | 控制器到 ID 的映射字典。 |
-| `PlayerInputDeviceMap` | `Dictionary<int, InputDevice>` | internal | 设备 ID 到设备对象的映射字典。 |
-
-### 控制器管理方法
-
-| 方法签名 | 说明 |
-| :--- | :--- |
-| `int AddPlayerInputController()` | 创建一个新的玩家控制器，并返回其生成的唯一 ID。如果已达到最大数量限制，可能无法创建。 |
-| `void RemovePlayerInputController(int playerId)` | 根据 ID 移除指定的玩家控制器。如果该控制器为主控制器，则不会被移除。 |
-| `void RemovePlayerInputController(PlayerInputController playerInputController)` | 移除指定的玩家控制器实例。 |
-| `PlayerInputController GetMainPlayerInputController()` | 获取当前的主玩家控制器（通常对应 ID 0，或者当前活跃的第一个控制器）。 |
-| `void SetMainPlayerInputController(PlayerInputController playerInputController)` | 将指定的控制器实例设置为主控制器，并触发变更事件。 |
-| `void SetMainPlayerInputController(int playerId)` | 将指定 ID 的控制器设置为主控制器。 |
-| `PlayerInputController GetPlayerInputController(int playerId)` | 根据 ID 获取玩家控制器实例。 |
-| `PlayerInputController[] GetPlayerInputControllerList()` | 获取所有玩家控制器的数组副本。注意：此方法会产生少量 GC，建议避免在 Update 中高频调用。 |
-| `PlayerInputController[] GetIdlePlayerInputControllerList()` | 获取当前未绑定任何设备的空闲玩家控制器列表。 |
-
-### 设备管理方法
-
-| 方法签名 | 说明 |
-| :--- | :--- |
-| `void SetPlayerInputControllerOfDevice(PlayerInputController playerInputController, InputDevice inputDevice)` | 将指定设备绑定到指定控制器。如果设备已被其他控制器绑定，会先解除旧绑定。 |
-| `void SetPlayerInputControllerOfDevice(int playerId, InputDevice inputDevice)` | 将指定设备绑定到指定 ID 的控制器。 |
-| `PlayerInputController GetPlayerInputDeviceOfPlayerInputController(int deviceId)` | 获取指定设备 ID 当前所绑定的玩家控制器。如果没有绑定，返回 null。 |
-| `PlayerInputController GetPlayerInputDeviceOfPlayerInputController(InputDevice inputDevice)` | 获取指定设备对象当前所绑定的玩家控制器。 |
-| `int GetPlayerInputDeviceCount()` | 获取当前连接的设备总数。 |
-| `InputDevice[] GetPlayerInputDeviceList()` | 获取所有已连接设备的数组副本。 |
-| `InputDevice[] GetIdlePlayerInputDeviceList()` | 获取当前未被任何控制器绑定的空闲设备列表。 |
-| `Dictionary<int, InputDevice> GetPlayerInputDeviceDictionary()` | 获取设备字典的副本。 |
-
-### 事件监听方法
-
-| 方法签名 | 说明 |
-| :--- | :--- |
-| `void AddMainPlayerInputControllerChangeListener(Action<EUMainInputControllerChangeData> action)` | 添加主控制器变更事件监听。 |
-| `void RemoveMainPlayerInputControllerChangeListener(Action<EUMainInputControllerChangeData> action)` | 移除主控制器变更事件监听。 |
-| `void RemoveAllMainPlayerInputControllerChangeListener()` | 移除所有主控制器变更事件监听。 |
-| `void AddPlayerInputControllerOfDeviceChangeListener(Action<EUPlayerInputOfDeviceChangeData> action)` | 添加控制器设备绑定变更事件监听。 |
-| `void RemovePlayerInputControllerOfDeviceChangeListener(Action<EUPlayerInputOfDeviceChangeData> action)` | 移除控制器设备绑定变更事件监听。 |
-| `void RemoveAllPlayerInputControllerOfDeviceChangeListener()` | 移除所有控制器设备绑定变更事件监听。 |
-| `void AddPlayerInputDeviceAddedListener(Action<InputDevice> action)` | 添加设备接入事件监听。 |
-| `void RemovePlayerInputDeviceAddedListener(Action<InputDevice> action)` | 移除设备接入事件监听。 |
-| `void RemoveAllPlayerInputDeviceAddedListener()` | 移除所有设备接入事件监听。 |
-| `void AddPlayerInputDeviceRemovedListener(Action<InputDevice> action)` | 添加设备移除事件监听。 |
-| `void RemovePlayerInputDeviceRemovedListener(Action<InputDevice> action)` | 移除设备移除事件监听。 |
-| `void RemoveAllPlayerInputDeviceRemovedListener()` | 移除所有设备移除事件监听。 |
+本文档提供了 `EUInputController` 模块的核心 API 详解。所有类均位于 `EUFramework.Extension.EUInputControllerKit` 命名空间下。
 
 ---
 
-## 2. PlayerInputController
+## 1. EUInputController (静态核心类)
 
-玩家控制器实例，是对 Unity `InputController` 的高级封装，管理单个玩家的输入状态和事件。
+`EUInputController` 是整个输入系统的核心管理类，负责玩家控制器的生命周期管理、设备自动绑定以及全局事件分发。
 
-### 属性
+### 1.1 属性
 
-| 属性名 | 类型 | 说明 |
+#### `int MaxPlayerInputControllers`
+*   **描述**：获取或设置系统支持的最大玩家控制器数量。
+*   **默认值**：4
+*   **注意**：
+    *   最小值为 1。
+    *   如果设置的值小于当前已存在的控制器数量，系统会自动移除多余的控制器（从列表末尾开始移除）。
+
+#### `int CurrentPlayerInputControllerCount`
+*   **描述**：获取当前已创建并活跃的玩家控制器数量。
+
+#### `int CurrentPlayerInputDeviceCount`
+*   **描述**：获取当前已连接且被系统识别的输入设备（主要是 Gamepad）数量。
+
+### 1.2 控制器管理
+
+#### `int AddPlayerInputController()`
+*   **描述**：创建一个新的玩家控制器。
+*   **返回值**：新创建控制器的 ID。如果已达到 `MaxPlayerInputControllers` 限制，则可能无法创建（具体行为取决于实现，通常会打印错误日志）。
+
+#### `void RemovePlayerInputController(int playerId)`
+*   **描述**：根据 ID 移除指定的玩家控制器。
+*   **参数**：
+    *   `playerId`：要移除的控制器 ID。
+*   **注意**：如果该控制器是当前的主控制器（Main Player），则不会被移除。
+
+#### `PlayerInputController GetMainPlayerInputController()`
+*   **描述**：获取当前的主玩家控制器。
+*   **用途**：通常用于单人游戏或多人游戏中的 UI 控制权归属。默认情况下，ID 为 0 的控制器是主控制器。
+
+#### `void SetMainPlayerInputController(int playerId)`
+*   **描述**：将指定 ID 的控制器设置为主控制器。
+*   **触发事件**：`OnMainInputControllerChange`
+
+#### `PlayerInputController GetPlayerInputController(int playerId)`
+*   **描述**：根据 ID 获取玩家控制器实例。
+*   **返回值**：如果 ID 存在则返回对应实例，否则返回 `null`。
+
+### 1.3 设备管理
+
+#### `void SetPlayerInputControllerOfDevice(PlayerInputController controller, InputDevice device)`
+*   **描述**：将指定输入设备绑定到目标控制器。
+*   **参数**：
+    *   `controller`：目标玩家控制器。
+    *   `device`：要绑定的输入设备（通常是 `Gamepad`）。如果传入 `null`，则该控制器将回退到键盘/鼠标模式。
+*   **逻辑**：
+    *   如果该设备已经被其他控制器绑定，系统会先解除旧的绑定关系。
+    *   绑定成功后会触发 `OnPlayerInputControllerOfDeviceChange` 事件。
+
+#### `PlayerInputController GetPlayerInputDeviceOfPlayerInputController(InputDevice device)`
+*   **描述**：查找指定设备当前绑定的玩家控制器。
+*   **返回值**：如果该设备未绑定任何控制器，返回 `null`。
+
+#### `InputDevice[] GetIdlePlayerInputDeviceList()`
+*   **描述**：获取当前所有未被绑定的空闲设备列表。
+*   **用途**：可用于在多人游戏加入界面中，自动为新加入的玩家分配空闲手柄。
+
+### 1.4 全局事件监听
+
+以下方法用于添加或移除全局事件监听。建议在 `OnEnable` 中添加，在 `OnDisable` 中移除。
+
+| 添加监听方法 | 移除监听方法 | 描述 |
 | :--- | :--- | :--- |
-| `Gamepad` | `Gamepad` | 获取当前绑定的手柄设备。如果为 `null`，表示当前使用键盘/鼠标作为输入源。 |
-| `Controller` | `InputController` | 获取底层的 Input System 控制器实例（自动生成的类）。 |
-| `PlayerInputControllerEvent` | `PlayerInputEvent` | 获取 Player Action Map (玩家操作) 的事件代理对象。 |
-| `UIInputControllerEvent` | `UIInputEvent` | 获取 UI Action Map (界面操作) 的事件代理对象。 |
+| `AddMainPlayerInputControllerChangeListener` | `RemoveMainPlayerInputControllerChangeListener` | 当主控制器发生切换时触发。 |
+| `AddPlayerInputControllerOfDeviceChangeListener` | `RemovePlayerInputControllerOfDeviceChangeListener` | 当任意控制器的设备绑定发生变化时触发（如手柄断开/连接）。 |
+| `AddPlayerInputDeviceAddedListener` | `RemovePlayerInputDeviceAddedListener` | 当有新设备（手柄）连接到系统时触发。 |
+| `AddPlayerInputDeviceRemovedListener` | `RemovePlayerInputDeviceRemovedListener` | 当有设备（手柄）从系统断开时触发。 |
 
 ---
 
-## 3. PlayerInputEvent
+## 2. PlayerInputController (玩家控制器类)
 
-封装了 Player Action Map 中所有 Action 的事件订阅接口。
+`PlayerInputController` 是对 Unity `InputController` 的封装，代表一个具体的玩家输入实体。
 
-### 方法
+### 2.1 属性
 
-所有方法均成对出现（Add/Remove/RemoveAll），以下以 `Move` 动作为例：
+#### `Gamepad Gamepad`
+*   **描述**：获取当前绑定的手柄设备。
+*   **返回值**：
+    *   `Gamepad` 对象：表示当前绑定了具体的手柄。
+    *   `null`：表示当前使用 **键盘和鼠标** 作为输入源。
 
-*   `void AddMoveListener(Action<InputAction.CallbackContext> action)`
-*   `void RemoveMoveListener(Action<InputAction.CallbackContext> action)`
-*   `void RemoveAllMoveListener()`
+#### `InputController Controller`
+*   **描述**：获取底层的 Unity Input System 生成类实例。通常不需要直接访问，除非需要进行非常底层的操作。
 
-**支持的 Action 事件：**
-*   `Move` (移动)
-*   `Jump` (跳跃)
-*   `Interaction` (交互)
-*   `Raise` (举起)
-*   `PickUp` (拾取)
-*   `PushPull` (推拉)
-*   `Discard` (丢弃)
-*   `Disassemble` (分解)
+#### `PlayerInputEvent PlayerInputControllerEvent`
+*   **描述**：获取 **玩家操作**（如移动、跳跃、攻击）的事件代理对象。
 
-*(注：具体 Action 取决于 Input Actions 配置文件，此处列出的是当前版本的默认配置)*
+#### `UIInputEvent UIInputControllerEvent`
+*   **描述**：获取 **UI 操作**（如导航、确认、取消）的事件代理对象。
 
 ---
 
-## 4. UIInputEvent
+## 3. PlayerInputEvent (事件代理类)
 
-封装了 UI Action Map 中所有 Action 的事件订阅接口。
+该类封装了具体的 Input Action 事件，提供了强类型的订阅接口。
 
-### 方法
+### 3.1 使用示例
 
-所有方法均成对出现（Add/Remove/RemoveAll），以下以 `Submit` 动作为例：
+```csharp
+// 获取控制器
+var controller = EUInputController.GetMainPlayerInputController();
 
-*   `void AddSubmitListener(Action<InputAction.CallbackContext> action)`
-*   `void RemoveSubmitListener(Action<InputAction.CallbackContext> action)`
-*   `void RemoveAllSubmitListener()`
+// 1. 监听移动 (Vector2)
+controller.PlayerInputControllerEvent.AddMoveListener(OnMove);
 
-**支持的 Action 事件：**
-*   `Navigate` (导航)
-*   `Submit` (确认)
-*   `Cancel` (取消)
-*   `Point` (指针位置)
-*   `Click` (点击)
-*   `ScrollWheel` (滚轮)
-*   `MiddleClick` (中键)
-*   `RightClick` (右键)
-*   `TrackedDevicePosition` (VR/AR 设备位置)
-*   `TrackedDeviceOrientation` (VR/AR 设备旋转)
+// 2. 监听跳跃 (Button - 按下)
+controller.PlayerInputControllerEvent.AddJumpListener(context => {
+    if (context.performed) {
+        Debug.Log("跳跃！");
+    }
+});
+
+// 回调函数
+private void OnMove(InputAction.CallbackContext context)
+{
+    Vector2 input = context.ReadValue<Vector2>();
+    // ...
+}
+```
+
+### 3.2 可用事件列表
+
+*   `AddMoveListener` / `RemoveMoveListener`：移动 (Vector2)
+*   `AddJumpListener` / `RemoveJumpListener`：跳跃 (Button)
+*   `AddInteractionListener` / `RemoveInteractionListener`：交互 (Button)
+*   `AddRaiseListener` / `RemoveRaiseListener`：举起 (Button)
+*   `AddPickUpListener` / `RemovePickUpListener`：拾取 (Button)
+*   `AddPushPullListener` / `RemovePushPullListener`：推拉 (Button)
+*   `AddDiscardListener` / `RemoveDiscardListener`：丢弃 (Button)
+*   `AddDisassembleListener` / `RemoveDisassembleListener`：分解 (Button)
+
+*(注：具体事件取决于 Input Actions 配置文件，以上为默认配置)*
 
 ---
 
-## 5. EUInputControllerExtension (扩展方法)
+## 4. EUInputControllerExtension (扩展方法)
 
-为 `PlayerInputController` 和 `InputDevice` 提供的便捷扩展方法。
+提供了针对 `PlayerInputController` 的便捷扩展功能。
 
-### 方法
+### 4.1 键位配置 (Rebinding)
 
-| 方法签名 | 扩展类型 | 说明 |
-| :--- | :--- | :--- |
-| `void SetPlayerInputControllerOfDevice(this PlayerInputController, InputDevice)` | `PlayerInputController` | 设置控制器的输入设备（快捷调用 `EUInputController` 静态方法）。 |
-| `int GetPlayerInputControllerId(this PlayerInputController)` | `PlayerInputController` | 获取控制器的 ID。 |
-| `bool Exists(this PlayerInputController)` | `PlayerInputController` | 判断该控制器是否在管理系统中存在。 |
-| `bool Exists(this InputDevice)` | `InputDevice` | 判断该设备是否在管理系统中存在。 |
-| `PlayerInputController GetPlayerInputController(this InputDevice)` | `InputDevice` | 获取该设备绑定的控制器。 |
-| `string GetBindingsJson(this PlayerInputController)` | `PlayerInputController` | 获取当前按键映射的 JSON 字符串（用于保存设置）。 |
-| `void SetBindings(this PlayerInputController, string json, bool removeExisting)` | `PlayerInputController` | 从 JSON 字符串加载按键映射。 |
+#### `string GetBindingsJson(this PlayerInputController controller)`
+*   **描述**：获取当前控制器所有按键映射的 JSON 字符串。
+*   **用途**：用于将用户自定义的键位保存到本地（如 `PlayerPrefs` 或文件）。
+
+#### `void SetBindings(this PlayerInputController controller, string json, bool removeExisting)`
+*   **描述**：从 JSON 字符串加载按键映射。
+*   **参数**：
+    *   `json`：由 `GetBindingsJson` 生成的 JSON 字符串。
+    *   `removeExisting`：是否先清除当前的自定义映射。通常设为 `true`。
+
+### 4.2 其他扩展
+
+#### `bool Exists(this PlayerInputController controller)`
+*   **描述**：判断该控制器实例是否仍然在 `EUInputController` 的管理列表中。
+
+#### `int GetPlayerInputControllerId(this PlayerInputController controller)`
+*   **描述**：获取该控制器的 ID。
 
 ---
 
-## 6. 数据结构
+## 5. 数据结构
 
-### EUMainInputControllerChangeData
-主控制器变更事件的数据结构。
-*   `LastPlayerInputController`: 变更前的主控制器。
-*   `CurrentPlayerInputController`: 变更后的主控制器。
+### `EUMainInputControllerChangeData`
+用于 `OnMainInputControllerChange` 事件。
+```csharp
+public struct EUMainInputControllerChangeData
+{
+    public PlayerInputController LastPlayerInputController;    // 变更前的主控制器
+    public PlayerInputController CurrentPlayerInputController; // 变更后的主控制器
+}
+```
 
-### EUPlayerInputOfDeviceChangeData
-控制器设备变更事件的数据结构。
-*   `ChangeOfPlayerInputController`: 发生变更的控制器。
-*   `LastGamepad`: 变更前绑定的手柄。
-*   `CurrentGamepad`: 变更后绑定的手柄。
+### `EUPlayerInputOfDeviceChangeData`
+用于 `OnPlayerInputControllerOfDeviceChange` 事件。
+```csharp
+public struct EUPlayerInputOfDeviceChangeData
+{
+    public PlayerInputController ChangeOfPlayerInputController; // 发生变更的控制器
+    public Gamepad LastGamepad;    // 变更前绑定的手柄 (可能为 null)
+    public Gamepad CurrentGamepad; // 变更后绑定的手柄 (可能为 null)
+}
