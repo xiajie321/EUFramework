@@ -14,7 +14,6 @@ namespace EUFramework.Extension.EUInputControllerKit
         private InputController _controller;//控制器
         private Gamepad _gamepad;//手柄绑定
         private PlayerInputEvent _playerInputEvent;
-        private UIInputEvent _uiInputEvent;
         public Gamepad Gamepad
         {
             get => _gamepad;
@@ -22,16 +21,13 @@ namespace EUFramework.Extension.EUInputControllerKit
         }
         public InputController Controller => _controller;
         public PlayerInputEvent PlayerInputControllerEvent => _playerInputEvent;
-        public UIInputEvent UIInputControllerEvent => _uiInputEvent;
         internal PlayerInputController()
         {
             _controller = new InputController();
             _playerInputEvent = new();
-            _uiInputEvent = new();
             BindGamepad(null);
             _controller.Player.SetCallbacks(_playerInputEvent.Event);
             _controller.Player.Enable();
-            _controller.UI.SetCallbacks(_uiInputEvent.Event);
             _controller.UI.Enable();
         }
         /// <summary>
@@ -43,16 +39,18 @@ namespace EUFramework.Extension.EUInputControllerKit
             if (gamepad == null)
             {
                 _gamepad = null;
-                _controller.devices = new[]
+                _controller.devices = new InputDevice[]
                 {
-                    Keyboard.current
+                    Keyboard.current,
+                    Mouse.current
                 };
                 return;
             }
             _gamepad = gamepad;
-            _controller.devices= new[]
+            _controller.devices= new InputDevice[]
             {
-                _gamepad
+                _gamepad,
+                Keyboard.current,
             };
         }
     }

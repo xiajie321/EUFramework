@@ -46,16 +46,18 @@ namespace EUFramework.Extension.EUInputControllerKit
             if (gamepad == null)
             {
                 _gamepad = null;
-                _controller.devices = new[]
+                _controller.devices = new InputDevice[]
                 {
-                    Keyboard.current
+                    Keyboard.current,
+                    Mouse.current
                 };
                 return;
             }
             _gamepad = gamepad;
-            _controller.devices= new[]
+            _controller.devices= new InputDevice[]
             {
-                _gamepad
+                _gamepad,
+                Mouse.current
             };
         }
     }
