@@ -174,7 +174,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// 扩展方法：发送事件
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<T>(this ICanSendEvent canSendEvent, ref T Tevent)
+        public static void SendEvent<T>(this ICanSendEvent canSendEvent,T Tevent)
             where T : struct
         {
             _architecture.SendEvent(Tevent);
@@ -186,7 +186,7 @@ namespace EUFramework.Core.MVC.CoreTool
         /// <typeparam name="TCaller">调用者的类型 (必须是 struct)</typeparam>
         /// <typeparam name="T">要发送的 Event 类型</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SendEvent<TCaller, T>(ref this TCaller caller, ref T Tevent)
+        public static void SendEvent<TCaller, T>(ref this TCaller caller,T Tevent)
             where T : struct
             where TCaller : struct, ICanSendEvent
         {
