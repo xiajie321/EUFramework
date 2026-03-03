@@ -72,6 +72,7 @@ namespace EUFramework.Core.MVC.CoreTool
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Register<T>(Action<T> handler) where T : struct
         {
+            if(handler == null) return;
             // 追踪类型以便Clear时清理（仅首次注册时执行）
             if (!EventCache<T>.IsTracked)
             {
@@ -103,6 +104,7 @@ namespace EUFramework.Core.MVC.CoreTool
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void UnRegister<T>(Action<T> handler) where T : struct
         {
+            if(handler == null) return;
             var handlers = EventCache<T>.Handlers;
             ref var count = ref EventCache<T>.Count;
             
