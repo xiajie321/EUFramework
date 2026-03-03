@@ -1,4 +1,5 @@
 ﻿using System;
+using EUFramework.Extension.EUInputControllerKit.MonoComponent;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -9,79 +10,55 @@ namespace EUFramework.Extension.EUInputControllerKit.Example
     {
         public Text text;
         [SerializeField] private Transform root;
-        private PlayerInputController _playerInputController;
-        private static bool _init = false;
+        [SerializeField] private float speed = 10;
+        EUPlayerInputController _playerInputController;
         Camera cam;
         private void Start()
         {
             cam ??= Camera.main;
+            _playerInputController = new();
+            _playerInputController.PlayerInputController.PlayerInputControllerEvent.AddMoveListener(Move);
+            _playerInputController.PlayerInputController.PlayerInputControllerEvent.AddJumpListener(Jump);
+            _playerInputController.AddInputDeviceAdded(OnInputDeviceAdded);
+            _playerInputController.AddInputDeviceRemoved(OnInputDeviceRemoved);
+            _playerInputController.Enable();//在注册完信息后使用该方法绑定默认手柄控制器
+            text.text = _playerInputController.GetPlayerInputControllerGamepadDevice()!=null? _playerInputController.GetPlayerInputControllerGamepadDevice().ToString():"默认设备";
         }
 
-        private void OnEnable()
+        private Vector2 pos;
+        public void Move(InputAction.CallbackContext context)
         {
-            if (_playerInputController == null) Init();
-            EUInputController.AddPlayerInputDeviceAddedListener(OnInputDeviceAdded);
-            EUInputController.AddPlayerInputDeviceRemovedListener(OnInputDeviceRemoved);
-            var ls = EUInputController.GetIdlePlayerInputDeviceList();
-            _playerInputController?.PlayerInputControllerEvent.AddMoveListener(Move);
-            if(ls.Length == 0) return;
-            EUInputController.SetPlayerInputControllerOfDevice(_playerInputController, ls[0]);
-            text.text = ls[0].ToString();
+            pos = context.ReadValue<Vector2>() * Time.deltaTime * speed;
         }
 
-        private void Init()
+        public void Jump(InputAction.CallbackContext context)
         {
-            if (_playerInputController == null)
-            {
-                if (!_init)
-                {
-                    _init = true;
-                    _playerInputController = EUInputController.GetMainPlayerInputController();
-                }
-                else
-                {
-                    _playerInputController = EUInputController.GetPlayerInputController(EUInputController.AddPlayerInputController());
-                }
-            }
+            if(context.performed)
+                transform.position += (Vector3)fx;
         }
+        
         private void OnInputDeviceAdded(InputDevice inputDevice)
         {
-            if(inputDevice.GetPlayerInputController() != null) return;
-            if (_playerInputController == null) Init();
-            if(_playerInputController?.Gamepad != null) return;//如果输入设备已经存在则不进行设置
-            EUInputController.SetPlayerInputControllerOfDevice(_playerInputController, inputDevice);
             text.text = inputDevice.ToString();
         }
 
         private void OnInputDeviceRemoved(InputDevice inputDevice)
         {
-            PlayerInputController ls = inputDevice.GetPlayerInputController();//判断该PlayerInputController是否与当玩家输入控制器相连
-            if(ls == null) return;
-            if(ls !=  _playerInputController) return;
-            EUInputController.SetPlayerInputControllerOfDevice(_playerInputController,null);
-            text.text = "无设备";
+            text.text = "默认设备";
         }
-
-        public void Move(InputAction.CallbackContext context)
-        {
-            Vector2 pos = context.ReadValue<Vector2>();
-            transform.position += new Vector3(pos.x, pos.y, 0);
-            Debug.Log($"{context.ToString()} : {context.ReadValue<Vector2>()}");
-        }
-        
+        private Vector3 lastPos;
+        private Vector2 fx;
         private void Update()
         {
             text.transform.position = cam.WorldToScreenPoint(root.position);
+            lastPos = transform.position;
+            transform.position += new Vector3(pos.x, pos.y, 0);
+            fx = (transform.position - lastPos).normalized;
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
-            EUInputController.RemovePlayerInputDeviceAddedListener(OnInputDeviceAdded);
-            EUInputController.RemovePlayerInputDeviceRemovedListener(OnInputDeviceRemoved);
-            if(_playerInputController == null) return;
-            _playerInputController.PlayerInputControllerEvent.RemoveMoveListener(Move);
-            EUInputController.RemovePlayerInputController(_playerInputController);
-            _playerInputController = null;//防止野引用所以要重置一下
+            _playerInputController.Disable();//解除绑定
         }
     }
 }

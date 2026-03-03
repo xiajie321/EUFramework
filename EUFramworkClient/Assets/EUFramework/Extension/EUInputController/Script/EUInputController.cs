@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Object = UnityEngine.Object;
 
 namespace EUFramework.Extension.EUInputControllerKit
 {
@@ -288,6 +287,7 @@ namespace EUFramework.Extension.EUInputControllerKit
         /// </summary>
         public static void SetMainPlayerInputController(PlayerInputController playerInputController)
         {
+            if(playerInputController == null) return;
             if(playerInputController == _mainPlayerInputController) return;
             if (!_playerInputControllerMapId.ContainsKey(playerInputController)) return;
             var last = _mainPlayerInputController;
