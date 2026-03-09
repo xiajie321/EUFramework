@@ -26,3 +26,4 @@ MonoBehaviour:
   uiCameraClearFlags: 3
   panelCacheCapacity: 5
   baseSortingOrder: 0
+  multiplayerInputMode: 0

@@ -3,6 +3,26 @@ using UnityEngine;
 namespace EUFramework.Extension.EUUI
 {
     /// <summary>
+    /// 多人 UI 输入 Asset 来源模式
+    /// </summary>
+    public enum MultiplayerInputMode
+    {
+        /// <summary>
+        /// 使用独立的 MultiplayerUIEvent.inputactions（4 个 Map，PlayerUI_1～4）。
+        /// 支持键盘区域隔离（P1=WASD / P2=方向键），适合含键盘的多人场景。
+        /// 设备管理由 EUUI 通过 AssignKeyboardPlayer / AssignGamepadPlayer 负责。
+        /// </summary>
+        MultiplayerUIEvent,
+
+        /// <summary>
+        /// 直接使用 EUInputController 每个 PlayerInputController 自带的 InputController Asset（UI Map）。
+        /// 设备隔离由 PlayerInputController.BindGamepad() 自动维护，EUUI 不做额外设备管理。
+        /// 适合纯手柄多人，或不需要键盘区域隔离的场景。
+        /// </summary>
+        InputControllerAsset,
+    }
+
+    /// <summary>
     /// EUUI 运行时配置（从 Resources 加载）
     /// </summary>
     [CreateAssetMenu(fileName = "EUUIKitConfig", menuName = "EUFramework/EUUI/Kit Config", order = 1)]
@@ -49,6 +69,11 @@ namespace EUFramework.Extension.EUUI
         [Header("层级排序")]
         [Tooltip("各层级的 Canvas SortingOrder 基础值")]
         public int baseSortingOrder = 0;
+
+        [Header("多人输入模式")]
+        [Tooltip("MultiplayerUIEvent：独立 inputactions，支持键盘区域隔离（默认）\n" +
+                 "InputControllerAsset：复用 PlayerInputController 自带 Asset，设备由 EUInputController 管理")]
+        public MultiplayerInputMode multiplayerInputMode = MultiplayerInputMode.MultiplayerUIEvent;
 
         /// <summary>
         /// 获取 UI Prefab 完整路径

@@ -130,13 +130,15 @@ namespace EUFramework.Extension.EUUI.Editor
 
         /// <summary>
         /// 通用内嵌 SO 编辑器：SO 存在时显示可编辑的 InspectorElement，不存在时显示创建入口。
+        /// <para><paramref name="extraContent"/> 可选：在 InspectorElement 下方追加额外控件（仅 SO 存在时调用）。</para>
         /// </summary>
         private static void ShowInlineSOEditor(
             VisualElement container,
             string label,
             string assetPath,
             UnityEngine.Object target,
-            Action onCreate)
+            Action onCreate,
+            Action<ScrollView> extraContent = null)
         {
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.style.flexGrow  = 1;
@@ -159,6 +161,8 @@ namespace EUFramework.Extension.EUUI.Editor
 
                 var inspector = new InspectorElement(target);
                 scroll.Add(inspector);
+
+                extraContent?.Invoke(scroll);
             }
             else
             {
@@ -205,46 +209,82 @@ namespace EUFramework.Extension.EUUI.Editor
             container.Add(scroll);
         }
 
+        // 仅在面板中显示的字段（分辨率 / 路径已由 EditorConfig 同步，不在此处展示）
+        private static readonly string[] _kitConfigEditableFields =
+        {
+            "uiCameraDepth", "uiCullingMask", "uiCameraClearFlags",
+            "panelCacheCapacity", "baseSortingOrder", "multiplayerInputMode"
+        };
+
         private void ShowKitConfigTab(VisualElement container)
         {
             container.Clear();
+
+            var path      = GetKitConfigAssetPath();
+            var kitConfig = AssetDatabase.LoadAssetAtPath<EUUIKitConfig>(path);
+
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.style.flexGrow  = 1;
             scroll.style.alignSelf = Align.Stretch;
 
-            var path      = GetKitConfigAssetPath();
-            var kitConfig = AssetDatabase.LoadAssetAtPath<EUUIKitConfig>(path);
-            var box       = new HelpBox { messageType = HelpBoxMessageType.Info };
+            if (kitConfig == null)
+            {
+                var warnBox = new HelpBox($"未找到 EUUIKitConfig，点击下方按钮创建", HelpBoxMessageType.Warning);
+                scroll.Add(warnBox);
 
-            if (kitConfig != null)
-            {
-                box.text = $"当前运行时配置：{path}（由 EUUIKit 运行时加载）";
-                var openBtn    = new Button(() => { Selection.activeObject = kitConfig; EditorGUIUtility.PingObject(kitConfig); }) { text = "打开 EUUIKitConfig" };
-                var editorConfig = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetConfigAssetPath());
-                var syncBtn    = new Button(() =>
+                var createBtn = new Button(() =>
                 {
-                    if (editorConfig == null) { EditorUtility.DisplayDialog("提示", "请先创建或打开 EUUIEditorConfig。", "确定"); return; }
-                    EUUIEditorConfigEditorSync.SyncEditorConfigToKitConfig(editorConfig);
-                    EditorUtility.DisplayDialog("完成", $"已同步到：{path}", "确定");
-                    ShowKitConfigTab(container);
-                }) { text = "从 EditorConfig 同步" };
-                scroll.Add(box);
-                scroll.Add(openBtn);
-                scroll.Add(syncBtn);
-            }
-            else
-            {
-                box.text        = "未找到 EUUIKitConfig。可从 EUUIEditorConfig 同步生成，或手动创建于 Resources 目录。";
-                box.messageType = HelpBoxMessageType.Warning;
-                var editorConfig = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetConfigAssetPath());
-                var syncBtn    = new Button(() =>
-                {
+                    var editorConfig = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetConfigAssetPath());
                     if (editorConfig == null) { EditorUtility.DisplayDialog("提示", "请先创建 EUUIEditorConfig。", "确定"); return; }
                     EUUIEditorConfigEditorSync.SyncEditorConfigToKitConfig(editorConfig);
                     EditorUtility.DisplayDialog("完成", $"已创建并同步：{path}", "确定");
                     ShowKitConfigTab(container);
-                }) { text = "从 EditorConfig 同步并创建" };
-                scroll.Add(box);
+                }) { text = "创建 EUUIKitConfig" };
+                scroll.Add(createBtn);
+            }
+            else
+            {
+                var infoBox = new HelpBox(path, HelpBoxMessageType.Info);
+                scroll.Add(infoBox);
+
+                var pingBtn = new Button(() => { Selection.activeObject = kitConfig; EditorGUIUtility.PingObject(kitConfig); })
+                    { text = "在 Project 中定位 EUUIKitConfig" };
+                pingBtn.style.marginBottom = 6;
+                scroll.Add(pingBtn);
+
+                var syncHint = new HelpBox(
+                    "分辨率、路径等字段由 EUUIEditorConfig 统一管理，请在 EUUIEditorConfig 中修改后点击同步。",
+                    HelpBoxMessageType.None);
+                syncHint.style.marginBottom = 4;
+                scroll.Add(syncHint);
+
+                // 只显示不由 EditorConfig 同步的独有字段
+                var so = new SerializedObject(kitConfig);
+                foreach (var fieldName in _kitConfigEditableFields)
+                {
+                    var prop = so.FindProperty(fieldName);
+                    if (prop == null) continue;
+                    var propField = new PropertyField(prop);
+                    propField.Bind(so);
+                    scroll.Add(propField);
+                }
+
+                var separator = new VisualElement();
+                separator.style.height          = 1;
+                separator.style.marginTop        = 8;
+                separator.style.marginBottom     = 4;
+                separator.style.backgroundColor  = new StyleColor(new Color(0.3f, 0.3f, 0.3f, 0.5f));
+                scroll.Add(separator);
+
+                var syncBtn = new Button(() =>
+                {
+                    var editorConfig = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(GetConfigAssetPath());
+                    if (editorConfig == null) { EditorUtility.DisplayDialog("提示", "请先创建或打开 EUUIEditorConfig。", "确定"); return; }
+                    EUUIEditorConfigEditorSync.SyncEditorConfigToKitConfig(editorConfig);
+                    EditorUtility.DisplayDialog("完成", $"已同步到：{path}", "确定");
+                    ShowKitConfigTab(container);
+                }) { text = "从 EditorConfig 同步（覆盖分辨率 / 路径等字段）" };
+                syncBtn.style.marginTop = 4;
                 scroll.Add(syncBtn);
             }
 

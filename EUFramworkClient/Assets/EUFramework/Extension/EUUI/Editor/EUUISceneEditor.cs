@@ -1,12 +1,12 @@
 #if UNITY_EDITOR
 using System;
 using System.IO;
+using EUFramework.Extension.EUUI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.UI;
-using EUFramework.Extension.EUUI;
 
 namespace EUFramework.Extension.EUUI.Editor
 {
@@ -189,6 +189,141 @@ namespace EUFramework.Extension.EUUI.Editor
             Debug.Log($"[EUUI] 已定位到: {desc.PackageName}/{UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().name}");
         }
 
+        /// <summary>
+        /// 在 Project 窗口中定位当前场景对应的面板 Prefab。
+        /// </summary>
+        public static void LocateCurrentPrefab()
+        {
+            var config = GetConfig();
+            if (config == null)
+            {
+                EditorUtility.DisplayDialog("提示", "未找到 EUUIEditorConfig，无法定位 Prefab。", "确定");
+                return;
+            }
+
+            var desc = UnityEngine.Object.FindFirstObjectByType<EUUIPanelDescription>();
+            if (desc == null)
+            {
+                EditorUtility.DisplayDialog("提示", "当前场景未找到 EUUIPanelDescription，无法确认包类型。", "确定");
+                return;
+            }
+
+            string panelName = EditorSceneManager.GetActiveScene().name;
+            string dir = config.GetUIPrefabDir(desc.PackageType);
+            string prefabPath = $"{dir}/{panelName}.prefab".Replace("\\", "/");
+
+            var prefab = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(prefabPath);
+            if (prefab == null)
+            {
+                EditorUtility.DisplayDialog("提示",
+                    $"未找到 Prefab：\n{prefabPath}\n\n请先执行「自动流程」生成 Prefab。", "确定");
+                return;
+            }
+
+            Selection.activeObject = prefab;
+            EditorGUIUtility.PingObject(prefab);
+        }
+
+        /// <summary>
+        /// 弹出 Area 设计参考框创建窗口。
+        /// </summary>
+        [EUHotboxEntry("创建 Area", "UI 制作", "在 UIRoot 下创建或更新多人分屏 Area 设计参考框")]
+        public static void ShowCreateAreaWindow()
+        {
+            EUUIAreaCreateWindow.ShowWindow(CreateOrUpdateArea);
+        }
+
+        /// <summary>
+        /// 在当前场景的 UIRoot 下创建或更新 Area 容器节点。
+        /// 流程：先以 center 锚点 + 动态 sizeDelta 定位（让 Unity 用正确尺寸计算位置），
+        /// 再立即转为全拉伸锚点（0,0 → 1,1），与运行时挂载到 PlayerRoot 后行为一致。
+        /// Canvas 的 referenceResolution 不变，始终以 EUUIEditorConfig 配置为准。
+        /// </summary>
+        public static void CreateOrUpdateArea(int playerCount,
+            MultiplayerLayoutMode layout, MultiplayerLayoutAxis axis)
+        {
+            var config = GetConfig();
+            if (config == null)
+            {
+                EditorUtility.DisplayDialog("错误", "未找到 EUUIEditorConfig，请先配置。", "确定");
+                return;
+            }
+
+            GameObject exportRoot = GameObject.Find(config.exportRootName);
+            if (exportRoot == null)
+            {
+                EditorUtility.DisplayDialog("错误",
+                    $"场景中未找到 [{config.exportRootName}]，请先创建 UI 场景。", "确定");
+                return;
+            }
+
+            // 计算玩家区域像素尺寸（同一布局下所有槽位相同，取槽位 0）
+            var slotRect = EUUIKit.GetSlotRect(0, playerCount, layout, axis);
+            float width = slotRect.width * config.referenceResolution.x;
+            float height = slotRect.height * config.referenceResolution.y;
+
+            // 找或创建 Area 节点
+            Transform areaTrans = exportRoot.transform.Find("Area");
+            GameObject areaGO;
+            if (areaTrans != null)
+            {
+                areaGO = areaTrans.gameObject;
+            }
+            else
+            {
+                areaGO = new GameObject("Area", typeof(RectTransform));
+                areaGO.layer = exportRoot.layer;
+                areaGO.transform.SetParent(exportRoot.transform, false);
+            }
+
+            var rt = areaGO.GetComponent<RectTransform>();
+
+            // 步骤一：初始设置（Center锚点）
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(width, height);
+            rt.anchoredPosition = Vector2.zero;
+
+            // 关键：复刻编辑器的锚点切换逻辑
+            SwitchAnchorToStretchWithoutSizeChange(rt);
+
+            EditorUtility.SetDirty(areaGO);
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+
+            Selection.activeGameObject = areaGO;
+            EditorGUIUtility.PingObject(areaGO);
+
+            string layoutDesc = layout == MultiplayerLayoutMode.Grid
+                ? "Grid 2×2"
+                : $"Linear {axis} {playerCount}人";
+            Debug.Log($"[EUUI] Area 已更新：{layoutDesc} → {width}×{height} px，全拉伸填满 UIRoot");
+        }
+        private static void SwitchAnchorToStretchWithoutSizeChange(RectTransform targetRt)
+        {
+            // 1. 记录切换前的关键数据（世界空间的矩形）
+            Rect rectBefore = targetRt.rect;
+            Vector2 worldPosBefore = targetRt.TransformPoint(rectBefore.center);
+
+            // 2. 切换锚点
+            targetRt.anchorMin = Vector2.zero;
+            targetRt.anchorMax = Vector2.one;
+
+            // 3. 编辑器核心补偿步骤：还原位置和尺寸
+            // 3.1 先把锚点位置归中（保证居中）
+            targetRt.anchoredPosition = Vector2.zero;
+            // 3.2 计算补偿后的sizeDelta（让尺寸回到切换前）
+            Vector2 parentSize = Vector2.zero;
+            if (targetRt.parent is RectTransform parentRt)
+            {
+                parentSize = parentRt.rect.size;
+            }
+            // 核心公式：sizeDelta = 目标尺寸 - 父节点尺寸（和编辑器一致）
+            targetRt.sizeDelta = new Vector2(rectBefore.width - parentSize.x, rectBefore.height - parentSize.y);
+
+            // 4. 可选：还原世界位置（确保位置完全不变，应对特殊布局）
+            Vector2 localPos = targetRt.InverseTransformPoint(worldPosBefore);
+            targetRt.anchoredPosition = localPos;
+        }
         private static void ExpandHierarchyToObject(GameObject target)
         {
             var hierarchyType = typeof(EditorWindow).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
@@ -335,6 +470,71 @@ namespace EUFramework.Extension.EUUI.Editor
             string finalName = _panelName.StartsWith("Wnd") ? _panelName : "Wnd" + _panelName;
             _onConfirm?.Invoke(finalName, _tempDesc);
             Close();
+        }
+    }
+
+    /// <summary>
+    /// 创建 Area 设计参考框的输入窗口：选玩家总数和布局方式后确认生成。
+    /// 同一布局下所有玩家区域尺寸相同，无需选择具体槽位；运行时挂载后自动 stretch 适配。
+    /// </summary>
+    public class EUUIAreaCreateWindow : EditorWindow
+    {
+        private static readonly string[] PlayerCountOptions = { "2 人", "3 人", "4 人" };
+        private static readonly string[] LayoutOptions = { "Linear X（左右等分）", "Linear Y（上下等分）", "Grid 2×2" };
+
+        private int _playerCountIndex = 0; // 默认 2 人
+        private int _layoutIndex = 0; // 默认 Linear X
+
+        private System.Action<int, MultiplayerLayoutMode, MultiplayerLayoutAxis> _onConfirm;
+
+        public static void ShowWindow(
+            System.Action<int, MultiplayerLayoutMode, MultiplayerLayoutAxis> onConfirm)
+        {
+            var window = GetWindow<EUUIAreaCreateWindow>(true, "创建 Area", true);
+            window._onConfirm = onConfirm;
+            window.minSize = new Vector2(380, 180);
+            window.CenterOnMainWin();
+            window.Focus();
+        }
+
+        private void OnGUI()
+        {
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("分屏布局设置", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+
+            _playerCountIndex = EditorGUILayout.Popup("玩家总数", _playerCountIndex, PlayerCountOptions);
+            _layoutIndex = EditorGUILayout.Popup("布局方式", _layoutIndex, LayoutOptions);
+
+            int playerCount = _playerCountIndex + 2; // 2/3/4
+            bool isGrid = _layoutIndex == 2;
+            var layout = isGrid ? MultiplayerLayoutMode.Grid : MultiplayerLayoutMode.Linear;
+            var axis = _layoutIndex == 1 ? MultiplayerLayoutAxis.Y : MultiplayerLayoutAxis.X;
+
+            EditorGUILayout.Space(8);
+
+            // 预览尺寸
+            var config = AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.GetEditorConfigPath());
+            if (config != null)
+            {
+                var rect = EUUIKit.GetSlotRect(0, isGrid ? 4 : playerCount, layout, axis);
+                float w = rect.width * config.referenceResolution.x;
+                float h = rect.height * config.referenceResolution.y;
+                EditorGUILayout.HelpBox(
+                    $"玩家区域参考尺寸：{w} × {h} px\n" +
+                    $"（基于 EUUIEditorConfig 参考分辨率 {config.referenceResolution.x}×{config.referenceResolution.y}）\n" +
+                    "Area 将以全拉伸方式填满 UIRoot，referenceResolution 不会被修改。",
+                    MessageType.Info);
+            }
+
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("创建 / 更新 Area", GUILayout.Height(36)))
+            {
+                _onConfirm?.Invoke(isGrid ? 4 : playerCount, layout, axis);
+                Close();
+            }
+            EditorGUILayout.Space(10);
         }
     }
 

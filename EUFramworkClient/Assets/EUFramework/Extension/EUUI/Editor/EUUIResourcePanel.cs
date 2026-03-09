@@ -19,16 +19,18 @@ namespace EUFramework.Extension.EUUI.Editor
             contentArea.Add(EUUIEditorWindowHelper.CreateContentHeader(
                 "EUUI 资源制作", "UI 场景、节点绑定、Prefab 导出流程"));
 
-            var tabBar    = EUUIEditorWindowHelper.CreateTabBar();
-            var tabScene  = EUUIEditorWindowHelper.CreateTabButton("创建场景",   true);
-            var tabLocate = EUUIEditorWindowHelper.CreateTabButton("定位 UIRoot", false);
-            var tabBind   = EUUIEditorWindowHelper.CreateTabButton("节点绑定",   false);
-            var tabExport = EUUIEditorWindowHelper.CreateTabButton("导出 Prefab", false);
-            var tabAuto   = EUUIEditorWindowHelper.CreateTabButton("自动流程",   false);
+            var tabBar           = EUUIEditorWindowHelper.CreateTabBar();
+            var tabScene         = EUUIEditorWindowHelper.CreateTabButton("创建场景",    true);
+            var tabLocate        = EUUIEditorWindowHelper.CreateTabButton("定位 UIRoot", false);
+            var tabBind          = EUUIEditorWindowHelper.CreateTabButton("节点绑定",    false);
+            var tabArea          = EUUIEditorWindowHelper.CreateTabButton("创建 Area",   false);
+            var tabLocatePrefab  = EUUIEditorWindowHelper.CreateTabButton("定位 Prefab", false);
+            var tabAuto          = EUUIEditorWindowHelper.CreateTabButton("自动流程",    false);
             tabBar.Add(tabScene);
             tabBar.Add(tabLocate);
             tabBar.Add(tabBind);
-            tabBar.Add(tabExport);
+            tabBar.Add(tabArea);
+            tabBar.Add(tabLocatePrefab);
             tabBar.Add(tabAuto);
             contentArea.Add(tabBar);
 
@@ -37,11 +39,12 @@ namespace EUFramework.Extension.EUUI.Editor
 
             ShowSceneTab(tabContent);
 
-            tabScene.clicked  += () => { EUUIEditorWindowHelper.SetActiveTab(tabScene,  tabLocate, tabBind, tabExport, tabAuto); ShowSceneTab(tabContent);  };
-            tabLocate.clicked += () => { EUUIEditorWindowHelper.SetActiveTab(tabLocate, tabScene,  tabBind, tabExport, tabAuto); ShowLocateTab(tabContent); };
-            tabBind.clicked   += () => { EUUIEditorWindowHelper.SetActiveTab(tabBind,   tabScene,  tabLocate, tabExport, tabAuto); ShowBindTab(tabContent);   };
-            tabExport.clicked += () => { EUUIEditorWindowHelper.SetActiveTab(tabExport, tabScene,  tabLocate, tabBind, tabAuto);  ShowExportTab(tabContent); };
-            tabAuto.clicked   += () => { EUUIEditorWindowHelper.SetActiveTab(tabAuto,   tabScene,  tabLocate, tabBind, tabExport); ShowAutoTab(tabContent);  };
+            tabScene.clicked        += () => { EUUIEditorWindowHelper.SetActiveTab(tabScene,        tabLocate, tabBind, tabArea, tabLocatePrefab, tabAuto); ShowSceneTab(tabContent);        };
+            tabLocate.clicked       += () => { EUUIEditorWindowHelper.SetActiveTab(tabLocate,       tabScene,  tabBind, tabArea, tabLocatePrefab, tabAuto); ShowLocateTab(tabContent);       };
+            tabBind.clicked         += () => { EUUIEditorWindowHelper.SetActiveTab(tabBind,         tabScene,  tabLocate, tabArea, tabLocatePrefab, tabAuto); ShowBindTab(tabContent);       };
+            tabArea.clicked         += () => { EUUIEditorWindowHelper.SetActiveTab(tabArea,         tabScene,  tabLocate, tabBind, tabLocatePrefab, tabAuto); ShowAreaTab(tabContent);       };
+            tabLocatePrefab.clicked += () => { EUUIEditorWindowHelper.SetActiveTab(tabLocatePrefab, tabScene,  tabLocate, tabBind, tabArea, tabAuto); ShowLocatePrefabTab(tabContent);       };
+            tabAuto.clicked         += () => { EUUIEditorWindowHelper.SetActiveTab(tabAuto,         tabScene,  tabLocate, tabBind, tabArea, tabLocatePrefab); ShowAutoTab(tabContent);       };
         }
 
         // ── Tab 内容 ─────────────────────────────────────────────────────────────
@@ -87,16 +90,39 @@ namespace EUFramework.Extension.EUUI.Editor
             });
         }
 
-        private void ShowExportTab(VisualElement container)
+        private void ShowAreaTab(VisualElement container)
         {
             container.Clear();
             SetupIMGUIContainer(container, () =>
             {
                 GUILayout.Space(10);
-                GUILayout.Label("此功能仅导出 Prefab，不进行代码生成和字段绑定。\n适用于已有代码的情况。", EditorStyles.wordWrappedLabel);
-                GUILayout.Space(20);
-                if (GUILayout.Button("导出 Prefab", GUILayout.Height(36), GUILayout.ExpandWidth(true)))
-                    EUUIPanelExporter.ExportCurrentPanelToPrefab();
+                GUILayout.Label("在当前 UIRoot 下创建（或更新）Area 设计参考框。", EditorStyles.wordWrappedLabel);
+                GUILayout.Space(5);
+                GUILayout.Label(
+                    "Area 尺寸 = 所选玩家槽位在指定分屏布局下的实际像素大小。\n" +
+                    "美术只需在 Area 内摆放控件，导出后框架自动适配各分辨率。",
+                    EditorStyles.helpBox);
+                GUILayout.Space(15);
+                if (GUILayout.Button("创建 / 更新 Area", GUILayout.Height(36), GUILayout.ExpandWidth(true)))
+                    EUUISceneEditor.ShowCreateAreaWindow();
+            });
+        }
+
+        private void ShowLocatePrefabTab(VisualElement container)
+        {
+            container.Clear();
+            SetupIMGUIContainer(container, () =>
+            {
+                GUILayout.Space(10);
+                GUILayout.Label("在 Project 窗口中定位当前面板对应的 Prefab 资源。", EditorStyles.wordWrappedLabel);
+                GUILayout.Space(5);
+                GUILayout.Label(
+                    "⚠ Prefab 是由「自动流程」生成的产物，请勿直接修改 Prefab。\n" +
+                    "如需修改 UI，请打开对应的 CreateUIScenes 设计场景后重新执行「自动流程」。",
+                    EditorStyles.helpBox);
+                GUILayout.Space(15);
+                if (GUILayout.Button("定位 Prefab", GUILayout.Height(36), GUILayout.ExpandWidth(true)))
+                    EUUISceneEditor.LocateCurrentPrefab();
             });
         }
 

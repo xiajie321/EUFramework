@@ -19,6 +19,23 @@ namespace EUFramework.Extension.EUUI
 
         public IEUUIPanelData uiPanelData;
 
+        /// <summary>
+        /// 面板所属的玩家槽位（0～3）。
+        /// 由 EUUIKit.OpenForPlayerAsync 自动写入；全局单人模式下为 -1。
+        /// 子类通过此字段区分多人/单人逻辑，无需外部传参。
+        /// </summary>
+        public int OwnerPlayerIndex { get; internal set; } = -1;
+
+        /// <summary>
+        /// 面板所属玩家的 EventSystem。
+        /// 单人模式（OwnerPlayerIndex == -1）返回 EventSystem.current；
+        /// 多人模式返回对应玩家的 MultiplayerEventSystem。
+        /// </summary>
+        public EventSystem OwnerEventSystem
+            => OwnerPlayerIndex >= 0
+                ? (EUUIKit.GetMultiplayerEventSystem(OwnerPlayerIndex) ?? EventSystem.current)
+                : EventSystem.current;
+
         /// <summary>面板默认所属层级（子类可重写）</summary>
         public virtual EUUILayerEnum DefaultLayer => EUUILayerEnum.Normal;
 

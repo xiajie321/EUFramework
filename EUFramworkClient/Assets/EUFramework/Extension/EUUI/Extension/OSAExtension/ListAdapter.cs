@@ -18,6 +18,27 @@ namespace EUUI.Extension
         public SimpleDataHelper<TData> Data { get; private set; }
         public Action<int, TData> OnItemClick;
 
+        EUFramework.Extension.EUUI.EUOSAInputBridge _inputBridge;
+
+        /// <summary>
+        /// 获取同节点上的 EUOSAInputBridge（懒加载）。
+        /// 未挂载时自动添加，兼容旧面板无需手动操作。
+        /// 直接注入 this 避免泛型继承链导致 GetComponent(typeof(IOSA)) 失效。
+        /// </summary>
+        public EUFramework.Extension.EUUI.EUOSAInputBridge InputBridge
+        {
+            get
+            {
+                if (_inputBridge == null)
+                {
+                    _inputBridge = GetComponent<EUFramework.Extension.EUUI.EUOSAInputBridge>()
+                                   ?? gameObject.AddComponent<EUFramework.Extension.EUUI.EUOSAInputBridge>();
+                    _inputBridge.InjectOSA(this);
+                }
+                return _inputBridge;
+            }
+        }
+
         /// <summary>
         /// 图集 Sprite 加载委托，由面板层赋值，创建 VH 时自动注入
         /// url 格式：atlasName/spriteName
@@ -51,6 +72,7 @@ namespace EUUI.Extension
             base.OnBeforeRecycleOrDisableViewsHolder(inRecycleBinOrVisible, newItemIndex);
             inRecycleBinOrVisible.OnRelease();
         }
+
         public void ClearItemClickListeners()
         {
             OnItemClick = null;
@@ -85,6 +107,27 @@ namespace EUUI.Extension
         public SimpleDataHelper<TData> Data { get; private set; }
         public event Action<int, TData> OnItemClick;
 
+        EUFramework.Extension.EUUI.EUOSAInputBridge _inputBridge;
+
+        /// <summary>
+        /// 获取同节点上的 EUOSAInputBridge（懒加载）。
+        /// 未挂载时自动添加，兼容旧面板无需手动操作。
+        /// 直接注入 this 避免泛型继承链导致 GetComponent(typeof(IOSA)) 失效。
+        /// </summary>
+        public EUFramework.Extension.EUUI.EUOSAInputBridge InputBridge
+        {
+            get
+            {
+                if (_inputBridge == null)
+                {
+                    _inputBridge = GetComponent<EUFramework.Extension.EUUI.EUOSAInputBridge>()
+                                   ?? gameObject.AddComponent<EUFramework.Extension.EUUI.EUOSAInputBridge>();
+                    _inputBridge.InjectOSA(this);
+                }
+                return _inputBridge;
+            }
+        }
+
         /// <summary>
         /// 图集 Sprite 加载委托，由面板层赋值，创建 VH 时自动注入
         /// url 格式：atlasName/spriteName
@@ -116,11 +159,11 @@ namespace EUUI.Extension
             base.OnBeforeRecycleOrDisableCellViewsHolder(viewsHolder, newItemIndex);
             viewsHolder.OnRelease();
         }
+
         public void ClearItemClickListeners()
         {
             OnItemClick = null;
         }
-
 
         #region 数据操作
         public void SetData(IList<TData> items) => Data.ResetItems(items);

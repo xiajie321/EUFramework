@@ -3,7 +3,8 @@
     "rootNamespace": "EUUI.Extension",
     "references": [
         "EUUI",
-        "OSA.Core"
+        "OSA.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

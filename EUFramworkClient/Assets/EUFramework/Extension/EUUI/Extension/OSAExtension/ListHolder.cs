@@ -26,7 +26,12 @@ namespace EUUI.Extension
                 clickBtn = root.gameObject.AddComponent<Button>();
                 clickBtn.transition = Selectable.Transition.None;
             }
+            var nav = Navigation.defaultNavigation;
+            nav.mode = Navigation.Mode.None;
+            clickBtn.navigation = nav;
             clickBtn.onClick.AddListener(() => OnClicked?.Invoke(ItemIndex));
+
+            ViewsHolderUtils.DisableSelectableNavigation(root);
         }
 
         protected abstract void OnCollectViews();
@@ -55,7 +60,12 @@ namespace EUUI.Extension
                 clickBtn = views.gameObject.AddComponent<Button>();
                 clickBtn.transition = Selectable.Transition.None;
             }
+            var nav = Navigation.defaultNavigation;
+            nav.mode = Navigation.Mode.None;
+            clickBtn.navigation = nav;
             clickBtn.onClick.AddListener(() => OnClicked?.Invoke(ItemIndex));
+
+            ViewsHolderUtils.DisableSelectableNavigation(views);
         }
 
         protected abstract void OnCollectViews();
@@ -63,5 +73,15 @@ namespace EUUI.Extension
         public virtual void OnRelease() { }
     }
 
+    internal static class ViewsHolderUtils
+    {
+        static readonly Navigation _noNav = new Navigation { mode = Navigation.Mode.None };
 
+        /// <summary>禁用 root 及其所有子节点上 Selectable 的键盘/手柄内置导航。</summary>
+        internal static void DisableSelectableNavigation(Transform root)
+        {
+            foreach (var selectable in root.GetComponentsInChildren<Selectable>(true))
+                selectable.navigation = _noNav;
+        }
+    }
 }

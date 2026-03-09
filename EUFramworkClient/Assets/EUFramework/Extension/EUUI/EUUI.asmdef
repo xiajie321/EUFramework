@@ -9,6 +9,10 @@
         "YooAsset"
     ,
         "Unity.RenderPipelines.Universal.Runtime"
+    ,
+        "EUInputController"
+    ,
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,0 +1,6 @@
+{
+    "requiredAssemblies": ["EUInputController"],
+    "namespaceVariables": {
+        "eu_input_controller_namespace": "EUFramework.Extension.EUInputControllerKit"
+    }
+}

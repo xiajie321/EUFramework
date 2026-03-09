@@ -6,36 +6,53 @@ using UnityEngine.UI;
 namespace EUFramework.Extension.EUUI
 {
     /// <summary>
-    /// EUUIKit 导航分部类（兼容新旧输入系统）
+    /// EUUIKit 输入与导航分部类
+    /// 负责统一处理 UI 焦点、方向导航与提交/返回行为（兼容新旧输入系统）
     /// 由 EUUIKit.Initialize() 自动初始化，无需手动调用
     /// </summary>
     public static partial class EUUIKit
     {
-
-        // ── 由 EUUIKit.Initialize() 调用 ──────────────────
-        private static void InitNavigation()
-        {
-
-        }
-
-        // ── 公开 API ──────────────────────────────────────
-
         /// <summary>
-        /// 设置当前焦点（由 EUUIPanelBase.Show 自动调用，通常无需手动调用）
+        /// 设置当前焦点（由 EUUIPanelBase.Show 自动调用，通常无需手动调用）。
+        /// 多人模式下此方法无效（请使用 MultiplayerEventSystem 直接设置焦点）。
         /// </summary>
         public static void SetDefaultSelection(Selectable selectable)
         {
+            if (_isMultiplayer) return;
             if (selectable == null || EventSystem.current == null) return;
             EventSystem.current.SetSelectedGameObject(selectable.gameObject);
         }
 
         /// <summary>
-        /// 清除当前焦点
+        /// 清除当前焦点。
+        /// 多人模式下此方法无效（避免错误地操作某个玩家的 MultiplayerEventSystem）。
         /// </summary>
         public static void ClearSelection()
         {
+            if (_isMultiplayer) return;
             if (EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(null);
+        }
+
+        /// <summary>
+        /// 为指定玩家设置焦点（多人模式专用）。
+        /// </summary>
+        /// <param name="playerIndex">玩家槽位 0～3</param>
+        /// <param name="selectable">要聚焦的 Selectable，传 null 则清除焦点</param>
+        public static void SetPlayerSelection(int playerIndex, Selectable selectable)
+        {
+            var es = GetMultiplayerEventSystem(playerIndex);
+            if (es == null) return;
+            es.SetSelectedGameObject(selectable != null ? selectable.gameObject : null);
+        }
+
+        /// <summary>
+        /// 清除指定玩家的焦点（多人模式专用）。
+        /// </summary>
+        /// <param name="playerIndex">玩家槽位 0～3</param>
+        public static void ClearPlayerSelection(int playerIndex)
+        {
+            SetPlayerSelection(playerIndex, null);
         }
 
         /// <summary>
@@ -50,9 +67,9 @@ namespace EUFramework.Extension.EUUI
             if (cur == null) return;
 
             Selectable next = null;
-            if      (direction.y >  0.5f) next = cur.FindSelectableOnUp();
+            if (direction.y > 0.5f) next = cur.FindSelectableOnUp();
             else if (direction.y < -0.5f) next = cur.FindSelectableOnDown();
-            else if (direction.x >  0.5f) next = cur.FindSelectableOnRight();
+            else if (direction.x > 0.5f) next = cur.FindSelectableOnRight();
             else if (direction.x < -0.5f) next = cur.FindSelectableOnLeft();
 
             if (next != null)

@@ -16,6 +16,8 @@ namespace EUFramework.Extension.EUUI
     {
         private static EUUIKitConfig _config;
         private static GameObject _euuiRoot;
+
+        public static GameObject EUUIRoot => _euuiRoot;
         private static GameObject _euuiCacheRoot;
         private static Camera _uiCamera;
         private static Canvas _canvas;
@@ -27,6 +29,15 @@ namespace EUFramework.Extension.EUUI
         private static HashSet<string> _opening = new HashSet<string>();
 
         private static bool _initialized = false;
+
+        /// <summary>当前是否处于多人活跃模式（true = 多人 EventSystem 启用，全局 EventSystem 禁用）</summary>
+        private static bool _isMultiplayer = false;
+
+        /// <summary>全局单人 EventSystem 的 GameObject 引用，供模式切换时 SetActive 开关</summary>
+        private static GameObject _globalEventSystemGO;
+
+        /// <summary>当前是否处于多人模式（只读）</summary>
+        public static bool IsMultiplayerMode => _isMultiplayer;
 
         /// <summary>
         /// 运行时配置
@@ -108,11 +119,7 @@ namespace EUFramework.Extension.EUUI
             // 7. 确保 EventSystem
             EnsureEventSystem();
 
-            // 8. 初始化导航处理器
-            InitNavigation();
-
             _initialized = true;
-            Debug.Log("[EUUIKit] 初始化完成");
         }
 
         private static void InitUICamera()
@@ -214,6 +221,12 @@ namespace EUFramework.Extension.EUUI
                     es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 
                 UnityEngine.Object.DontDestroyOnLoad(es);
+                _globalEventSystemGO = es;
+            }
+            else
+            {
+                // 场景中已有 EventSystem，保存引用（此时多人 ES 尚未创建，current 一定是全局单人 ES）
+                _globalEventSystemGO = UnityEngine.EventSystems.EventSystem.current.gameObject;
             }
 
             OnAfterEnsureEventSystem();
