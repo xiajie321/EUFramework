@@ -14,7 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   templates:
   - id: EUResLoaderEURes
-    path: Static/Res/EUResLoader.EURes
+    path: Static/UIKit/EUResLoader.EURes
+  - id: EUUIKitEUInputController
+    path: Static/UIKit/EUUIKit.EUInputController
   - id: EUUIKitEURes
     path: Static/UIKit/EUUIKit.EURes
   - id: EUUIPanelBaseEURes
