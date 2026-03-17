@@ -6,7 +6,7 @@ namespace EUFramework.Extension.SingletonKit
     {
         private static T _instance;
         private static bool _isApplicationQuitting = false;
-
+        private static bool _isInit = false;
         public static T Instance
         {
             get
@@ -16,6 +16,8 @@ namespace EUFramework.Extension.SingletonKit
                     return null;
                 }
 
+                if (_isInit)
+                    return _instance;
                 if (_instance == null)
                 {
                     _instance = FindObjectOfType<T>();
@@ -25,9 +27,11 @@ namespace EUFramework.Extension.SingletonKit
                         _instance = go.AddComponent<T>();
                     }
                 }
+                _isInit = true;
                 return _instance;
             }
         }
+        public static bool IsInit => _isInit;
 
         protected virtual void Awake()
         {
@@ -59,12 +63,14 @@ namespace EUFramework.Extension.SingletonKit
         protected virtual void OnApplicationQuit()
         {
             _isApplicationQuitting = true;
+            _isInit = false;
         }
 
         protected virtual void OnDestroy()
         {
             if (_instance == this)
             {
+                _isInit = false;
                 _instance = null;
             }
         }
