@@ -10,10 +10,6 @@ namespace EUFramework.Extension.EUInputControllerKit.MonoComponent
             Init();
         }
 
-        ~EUPlayerInputController()
-        {
-            Disable();
-        }
         private PlayerInputController _playerInputController;
         private static bool _init = false;
         private Action<InputDevice> _onInputDeviceAdded;

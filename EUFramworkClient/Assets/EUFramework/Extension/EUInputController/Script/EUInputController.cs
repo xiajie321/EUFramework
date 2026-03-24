@@ -56,6 +56,8 @@ namespace EUFramework.Extension.EUInputControllerKit
                         SetPlayerInputControllerOfDevice(ls2,null);
                         _idAndDevicesIdMap.Remove(GetPlayerInputControllerId(ls2));
                         _playerInputControllerList.RemoveAt(_playerInputControllerList.Count - 1);
+                        ls2.Controller.Disable();
+                        ls2.Controller.Dispose();
                     }
                 }
 
@@ -179,6 +181,8 @@ namespace EUFramework.Extension.EUInputControllerKit
                 _devicesIdAndIdMap[_idAndDevicesIdMap[playerId]] = -1;
             _idAndDevicesIdMap.Remove(playerId);
             _onRemovePlayerInputController?.Invoke(lsC);
+            lsC.Controller.Disable();
+            lsC.Controller.Dispose();
         }
 
         /// <summary>
