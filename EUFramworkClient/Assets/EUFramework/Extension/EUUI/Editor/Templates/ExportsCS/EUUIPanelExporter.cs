@@ -38,38 +38,6 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             return AssetDatabase.LoadAssetAtPath<EUUIEditorConfig>(EUUISceneEditor.GetEditorConfigPath());
         }
         
-        /// <summary>
-        /// 移除根节点及所有子节点上的缺失脚本，避免保存 Prefab 时报错
-        /// </summary>
-        private static void RemoveMissingScripts(GameObject root)
-        {
-            if (root == null) return;
-            var transforms = root.GetComponentsInChildren<Transform>(true);
-            int totalRemoved = 0;
-            foreach (var t in transforms)
-            {
-                int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
-                totalRemoved += removed;
-            }
-            if (totalRemoved > 0)
-                Debug.Log($"[EUUI] 已移除 {totalRemoved} 个缺失脚本（{root.name} 及其子节点）。");
-        }
-
-        /// <summary>
-        /// 确保目录存在
-        /// </summary>
-        private static void EnsureDirectory(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return;
-            
-            string fullPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), path));
-            if (!Directory.Exists(fullPath))
-            {
-                Directory.CreateDirectory(fullPath);
-                AssetDatabase.Refresh();
-            }
-        }
-
         #region 变量名校验与路径辅助（参考 Doc UIEditorHelper）
 
         private static readonly HashSet<string> CSharpKeywords = new HashSet<string>
@@ -125,21 +93,6 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             };
         }
 
-        private static Type GetComponentType(EUUINodeBindType bindType)
-        {
-            switch (bindType)
-            {
-                case EUUINodeBindType.RectTransform: return typeof(RectTransform);
-                case EUUINodeBindType.Image: return typeof(UnityEngine.UI.Image);
-                case EUUINodeBindType.Text: return typeof(UnityEngine.UI.Text);
-                case EUUINodeBindType.Button: return typeof(UnityEngine.UI.Button);
-                case EUUINodeBindType.TextMeshProUGUI:
-                    var t = Type.GetType("TMPro.TextMeshProUGUI, Unity.TextMeshPro");
-                    return t ?? typeof(Component);
-                default: return typeof(RectTransform);
-            }
-        }
-
         #endregion
 
         /// <summary>
@@ -170,23 +123,9 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 return;
             }
 
-            string folderPath = editorConfig.GetUIPrefabDir(desc.PackageType);
-            EnsureDirectory(folderPath);
-
             string panelName = EditorSceneManager.GetActiveScene().name;
-            string prefabPath = $"{folderPath}/{panelName}.prefab".Replace("\\", "/");
-
-            PrefabUtility.SaveAsPrefabAsset(exportRoot, prefabPath);
-            GameObject prefabContents = PrefabUtility.LoadPrefabContents(prefabPath);
-            var nodes = prefabContents.GetComponentsInChildren<EUUINodeBind>(true);
-            for (int i = nodes.Length - 1; i >= 0; i--)
-                UnityEngine.Object.DestroyImmediate(nodes[i]);
-            PrefabUtility.SaveAsPrefabAsset(prefabContents, prefabPath);
-            PrefabUtility.UnloadPrefabContents(prefabContents);
-
-            AssetDatabase.Refresh();
-            Debug.Log($"[EUUI] Prefab 导出成功: {prefabPath}");
-            EditorUtility.DisplayDialog("完成", $"Prefab 已导出至:\n{prefabPath}", "确定");
+            if (EUUIPrefabExporter.FinalizePrefab(exportRoot, panelName, editorConfig))
+                EditorUtility.DisplayDialog("完成", "Prefab 已导出并清理 EUUINodeBind。", "确定");
         }
 
         #region 自动绑定流程：开始导出 → 代码生成 → 编译后绑定 → 导出 Prefab
@@ -247,7 +186,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 members.Add(new { name = finalName, type = GetMemberTypeName(node.GetFinalComponentType()) });
             }
 
-            if (!GenerateCode(panelName, members, desc, config))
+            if (!EUUIPanelCodeGenerator.GenerateCode(panelName, members, desc, config))
                 return;
 
             EditorPrefs.SetBool(k_AutoBindKey, true);
@@ -258,106 +197,6 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
                 OnScriptsReloaded();
         }
 
-        /// <summary>
-        /// 生成 MVC 架构集成代码（为面板生成 IController 分部类）
-        /// </summary>
-        private static void GenerateMVCIntegration(EUUITemplateConfig config, string ns, string className, string bindDir)
-        {
-            try
-            {
-                bool needGetArchitecture = !string.IsNullOrWhiteSpace(config.architectureName);
-                bool hasArchitectureNamespace = !string.IsNullOrWhiteSpace(config.architectureNamespace);
-                var controllerContext = new
-                {
-                    namespace_name = ns,
-                    class_name = className,
-                    need_get_architecture = needGetArchitecture,
-                    architecture_name = config.architectureName?.Trim(),
-                    has_architecture_namespace = hasArchitectureNamespace,
-                    architecture_namespace = config.architectureNamespace?.Trim()
-                };
-
-                string controllerPath = Path.Combine(bindDir, className + ".IController.Generated.cs").Replace("\\", "/");
-                if (!File.Exists(controllerPath))
-                {
-                    string result = EUUIBaseExporter.RenderTemplate("MVCArchitecture", controllerContext);
-                    File.WriteAllText(controllerPath, result, System.Text.Encoding.UTF8);
-                    Debug.Log($"[EUUI] IController partial 已生成: {controllerPath}");
-                }
-            }
-            catch (System.Collections.Generic.KeyNotFoundException)
-            {
-                Debug.LogWarning("[EUUI] 注册表中未找到 MVCArchitecture 模板，跳过 MVC 集成代码生成。");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[EUUI] MVC 集成代码生成失败: {e.Message}");
-            }
-        }
-
-        private static bool GenerateCode(string className, List<object> members, EUUIPanelDescription desc, EUUITemplateConfig config)
-        {
-            string baseClassName = desc.PanelType switch
-            {
-                EUUIType.Popup => "EUUIPopupPanelBase",
-                EUUIType.Bar => "EUUIBarBase",
-                _ => "EUUIPanelBase"
-            };
-            string fullBaseClass = $"{baseClassName}<{className}>";
-
-            try
-            {
-                string ns = string.IsNullOrEmpty(desc.Namespace) ? config.namespaceName : desc.Namespace;
-                string bindDir = string.IsNullOrEmpty(config.uiBindScriptsPath) ? "Assets/Script/Generate/UI" : config.uiBindScriptsPath;
-                string logicDirBase = string.IsNullOrEmpty(config.uiLogicScriptsPath) ? "Assets/Script/Game/UI" : config.uiLogicScriptsPath;
-
-                // 1. 生成 .Generated.cs（带绑定的 partial）
-                string genResult = EUUIBaseExporter.RenderTemplate("PanelGenerated", new
-                {
-                    is_gen = true,
-                    namespace_name = ns,
-                    class_name = className,
-                    members = members,
-                    package_type = desc.PackageType.ToString()
-                });
-                EnsureDirectory(bindDir);
-                string genPath = Path.Combine(bindDir, className + ".Generated.cs").Replace("\\", "/");
-                File.WriteAllText(genPath, genResult, System.Text.Encoding.UTF8);
-                Debug.Log($"[EUUI] 代码生成: {className}.Generated.cs");
-
-                // 2. 若启用架构，生成 MVC 集成代码
-                if (config.useArchitecture)
-                    GenerateMVCIntegration(config, ns, className, bindDir);
-
-                // 3. 若不存在则生成业务逻辑 .cs
-                string logicDir = Path.Combine(logicDirBase, desc.PackageName).Replace("\\", "/");
-                EnsureDirectory(logicDir);
-                string logicPath = Path.Combine(logicDir, className + ".cs").Replace("\\", "/");
-                if (!File.Exists(logicPath))
-                {
-                    string logicResult = EUUIBaseExporter.RenderTemplate("PanelGenerated", new
-                    {
-                        is_gen = false,
-                        namespace_name = ns,
-                        class_name = className,
-                        base_class = fullBaseClass,
-                        package_name = desc.PackageName,
-                        use_architecture = config.useArchitecture
-                    });
-                    File.WriteAllText(logicPath, logicResult, System.Text.Encoding.UTF8);
-                    Debug.Log($"[EUUI] 初始业务逻辑已生成: {logicPath}");
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[EUUI] 代码生成失败: {e.Message}");
-                EditorUtility.DisplayDialog("错误", $"代码生成失败: {e.Message}", "确定");
-                return false;
-            }
-        }
-
         [DidReloadScripts]
         private static void OnScriptsReloaded()
         {
@@ -365,87 +204,21 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             EditorPrefs.SetBool(k_AutoBindKey, false);
             string panelName = EditorPrefs.GetString(k_PendingSceneKey, "");
             if (string.IsNullOrEmpty(panelName)) return;
-            PerformBinding(panelName);
+            SchedulePrefabBinding(panelName);
         }
 
-        private static void PerformBinding(string panelName)
+        private static void SchedulePrefabBinding(string panelName)
         {
-            var config = GetConfig();
-            var editorConfig = GetEditorConfig();
-            if (config == null || editorConfig == null)
+            EditorApplication.delayCall += () =>
             {
-                Debug.LogError("[EUUI] 绑定失败：未找到配置文件（EUUITemplateConfig / EUUIEditorConfig）");
-                return;
-            }
-
-            GameObject exportRoot = GameObject.Find(editorConfig.exportRootName);
-            if (exportRoot == null)
-            {
-                Debug.LogError($"[EUUI] 绑定失败：场景中找不到 [{editorConfig.exportRootName}]");
-                return;
-            }
-
-            // 导出前移除 UIRoot 及子节点上的缺失脚本，避免保存 Prefab 时报错
-            RemoveMissingScripts(exportRoot);
-
-            var desc = exportRoot.GetComponentInParent<EUUIPanelDescription>() ?? UnityEngine.Object.FindFirstObjectByType<EUUIPanelDescription>();
-            string ns = desc != null && !string.IsNullOrEmpty(desc.Namespace) ? desc.Namespace : config.namespaceName;
-
-            Type type = null;
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (asm.IsDynamic) continue;
-                string fullName = ns + "." + panelName;
-                type = asm.GetType(fullName);
-                if (type != null) break;
-            }
-            if (type == null)
-            {
-                Debug.LogError($"[EUUI] 绑定失败：找不到类型 {ns}.{panelName}，请检查编译是否通过。");
-                return;
-            }
-
-            var comp = exportRoot.GetComponent(type) ?? exportRoot.AddComponent(type);
-            var nodes = exportRoot.GetComponentsInChildren<EUUINodeBind>(true);
-            foreach (var node in nodes)
-            {
-                var field = type.GetField(node.GetFinalMemberName(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null)
+                if (EditorApplication.isCompiling || EditorApplication.isUpdating)
                 {
-                    Type compType = GetComponentType(node.GetFinalComponentType());
-                    var targetComp = node.GetComponent(compType);
-                    if (targetComp != null)
-                        field.SetValue(comp, targetComp);
+                    SchedulePrefabBinding(panelName);
+                    return;
                 }
-            }
 
-            FinalizePrefab(exportRoot, panelName, editorConfig);
-        }
-
-        private static void FinalizePrefab(GameObject exportRoot, string panelName, EUUIEditorConfig config)
-        {
-            var desc = exportRoot.GetComponentInParent<EUUIPanelDescription>() ?? UnityEngine.Object.FindFirstObjectByType<EUUIPanelDescription>();
-            var pkgType = desc != null ? desc.PackageType : EUUIPackageType.Remote;
-            string folderPath = config.GetUIPrefabDir(pkgType);
-            EnsureDirectory(folderPath);
-            string prefabPath = $"{folderPath}/{panelName}.prefab".Replace("\\", "/");
-
-            GameObject savedRoot = PrefabUtility.SaveAsPrefabAsset(exportRoot, prefabPath);
-            if (savedRoot == null)
-            {
-                Debug.LogError($"[EUUI] Prefab 保存失败（路径: {prefabPath}）。若控制台提示「缺失脚本」，请先移除 UIRoot 上的缺失组件、确保生成脚本已编译，再重新执行「自动绑定并导出 Prefab」。");
-                return;
-            }
-
-            GameObject prefabContents = PrefabUtility.LoadPrefabContents(prefabPath);
-            var nodes = prefabContents.GetComponentsInChildren<EUUINodeBind>(true);
-            for (int i = nodes.Length - 1; i >= 0; i--)
-                UnityEngine.Object.DestroyImmediate(nodes[i]);
-            PrefabUtility.SaveAsPrefabAsset(prefabContents, prefabPath);
-            PrefabUtility.UnloadPrefabContents(prefabContents);
-
-            AssetDatabase.Refresh();
-            Debug.Log($"[EUUI] 自动绑定完成，Prefab 已导出: {prefabPath}");
+                EUUIPrefabBinder.PerformBinding(panelName);
+            };
         }
 
         #endregion

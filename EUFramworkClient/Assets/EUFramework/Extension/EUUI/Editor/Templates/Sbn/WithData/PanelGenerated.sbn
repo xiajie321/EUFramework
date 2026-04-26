@@ -29,6 +29,7 @@ namespace {{ namespace_name }}
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using EUFramework.Extension.EUUI;
+using TMPro;
 
 namespace {{ namespace_name }}
 {

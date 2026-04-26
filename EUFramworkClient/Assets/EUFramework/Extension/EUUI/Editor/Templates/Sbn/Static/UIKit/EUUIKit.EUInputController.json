@@ -1,6 +1,6 @@
 {
-    "requiredAssemblies": ["EUInputController"],
-    "namespaceVariables": {
-        "eu_input_controller_namespace": "EUFramework.Extension.EUInputControllerKit"
-    }
+    "requiredAssemblies": ["EUInputController", "Unity.InputSystem"],
+    "namespaceVariables": [
+        { "key": "eu_input_controller_namespace", "value": "EUFramework.Extension.EUInputControllerKit" }
+    ]
 }

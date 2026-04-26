@@ -354,6 +354,23 @@ namespace EUFramework.Extension.EUUI
             }
         }
 
+
+        public static void Close(Type type)
+        {
+            string panelName = type.Name;
+
+            // 若该面板在 LRU 缓存中，先销毁缓存版本
+            RemoveFromCache(panelName);
+
+            if (_activePanels.TryGetValue(panelName, out var panel))
+            {
+                _activePanels.Remove(panelName);
+                RemoveFromPanelStack(panelName);
+                panel.Close();
+                OnPanelClosed(panelName);
+            }
+        }
+
         /// <summary>
         /// 面板关闭后的钩子（由扩展实现，如资源释放）
         /// </summary>

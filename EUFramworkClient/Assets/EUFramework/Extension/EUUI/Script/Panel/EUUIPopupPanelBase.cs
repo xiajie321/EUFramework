@@ -55,7 +55,7 @@ namespace EUFramework.Extension.EUUI
         /// <summary>点击遮罩关闭时调用，可重写以接入 UIKit.CloseAsync 等</summary>
         protected virtual void CloseSelf()
         {
-            Close();
+            EUUIKit.Close(this.GetType());
         }
     }
 }

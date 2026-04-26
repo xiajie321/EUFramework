@@ -12,10 +12,10 @@ namespace {{ namespace_name }}
     /// MVC 架构集成（分部类）
     /// GetModel/GetSystem/SendCommand 等方法由 IController 扩展自动提供
     /// </summary>
-    public partial class {{ class_name }} : EUFramework.Core.MVC.Interface.IController
+    public partial class {{ class_name }} : {{ controller_base_type }}
     {
         {{ if need_get_architecture -}}
-        public EUFramework.Core.MVC.Interface.IArchitecture GetArchitecture() => {{ architecture_name }}.Interface;
+        public {{ architecture_interface_type }} GetArchitecture() => {{ architecture_name }}.Interface;
         {{- end }}
     }
 }

@@ -1,18 +1,11 @@
-{
+﻿{
     "name": "EUUI",
     "rootNamespace": "EUFramework.Extension.EUUI",
     "references": [
-        "UniTask"
-    ,
-        "EURes"
-    ,
-        "YooAsset"
-    ,
+        "UniTask",
+        "Unity.InputSystem",
+        "Unity.InputSystem.ForUI",
         "Unity.RenderPipelines.Universal.Runtime"
-    ,
-        "EUInputController"
-    ,
-        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
