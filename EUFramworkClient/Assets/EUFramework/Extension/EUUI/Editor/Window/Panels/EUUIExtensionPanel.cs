@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using Scriban.Runtime;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using EUFramework.Extension.EUUI.Editor.Templates;
@@ -14,12 +13,6 @@ namespace EUFramework.Extension.EUUI.Editor
 {
     internal class EUUIExtensionPanel : IEUUIEditorPanel
     {
-        // ── 扩展创建 Tab 的持久状态 ──────────────────────────────────────────────
-        private EUUIExtensionTemplateCreator.ExtensionType  _extensionType        = EUUIExtensionTemplateCreator.ExtensionType.KitExtension;
-        private EUUIExtensionTemplateCreator.TemplatePreset _templatePreset       = EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader;
-        private string _extensionName        = "";
-        private string _requiredAssemblies   = "";
-
         // 模板管理 Tab 的滚动位置
         private Vector2 _scrollPos;
 
@@ -47,10 +40,8 @@ namespace EUFramework.Extension.EUUI.Editor
             var tabBar       = EUUIEditorWindowHelper.CreateTabBar();
             var tabTemplates = EUUIEditorWindowHelper.CreateTabButton("模板管理", true);
             var tabGenerate  = EUUIEditorWindowHelper.CreateTabButton("生成绑定模板", false);
-            var tabExtension = EUUIEditorWindowHelper.CreateTabButton("模板拓展", false);
             tabBar.Add(tabTemplates);
             tabBar.Add(tabGenerate);
-            tabBar.Add(tabExtension);
             contentArea.Add(tabBar);
 
             var tabContent = EUUIEditorWindowHelper.CreateTabContentContainer();
@@ -60,18 +51,13 @@ namespace EUFramework.Extension.EUUI.Editor
 
             tabTemplates.clicked += () =>
             {
-                EUUIEditorWindowHelper.SetActiveTab(tabTemplates, tabGenerate, tabExtension);
+                EUUIEditorWindowHelper.SetActiveTab(tabTemplates, tabGenerate);
                 ShowTemplatesManagementTab(tabContent);
             };
             tabGenerate.clicked += () =>
             {
-                EUUIEditorWindowHelper.SetActiveTab(tabGenerate, tabTemplates, tabExtension);
+                EUUIEditorWindowHelper.SetActiveTab(tabGenerate, tabTemplates);
                 ShowExtensionsTab(tabContent);
-            };
-            tabExtension.clicked += () =>
-            {
-                EUUIEditorWindowHelper.SetActiveTab(tabExtension, tabTemplates, tabGenerate);
-                ShowCreateExtensionTab(tabContent);
             };
         }
 
@@ -193,14 +179,14 @@ namespace EUFramework.Extension.EUUI.Editor
                 GUILayout.Space(10);
                 EditorGUILayout.LabelField("Static 扩展模板（生成绑定模板 Tab 管理）", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox(
-                    "Static/PanelBase/ 和 Static/UIKit/ 下的所有 .sbn 均可在「生成绑定模板」面板中启用/禁用和导出。\n" +
+                    "Static/ 下的所有 .sbn 均可在「生成绑定模板」面板中启用/禁用和导出。\n" +
                     "勾选状态在此处预览；实际启用操作请前往「生成绑定模板」Tab。",
                     MessageType.Info);
                 GUILayout.Space(5);
 
                 if (customFiles.Count == 0)
                 {
-                    EditorGUILayout.HelpBox("暂无 Static 扩展模板，可在「模板拓展」Tab 中创建。", MessageType.Warning);
+                    EditorGUILayout.HelpBox("暂无 Static 扩展模板，可直接在 Templates/Sbn/Static 下新增 .sbn。", MessageType.Warning);
                 }
                 else
                 {
@@ -353,8 +339,6 @@ namespace EUFramework.Extension.EUUI.Editor
                         {
                             AssetDatabase.DeleteAsset(r.OutputAssetPath);
                             AssetDatabase.Refresh();
-                            if (!EUUIAsmdefHelper.HasAnyUIKitGeneratedFile())
-                                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(false);
                             EUUIAsmdefHelper.RecalculateFromGeneratedFiles();
                             ShowExtensionsTab(container);
                         };
@@ -404,8 +388,7 @@ namespace EUFramework.Extension.EUUI.Editor
         private static List<ExtRow> BuildExtRows(EUUITemplateConfig config)
         {
             var rows        = new List<ExtRow>();
-            string panelDir = GetPanelBaseOutputDirectory();
-            string uikitDir = GetUIKitOutputDirectory();
+            string outputDir = GetStaticGeneratedOutputDirectory();
 
             if (config.manualExtensions == null)
                 config.manualExtensions = new List<EUUIAdditionalExtension>();
@@ -423,10 +406,8 @@ namespace EUFramework.Extension.EUUI.Editor
                     foreach (var file in Directory.GetFiles(staticDir, "*.sbn", SearchOption.AllDirectories))
                     {
                         string ap = ToAssetPath(file);
-                        if (!IsPanelBaseTemplate(ap) && !IsUIKitTemplate(ap)) continue;
 
                         string fileName  = Path.GetFileNameWithoutExtension(ap);
-                        string outputDir = IsPanelBaseTemplate(ap) ? panelDir : uikitDir;
                         string outPath   = string.IsNullOrEmpty(outputDir) ? "" : $"{outputDir}/{fileName}.Generated.cs";
 
                         var ext = config.manualExtensions.Find(e => e.templatePath == ap);
@@ -466,7 +447,6 @@ namespace EUFramework.Extension.EUUI.Editor
 
                 addedPaths.Add(ext.templatePath);
                 string fileName  = Path.GetFileNameWithoutExtension(ext.templatePath);
-                string outputDir = IsPanelBaseTemplate(ext.templatePath) ? panelDir : uikitDir;
                 string outPath   = string.IsNullOrEmpty(outputDir) ? "" : $"{outputDir}/{fileName}.Generated.cs";
                 rows.Add(new ExtRow
                 {
@@ -529,9 +509,6 @@ namespace EUFramework.Extension.EUUI.Editor
 
             EUUIBaseExporter.Export(row.TemplateId, row.OutputAssetPath, scriptObject, row.DisplayName);
 
-            // 只要有任何 UIKit 扩展生成，就设置项目宏
-            if (IsUIKitTemplate(sbnPath))
-                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(true);
             // 读取伴生 JSON，将运行时所需程序集加入 EUUI.asmdef，编辑器所需程序集加入 EUUI.Editor.asmdef
             var runtimeAsms = EUUIAsmdefHelper.ReadSidecarRuntimeAssemblies(sbnPath);
             foreach (var asm in runtimeAsms)
@@ -550,7 +527,6 @@ namespace EUFramework.Extension.EUUI.Editor
                         ExportRow(row);
 
                 AssetDatabase.Refresh();
-                EUUIAsmdefHelper.SyncExtensionsGeneratedDefine();
                 EditorUtility.DisplayDialog("完成", "所有扩展代码已生成", "确定");
             }
             catch (Exception e)
@@ -580,10 +556,6 @@ namespace EUFramework.Extension.EUUI.Editor
                 }
                 AssetDatabase.Refresh();
 
-                // 只有当 UIKit 生成目录下已无任何 .Generated.cs 时才移除宏
-                if (!EUUIAsmdefHelper.HasAnyUIKitGeneratedFile())
-                    EUUIAsmdefHelper.SetExtensionsGeneratedDefine(false);
-
                 // 根据剩余生成文件重新计算两个 asmdef 所需的程序集引用
                 EUUIAsmdefHelper.RecalculateFromGeneratedFiles();
 
@@ -598,8 +570,7 @@ namespace EUFramework.Extension.EUUI.Editor
 
         // ── 私有辅助方法 ──────────────────────────────────────────────────────────
 
-        private static string GetPanelBaseOutputDirectory() => EUUIAsmdefHelper.GetPanelBaseOutputDirectory();
-        private static string GetUIKitOutputDirectory()     => EUUIAsmdefHelper.GetUIKitOutputDirectory();
+        private static string GetStaticGeneratedOutputDirectory() => EUUIAsmdefHelper.GetStaticGeneratedOutputDirectory();
 
         private static void EnsureDirectory(string assetRelDir) => EUUIAsmdefHelper.EnsureDirectory(assetRelDir);
 
@@ -625,12 +596,6 @@ namespace EUFramework.Extension.EUUI.Editor
             return File.Exists(full);
         }
 
-        private static bool IsPanelBaseTemplate(string path) =>
-            path.Contains("/PanelBase/") || path.Contains("\\PanelBase\\");
-
-        private static bool IsUIKitTemplate(string path) =>
-            path.Contains("/UIKit/") || path.Contains("\\UIKit\\");
-
         /// <summary>
         /// 判断该 .sbn 是否由框架其他机制管理，不应出现在本面板列表中。
         /// 目前仅 WithData/ 模板（由 EUUIPanelExporter / 资源制作面板负责）属于此类。
@@ -638,177 +603,6 @@ namespace EUFramework.Extension.EUUI.Editor
         /// </summary>
         private static bool IsManagedByFramework(string sbnPath) =>
             sbnPath.Contains("/WithData/") || sbnPath.Contains("\\WithData\\");
-
-        // ── Tab：模板拓展（创建扩展） ────────────────────────────────────────────
-
-        private void ShowCreateExtensionTab(VisualElement container)
-        {
-            container.Clear();
-            var template = EUUIEditorWindowHelper.LoadUXMLTemplate("CreateExtensionTab.uxml");
-            if (template == null) return;
-
-            var tab = template.Instantiate();
-
-            var typeField          = tab.Q<EnumField>("extension-type");
-            var nameField          = tab.Q<TextField>("extension-name");
-            var presetField        = tab.Q<EnumField>("template-preset");
-            var assembliesField    = tab.Q<TextField>("required-assemblies");
-            var createBtn          = tab.Q<Button>("btn-create");
-
-            var typeHint           = tab.Q<HelpBox>("type-hint");
-            var nameValidation     = tab.Q<HelpBox>("name-validation");
-            var presetHint         = tab.Q<HelpBox>("preset-hint");
-            var previewLabel       = tab.Q<Label>("preview-label");
-            var previewFilename    = tab.Q<TextField>("preview-filename");
-            var existsHint         = tab.Q<HelpBox>("exists-hint");
-
-            typeField.Init(_extensionType);
-            presetField.Init(_templatePreset);
-            nameField.value       = _extensionName;
-            if (assembliesField != null)
-                assembliesField.value = _requiredAssemblies;
-
-            UpdateTypeHint(typeHint, _extensionType);
-            UpdatePresetHint(presetHint, _templatePreset);
-            UpdatePreview(previewLabel, previewFilename, existsHint, createBtn, _extensionName);
-
-            typeField.RegisterValueChangedCallback(evt =>
-            {
-                _extensionType = (EUUIExtensionTemplateCreator.ExtensionType)evt.newValue;
-                UpdateTypeHint(typeHint, _extensionType);
-                UpdatePreview(previewLabel, previewFilename, existsHint, createBtn, nameField.value);
-            });
-            nameField.RegisterValueChangedCallback(evt =>
-            {
-                _extensionName = evt.newValue;
-                ValidateExtensionName(nameValidation, evt.newValue);
-                UpdatePreview(previewLabel, previewFilename, existsHint, createBtn, evt.newValue);
-            });
-            presetField.RegisterValueChangedCallback(evt =>
-            {
-                _templatePreset = (EUUIExtensionTemplateCreator.TemplatePreset)evt.newValue;
-                UpdatePresetHint(presetHint, _templatePreset);
-            });
-            assembliesField?.RegisterValueChangedCallback(evt =>
-            {
-                _requiredAssemblies = evt.newValue;
-            });
-
-            createBtn.clicked += () => CreateExtensionTemplate(container);
-
-            ValidateExtensionName(nameValidation, _extensionName);
-
-            container.Add(tab);
-        }
-
-        // ── 扩展创建辅助方法 ──────────────────────────────────────────────────────
-
-        private void UpdateTypeHint(HelpBox helpBox, EUUIExtensionTemplateCreator.ExtensionType type)
-        {
-            string targetDir = EUUIExtensionTemplateAssetCreator.GetExtensionTargetDirectory(type);
-            helpBox.text = type switch
-            {
-                EUUIExtensionTemplateCreator.ExtensionType.PanelExtension =>
-                    $"为 EUUIPanelBase 添加静态扩展方法（如 OSA、DoTween）\n目标目录：{targetDir}",
-                EUUIExtensionTemplateCreator.ExtensionType.KitExtension =>
-                    $"为 EUUIKit 添加功能扩展（如资源加载、分析统计、日志）\n目标目录：{targetDir}\n" +
-                    $"提示：选择 ResourceLoader 预设可快速生成含加载/释放框架的模板",
-                _ => ""
-            };
-        }
-
-        private void UpdatePresetHint(HelpBox helpBox, EUUIExtensionTemplateCreator.TemplatePreset preset)
-        {
-            helpBox.text = preset switch
-            {
-                EUUIExtensionTemplateCreator.TemplatePreset.Empty           => "仅包含基础结构和 TODO 注释",
-                EUUIExtensionTemplateCreator.TemplatePreset.ResourceLoader  => "包含完整的资源加载/释放方法框架",
-                EUUIExtensionTemplateCreator.TemplatePreset.StaticExtension => "包含静态扩展方法示例",
-                _ => ""
-            };
-        }
-
-        private void ValidateExtensionName(HelpBox helpBox, string name)
-        {
-            if (string.IsNullOrEmpty(name))
-            {
-                helpBox.text          = "请输入扩展名称（如：MyLoader、OSA、DoTween）";
-                helpBox.messageType   = HelpBoxMessageType.Warning;
-                helpBox.style.display = DisplayStyle.Flex;
-            }
-            else if (!IsValidExtensionName(name))
-            {
-                helpBox.text          = "名称只能包含字母、数字和下划线，且必须以字母开头";
-                helpBox.messageType   = HelpBoxMessageType.Error;
-                helpBox.style.display = DisplayStyle.Flex;
-            }
-            else
-            {
-                helpBox.style.display = DisplayStyle.None;
-            }
-        }
-
-        private void UpdatePreview(Label label, TextField field, HelpBox existsHint, Button createBtn, string name)
-        {
-            bool validName = !string.IsNullOrEmpty(name) && IsValidExtensionName(name);
-            if (!validName)
-            {
-                label.style.display      = DisplayStyle.None;
-                field.style.display      = DisplayStyle.None;
-                existsHint.style.display = DisplayStyle.None;
-                createBtn.SetEnabled(false);
-                return;
-            }
-
-            string targetDir = EUUIExtensionTemplateAssetCreator.GetExtensionTargetDirectory(_extensionType);
-            string assetPath = $"{targetDir}/{GetExtensionFileName()}";
-            field.SetValueWithoutNotify(assetPath);
-            label.style.display = DisplayStyle.Flex;
-            field.style.display = DisplayStyle.Flex;
-
-            string fullPath = Path.GetFullPath(
-                Path.Combine(Path.GetDirectoryName(Application.dataPath), assetPath));
-            bool fileExists = File.Exists(fullPath);
-
-            if (fileExists)
-            {
-                existsHint.text          = "文件已存在，无需重复创建。可直接编辑已有模板。";
-                existsHint.messageType   = HelpBoxMessageType.Warning;
-                existsHint.style.display = DisplayStyle.Flex;
-                createBtn.SetEnabled(false);
-            }
-            else
-            {
-                existsHint.style.display = DisplayStyle.None;
-                createBtn.SetEnabled(true);
-            }
-        }
-
-        /// <summary>根据扩展类型返回目标目录（Templates/Sbn/Static 子目录）</summary>
-        private static string GetExtensionTargetDirectory(EUUIExtensionTemplateCreator.ExtensionType type)
-        {
-            return EUUIExtensionTemplateAssetCreator.GetExtensionTargetDirectory(type);
-        }
-
-        private bool IsValidExtensionName(string name) =>
-            EUUIExtensionTemplateAssetCreator.IsValidExtensionName(name);
-
-        private string GetExtensionFileName() =>
-            EUUIExtensionTemplateAssetCreator.GetExtensionFileName(_extensionType, _extensionName);
-
-        private bool CanCreateExtension() =>
-            !string.IsNullOrEmpty(_extensionName) && IsValidExtensionName(_extensionName);
-
-        private void CreateExtensionTemplate(VisualElement container)
-        {
-            if (EUUIExtensionTemplateAssetCreator.CreateTemplateAsset(
-                    _extensionType, _templatePreset, _extensionName, _requiredAssemblies))
-            {
-                _extensionName = "";
-                _requiredAssemblies = "";
-                ShowCreateExtensionTab(container);
-            }
-        }
     }
 }
 #endif

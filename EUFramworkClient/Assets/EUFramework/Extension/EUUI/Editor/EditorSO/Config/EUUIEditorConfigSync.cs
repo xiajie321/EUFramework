@@ -37,8 +37,6 @@ namespace EUFramework.Extension.EUUI.Editor
             kitConfig.referencePixelsPerUnit = editorConfig.referencePixelsPerUnit;
             kitConfig.builtinPrefabPath = editorConfig.uiPrefabBuiltinPath;
             kitConfig.remotePrefabPath = editorConfig.uiPrefabRemotePath;
-            kitConfig.builtinAtlasPath = editorConfig.atlasBuiltinPath;
-            kitConfig.remoteAtlasPath = editorConfig.atlasRemotePath;
 
             EditorUtility.SetDirty(kitConfig);
             AssetDatabase.SaveAssets();

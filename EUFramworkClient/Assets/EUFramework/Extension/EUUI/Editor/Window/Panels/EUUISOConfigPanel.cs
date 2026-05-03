@@ -247,7 +247,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 scroll.Add(pingBtn);
 
                 var syncHint = new HelpBox(
-                    "分辨率、路径等字段由 EUUIEditorConfig 统一管理，请在 EUUIEditorConfig 中修改后点击同步。",
+                    "分辨率、UI Prefab 路径等字段由 EUUIEditorConfig 统一管理，请在 EUUIEditorConfig 中修改后点击同步。",
                     HelpBoxMessageType.None);
                 syncHint.style.marginBottom = 4;
                 scroll.Add(syncHint);
@@ -277,7 +277,7 @@ namespace EUFramework.Extension.EUUI.Editor
                     EUUIEditorConfigEditorSync.SyncEditorConfigToKitConfig(editorConfig);
                     EditorUtility.DisplayDialog("完成", $"已同步到：{path}", "确定");
                     ShowKitConfigTab(container);
-                }) { text = "从 EditorConfig 同步（覆盖分辨率 / 路径等字段）" };
+                }) { text = "从 EditorConfig 同步（覆盖分辨率 / UI Prefab 路径等字段）" };
                 syncBtn.style.marginTop = 4;
                 scroll.Add(syncBtn);
             }

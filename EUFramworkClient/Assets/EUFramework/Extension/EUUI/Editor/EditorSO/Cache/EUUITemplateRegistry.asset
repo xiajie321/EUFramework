@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   templates:
   - id: EUResLoaderEURes
-    path: Static/UIKit/EUResLoader.EURes
+    path: Static/EUResLoader.EURes
   - id: EUUIKitEUInputController
-    path: Static/UIKit/EUUIKit.EUInputController
+    path: Static/EUUIKit.EUInputController
   - id: EUUIKitEURes
-    path: Static/UIKit/EUUIKit.EURes
+    path: Static/EUUIKit.EURes
   - id: EUUIPanelBaseEURes
-    path: Static/PanelBase/EUUIPanelBase.EURes
+    path: Static/EUUIPanelBase.EURes
   - id: MVCArchitecture
     path: WithData/MVCArchitecture
   - id: PanelGenerated

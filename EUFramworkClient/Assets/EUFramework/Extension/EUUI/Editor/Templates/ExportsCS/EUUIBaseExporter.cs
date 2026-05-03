@@ -22,7 +22,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         /// 通过注册表 ID 获取 .sbn 模板文件的完整路径
         /// 路径拼接规则：
         ///   前缀 = EUUI.Editor.asmdef 所在目录（由 EUUITemplateLocator.GetEditorDirectory() 提供）
-        ///   后缀 = 注册表 EUUITemplateInfo.path 字段（如 "Static/PanelBase/EURes"）
+        ///   后缀 = 注册表 EUUITemplateInfo.path 字段（如 "Static/EUUIKit.EURes"）
         ///   完整 = {editorDir}/Templates/Sbn/{registryPath}.sbn
         /// 常见 ID：PanelGenerated / MVCArchitecture / EUUIPanelBase.EURes / EUUIKit.EURes
         /// 以及所有在 Templates/Sbn/ 下扫描到的自定义模板 ID
@@ -43,7 +43,7 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
             if (string.IsNullOrEmpty(editorDir))
                 throw new InvalidOperationException("无法通过 EUUI.Editor.asmdef 定位 Editor 目录");
 
-            // 2. 从注册表获取该 ID 对应的相对路径（如 "Static/PanelBase/EURes"）
+            // 2. 从注册表获取该 ID 对应的相对路径（如 "Static/EUUIKit.EURes"）
             var registry = EUUITemplateLocator.GetRegistryAsset();
             if (registry == null)
                 throw new InvalidOperationException("模板注册表不可用，请执行菜单 EUFramework/EUUI/刷新模板注册表");
@@ -102,37 +102,6 @@ namespace EUFramework.Extension.EUUI.Editor.Templates
         #endregion
 
         #region 导出方法
-
-        /// <summary>
-        /// 核心导出方法：通过注册表 ID 读取模板 → Scriban 渲染 → 输出 .cs 文件
-        /// </summary>
-        /// <param name="templateId">注册表中的模板 ID（如 "PanelGenerated"）</param>
-        /// <param name="outputPath">输出文件路径（Assets相对路径或绝对路径均可）</param>
-        /// <param name="context">模板上下文数据（可选，无数据时传 null）</param>
-        /// <param name="displayName">日志显示名（可选，默认取文件名）</param>
-        /// <exception cref="ArgumentException">参数无效</exception>
-        /// <exception cref="KeyNotFoundException">模板 ID 未在注册表中找到</exception>
-        /// <exception cref="FileNotFoundException">模板文件不存在</exception>
-        /// <exception cref="IOException">文件操作失败</exception>
-        public static void Export(
-            string templateId,
-            string outputPath,
-            object context = null,
-            string displayName = null)
-        {
-            if (!ValidateExport(templateId, outputPath, out string errorMessage))
-                throw new ArgumentException(errorMessage);
-
-            string normalizedOutputPath = NormalizeOutputPath(outputPath);
-            EnsureOutputDirectory(normalizedOutputPath);
-
-            string content = ReadTemplateContent(templateId);
-            var template = Scriban.Template.Parse(content);
-            string result = template.Render(context ?? new { });
-
-            WriteFileWithRetry(normalizedOutputPath, result, displayName ?? Path.GetFileNameWithoutExtension(outputPath));
-        }
-
         /// <summary>
         /// 核心导出方法（ScriptObject 版本）：支持动态键名的模板变量注入（如 eu_res_namespace）
         /// </summary>

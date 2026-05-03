@@ -56,7 +56,7 @@ namespace EUFramework.Extension.EUUI.Editor
 
         /// <summary>
         /// 返回用户自定义扩展模板的备用存放目录（Templates/Extensions/）
-        /// 框架内置扩展直接放在 Templates/Sbn/Static/PanelBase 或 Static/UIKit 下；
+        /// 框架内置扩展直接放在 Templates/Sbn/Static 下；
         /// 此目录供 autoDiscoverExtensions 模式扫描使用。
         /// </summary>
         public static string GetExtensionsDirectory()

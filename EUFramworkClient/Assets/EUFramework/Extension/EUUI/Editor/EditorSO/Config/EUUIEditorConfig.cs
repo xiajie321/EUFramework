@@ -5,7 +5,7 @@ namespace EUFramework.Extension.EUUI.Editor
 {
     /// <summary>
     /// EUUI 编辑器配置（ScriptableObject）
-    /// 管理场景制作、分辨率及 UI 资源路径等美术/资源制作相关设置。
+    /// 管理场景制作、分辨率及 UI Prefab 资源路径等编辑器设置。
     /// 代码生成与模板扩展配置请参见 EUUITemplateConfig。
     /// </summary>
     [CreateAssetMenu(fileName = "EUUIEditorConfig", menuName = "EUFramework/EUUI/Editor Config", order = 0)]
@@ -42,12 +42,6 @@ namespace EUFramework.Extension.EUUI.Editor
         [Tooltip("远程 UI Prefab 路径")]
         public string uiPrefabRemotePath = "Assets/EUResources/Remote/UI/Prefabs";
 
-        [Tooltip("首包图集路径")]
-        public string atlasBuiltinPath = "Assets/EUResources/Builtin/UI/Atlases";
-
-        [Tooltip("远程图集路径")]
-        public string atlasRemotePath = "Assets/EUResources/Remote/UI/Atlases";
-
         public string GetUIPrefabDir(EUUIPackageType type)
         {
             return type switch
@@ -56,11 +50,6 @@ namespace EUFramework.Extension.EUUI.Editor
                 EUUIPackageType.Remote => uiPrefabRemotePath,
                 _ => uiPrefabRemotePath
             };
-        }
-
-        public string GetAtlasPath(bool isBuiltin)
-        {
-            return isBuiltin ? atlasBuiltinPath : atlasRemotePath;
         }
     }
 }

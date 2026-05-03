@@ -27,8 +27,12 @@ namespace EUFramework.Extension.EUUI
         private static Dictionary<string, IEUUIPanel> _activePanels = new Dictionary<string, IEUUIPanel>();
         private static Stack<string> _panelStack = new Stack<string>();
         private static HashSet<string> _opening = new HashSet<string>();
+        private static Dictionary<Type, EUUIPackageType> _packageTypeCache = new Dictionary<Type, EUUIPackageType>();
 
         private static bool _initialized = false;
+
+        private delegate UniTask<GameObject> PanelPrefabLoader(string prefabPath, bool isRemote, string panelName);
+        private static PanelPrefabLoader _panelPrefabLoader;
 
         /// <summary>当前是否处于多人活跃模式（true = 多人 EventSystem 启用，全局 EventSystem 禁用）</summary>
         private static bool _isMultiplayer = false;
@@ -640,21 +644,49 @@ namespace EUFramework.Extension.EUUI
 
         #endregion
 
-#if !EUUI_EXTENSIONS_GENERATED
         /// <summary>
-        /// 加载面板 Prefab - 占位方法（未生成扩展时编译）
-        /// 生成扩展代码后，项目会定义 EUUI_EXTENSIONS_GENERATED，此方法不再编译，由生成文件提供实现
+        /// 注册面板 Prefab 加载器，由资源扩展生成代码调用。
+        /// </summary>
+        private static void SetPanelPrefabLoader(PanelPrefabLoader loader)
+        {
+            _panelPrefabLoader = loader;
+        }
+
+        /// <summary>
+        /// 读取生成代码中的 k_PackageType 字段（结果缓存，避免重复反射）。
+        /// </summary>
+        private static EUUIPackageType GetPanelPackageType<T>() where T : EUUIPanelBase<T>
+        {
+            var type = typeof(T);
+            if (_packageTypeCache.TryGetValue(type, out var cached)) return cached;
+
+            var field = type.GetField("k_PackageType", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            var packageType = field != null ? (EUUIPackageType)field.GetValue(null) : EUUIPackageType.Remote;
+            _packageTypeCache[type] = packageType;
+            return packageType;
+        }
+
+        /// <summary>
+        /// 加载面板 Prefab。具体资源系统由 Static 扩展模板注册。
         /// </summary>
         private static async UniTask<GameObject> LoadPanelPrefabAsync<T>() where T : EUUIPanelBase<T>
         {
-            Debug.LogError("[EUUIKit] 资源加载扩展未生成！\n" +
+            if (_panelPrefabLoader == null)
+            {
+                Debug.LogError("[EUUIKit] 资源加载扩展未生成或未注册！\n" +
                           "请执行以下步骤：\n" +
                           "1. 打开 EUUI 配置工具（菜单：EUFramework/拓展/EUUI 配置工具）\n" +
                           "2. 在「拓展」→「生成绑定模板」中选择资源加载器类型\n" +
                           "3. 点击「生成扩展代码」按钮");
-            await UniTask.Yield();
-            return null;
+                await UniTask.Yield();
+                return null;
+            }
+
+            string panelName = typeof(T).Name;
+            EUUIPackageType packageType = GetPanelPackageType<T>();
+            string prefabPath = Config.GetPrefabPath(panelName, packageType);
+
+            return await _panelPrefabLoader(prefabPath, packageType == EUUIPackageType.Remote, panelName);
         }
-#endif
     }
 }

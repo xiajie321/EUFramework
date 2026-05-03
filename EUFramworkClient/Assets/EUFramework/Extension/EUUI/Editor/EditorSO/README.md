@@ -14,7 +14,7 @@ EUUI 编辑器使用的 ScriptableObject 类型、配置资产和路径管理。
 
 | 文件 | 分类 | 说明 |
 |---|---|---|
-| `Config/EUUIEditorConfig.asset` | 用户配置 | 编辑器全局配置，存储分辨率、UI 场景路径、Prefab 路径、图集路径等 |
+| `Config/EUUIEditorConfig.asset` | 用户配置 | 编辑器全局配置，存储分辨率、UI 场景路径、Prefab 路径等 |
 | `Config/EUUITemplateConfig.asset` | 用户配置 | 模板与代码生成配置，记录命名空间、架构集成、输出目录和扩展模板启用状态 |
 | `Cache/EUUITemplateRegistry.asset` | 生成缓存 | 模板注册表，由工具扫描 `Templates/Sbn` 自动生成或刷新 |
 | `Workspace/EUHotboxConfig.asset` | 工作区配置 | Hotbox 功能编排配置，存储快捷操作区域和条目布局 |

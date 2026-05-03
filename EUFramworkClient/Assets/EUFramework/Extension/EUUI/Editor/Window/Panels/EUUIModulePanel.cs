@@ -144,9 +144,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 AssetDatabase.StartAssetEditing();
                 try
                 {
-                    foreach (var dir in new[] {
-                        EUUIAsmdefHelper.GetPanelBaseOutputDirectory(),
-                        EUUIAsmdefHelper.GetUIKitOutputDirectory() })
+                    foreach (var dir in new[] { EUUIAsmdefHelper.GetStaticGeneratedOutputDirectory() })
                     {
                         if (string.IsNullOrEmpty(dir)) continue;
                         string full = Path.GetFullPath(
@@ -175,7 +173,6 @@ namespace EUFramework.Extension.EUUI.Editor
                 }
 
                 EUUIAsmdefHelper.RecalculateFromGeneratedFiles();
-                EUUIAsmdefHelper.SetExtensionsGeneratedDefine(false);
 
                 EditorUtility.DisplayDialog("完成",
                     $"已删除 {count} 个生成文件及所有 EUUI SO 配置，程序集引用已重置。", "确定");
@@ -197,9 +194,7 @@ namespace EUFramework.Extension.EUUI.Editor
         {
             string templateId = Path.GetFileNameWithoutExtension(Path.GetFileName(sbnAssetPath));
 
-            string outDir = templateId.StartsWith("EUUIKit", StringComparison.OrdinalIgnoreCase)
-                ? EUUIAsmdefHelper.GetUIKitOutputDirectory()
-                : EUUIAsmdefHelper.GetPanelBaseOutputDirectory();
+            string outDir = EUUIAsmdefHelper.GetStaticGeneratedOutputDirectory();
 
             if (string.IsNullOrEmpty(outDir))
                 throw new InvalidOperationException($"无法确定模板 [{templateId}] 的输出目录");

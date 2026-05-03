@@ -1,8 +1,8 @@
 {
   "name": "com.eu.ui",
   "displayName": "EU UI管理器",
-  "version": "1.0.4",
-  "description": "修改Json读取，重构EU Editor架构",
+  "version": "1.0.5",
+  "description": "去除EUUI中冗余功能",
   "author": "Cai_JH",
   "category": "工具"
 }

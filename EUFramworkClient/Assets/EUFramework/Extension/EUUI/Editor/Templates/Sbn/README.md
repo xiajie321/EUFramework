@@ -1,16 +1,15 @@
-# Sbn 模板拓展
+# Sbn 模板
 
-EUUI 使用 Scriban 的 `.sbn` 文件生成 C# 代码。用户可以通过「拓展管理 / 模板拓展」创建模板骨架，也可以直接编辑 `Templates/Sbn` 下的 `.sbn` 文件。
+EUUI 使用 Scriban 的 `.sbn` 文件生成 C# 代码。用户可以直接编辑 `Templates/Sbn` 下的 `.sbn` 文件，也可以在 `Static/` 下新增模板。
 
 ## 目录约定
 
 | 目录 | 用途 | 导出方式 |
 |---|---|---|
-| `Static/UIKit/` | 扩展 `EUUIKit` 分部静态类，例如资源加载、输入模块、日志模块 | 在「生成绑定模板」中启用并导出 |
-| `Static/PanelBase/` | 扩展 `EUUIPanelBase` 分部类，例如图片加载、动画辅助、第三方控件适配 | 在「生成绑定模板」中启用并导出 |
+| `Static/` | 静态扩展模板，例如扩展 `EUUIKit`、`EUUIPanelBase` 或生成公共辅助类 | 在「生成绑定模板」中启用并导出 |
 | `WithData/` | 面板绑定代码、MVC 接入等需要面板数据的模板 | 由面板自动绑定导出流程使用 |
 
-用户扩展通常放在 `Static/UIKit/` 或 `Static/PanelBase/`。`WithData/` 属于框架生成流程，不建议作为普通扩展入口。
+用户扩展通常放在 `Static/`。`WithData/` 属于框架生成流程，不建议作为普通扩展入口。
 
 ## 命名约定
 
@@ -23,15 +22,7 @@ EUUI 使用 Scriban 的 `.sbn` 文件生成 C# 代码。用户可以通过「拓
 
 ## 模板变量
 
-「模板拓展」创建器会为新模板注入基础变量：
-
-| 变量 | 说明 |
-|---|---|
-| `{{ extension_name }}` | 扩展名称，例如 `EURes`、`MyLoader` |
-| `{{ creation_time }}` | 创建时间 |
-| `{{ extension_type }}` | 扩展类型，`KitExtension` 或 `PanelExtension` |
-
-导出 `Static/` 模板时，导出器还会读取同名 sidecar JSON 的 `namespaceVariables`，并把对应程序集的 `rootNamespace` 注入模板。例如：
+导出 `Static/` 模板时，导出器会注入基础变量 `extension_name`（从文件名提取扩展名部分），并读取同名 sidecar JSON 的 `namespaceVariables`，把对应程序集的 `rootNamespace` 注入模板。例如：
 
 ```sbn
 using {{ eu_res_namespace }};
@@ -76,7 +67,7 @@ using {{ eu_res_namespace }};
 
 ## 拓展流程
 
-1. 在「拓展管理 / 模板拓展」创建 `.sbn` 骨架，或直接在 `Static/UIKit/`、`Static/PanelBase/` 新建 `.sbn`。
+1. 直接在 `Static/` 新建或编辑 `.sbn`。
 2. 如需额外程序集或动态命名空间，在 `.sbn` 旁创建同名 `.json`。
 3. 在「模板管理」确认模板能被扫描到。
 4. 在「生成绑定模板」勾选需要导出的模板，点击生成。
@@ -84,7 +75,7 @@ using {{ eu_res_namespace }};
 
 ## 编写建议
 
-- `Static/UIKit/` 适合实现 `EUUIKit` 的核心加载入口，例如 `LoadPanelPrefabAsync<T>()` 和 `OnPanelClosed(string panelName)`。
-- `Static/PanelBase/` 适合给面板基类补充通用能力，例如 `SetImage`、`LoadSprite`、动画或第三方控件适配。
+- `EUUIKit.*.sbn` 适合实现 `EUUIKit` 的核心加载入口，例如资源加载器注册和 `OnPanelClosed(string panelName)`。
+- `EUUIPanelBase.*.sbn` 适合给面板基类补充通用能力，例如 `SetImage`、`LoadSprite`、动画或第三方控件适配。
 - 模板中只放通用框架能力，不建议写具体业务面板逻辑。
 - 需要用户项目自行实现的地方保留清晰的 TODO，避免生成不可用但难以定位的代码。

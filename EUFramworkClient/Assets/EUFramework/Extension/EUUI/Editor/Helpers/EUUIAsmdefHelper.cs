@@ -39,6 +39,7 @@ namespace EUFramework.Extension.EUUI.Editor
                     if (!string.IsNullOrEmpty(pair?.key))
                         result[pair.key] = pair.value;
                 }
+
                 return result;
             }
         }
@@ -76,85 +77,8 @@ namespace EUFramework.Extension.EUUI.Editor
             "Unity.InputSystem.ForUI",
             "Unity.RenderPipelines.Universal.Runtime"
         };
-        private static readonly string[] k_EditorBaseRefs  = { "EUUI", "UniTask" };
 
-        // ── 脚本宏 ──────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 设置或移除 EUUI_EXTENSIONS_GENERATED 脚本宏。
-        /// 使用 delayCall 延迟到下一编辑器帧执行，避免在 asset 变更（删除/生成文件）
-        /// 完成之前调用 SetScriptingDefineSymbols 导致 Unity 内部 Assembly 图中存在
-        /// 残留空项，触发 Dictionary.ContainsKey(null) 崩溃。
-        /// </summary>
-        public static void SetExtensionsGeneratedDefine(bool add)
-        {
-            // 延迟到下一帧，确保 Unity 已完成对被删除/新增 asset 的 assembly 重建
-            EditorApplication.delayCall += () => ApplyDefineImmediate(add);
-        }
-
-        /// <summary>
-        /// 根据 UIKit 生成目录下是否仍存在 .Generated.cs，同步 EUUI_EXTENSIONS_GENERATED 宏。
-        /// </summary>
-        public static void SyncExtensionsGeneratedDefine()
-        {
-            SetExtensionsGeneratedDefine(HasAnyUIKitGeneratedFile());
-        }
-
-        /// <summary>
-        /// 检查 UIKit 生成目录下是否还存在任何 .Generated.cs 文件。
-        /// </summary>
-        public static bool HasAnyUIKitGeneratedFile()
-        {
-            string uikitDir = GetUIKitOutputDirectory();
-            if (string.IsNullOrEmpty(uikitDir)) return false;
-            string full = Path.GetFullPath(
-                Path.Combine(Path.GetDirectoryName(Application.dataPath), uikitDir));
-            if (!Directory.Exists(full)) return false;
-            return Directory.GetFiles(full, "*.Generated.cs", SearchOption.TopDirectoryOnly).Length > 0;
-        }
-
-        private static void ApplyDefineImmediate(bool add)
-        {
-            const string define = "EUUI_EXTENSIONS_GENERATED";
-
-            var targets = new[]
-            {
-                UnityEditor.Build.NamedBuildTarget.Standalone,
-                UnityEditor.Build.NamedBuildTarget.Android,
-                UnityEditor.Build.NamedBuildTarget.iOS,
-                UnityEditor.Build.NamedBuildTarget.WebGL,
-                UnityEditor.Build.NamedBuildTarget.WindowsStoreApps,
-                UnityEditor.Build.NamedBuildTarget.tvOS,
-                UnityEditor.Build.NamedBuildTarget.NintendoSwitch,
-                UnityEditor.Build.NamedBuildTarget.Server,
-            };
-
-            foreach (var target in targets)
-            {
-                try
-                {
-                    string defines = PlayerSettings.GetScriptingDefineSymbols(target);
-                    if (add)
-                    {
-                        if (defines.IndexOf(define, StringComparison.Ordinal) >= 0) continue;
-                        if (defines.Length > 0) defines += ";";
-                        defines += define;
-                    }
-                    else
-                    {
-                        var list = new List<string>(
-                            defines.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries));
-                        if (!list.Remove(define)) continue;
-                        defines = string.Join(";", list);
-                    }
-                    PlayerSettings.SetScriptingDefineSymbols(target, defines);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[EUUI] 设置脚本宏 {define} 失败 ({target}): {e.Message}");
-                }
-            }
-        }
+        private static readonly string[] k_EditorBaseRefs = { "EUUI", "UniTask" };
 
         // ── 单条 reference 增/删 ─────────────────────────────────────────────────
 
@@ -179,7 +103,7 @@ namespace EUFramework.Extension.EUUI.Editor
             var refs = asmdef.references ?? new List<string>();
             bool hasRef = refs.Any(r => string.Equals(r, assemblyName, StringComparison.OrdinalIgnoreCase));
 
-            if (add && hasRef)   return;
+            if (add && hasRef) return;
             if (!add && !hasRef) return;
 
             if (add)
@@ -213,7 +137,7 @@ namespace EUFramework.Extension.EUUI.Editor
             var sbnPaths = CollectActiveSbnPaths();
 
             var runtimeRequired = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var editorRequired  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var editorRequired = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var sbn in sbnPaths)
             {
@@ -224,8 +148,8 @@ namespace EUFramework.Extension.EUUI.Editor
             }
 
             // 直接写文件，不调用 ImportAsset；延迟一帧再 Refresh 让 Unity 重新编译
-            RewriteAsmdefReferences("EUUI.asmdef",        k_RuntimeBaseRefs, runtimeRequired);
-            RewriteAsmdefReferences("EUUI.Editor.asmdef", k_EditorBaseRefs,  editorRequired);
+            RewriteAsmdefReferences("EUUI.asmdef", k_RuntimeBaseRefs, runtimeRequired);
+            RewriteAsmdefReferences("EUUI.Editor.asmdef", k_EditorBaseRefs, editorRequired);
             EditorApplication.delayCall += AssetDatabase.Refresh;
         }
 
@@ -271,8 +195,12 @@ namespace EUFramework.Extension.EUUI.Editor
                     if (!string.IsNullOrEmpty(name) && name.Equals(assemblyName, StringComparison.OrdinalIgnoreCase))
                         return true;
                 }
-                catch { /* 读取失败时跳过 */ }
+                catch
+                {
+                    /* 读取失败时跳过 */
+                }
             }
+
             return false;
         }
 
@@ -292,6 +220,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 if (Path.GetFileName(p).Equals(asmdefFileName, StringComparison.OrdinalIgnoreCase))
                     return p;
             }
+
             return null;
         }
 
@@ -310,25 +239,27 @@ namespace EUFramework.Extension.EUUI.Editor
                 Path.Combine(Path.GetDirectoryName(Application.dataPath),
                     $"{editorDir}/Templates/Sbn/Static"));
 
-            foreach (var outDir in new[] { GetPanelBaseOutputDirectory(), GetUIKitOutputDirectory() })
+            string outDir = GetStaticGeneratedOutputDirectory();
+            if (!string.IsNullOrEmpty(outDir))
             {
-                if (string.IsNullOrEmpty(outDir)) continue;
                 string outFull = Path.GetFullPath(
                     Path.Combine(Path.GetDirectoryName(Application.dataPath), outDir));
-                if (!Directory.Exists(outFull)) continue;
-
-                foreach (var genFile in Directory.GetFiles(outFull, "*.Generated.cs", SearchOption.TopDirectoryOnly))
+                if (Directory.Exists(outFull))
                 {
-                    string baseName = Path.GetFileName(genFile)
-                        .Replace(".Generated.cs", ".sbn", StringComparison.OrdinalIgnoreCase);
-
-                    if (Directory.Exists(staticDir))
+                    foreach (var genFile in Directory.GetFiles(outFull, "*.Generated.cs", SearchOption.TopDirectoryOnly))
                     {
-                        foreach (var sbn in Directory.GetFiles(staticDir, baseName, SearchOption.AllDirectories))
-                            sbnPaths.Add(ToAssetPath(sbn));
+                        string baseName = Path.GetFileName(genFile)
+                            .Replace(".Generated.cs", ".sbn", StringComparison.OrdinalIgnoreCase);
+
+                        if (Directory.Exists(staticDir))
+                        {
+                            foreach (var sbn in Directory.GetFiles(staticDir, baseName, SearchOption.AllDirectories))
+                                sbnPaths.Add(ToAssetPath(sbn));
+                        }
                     }
                 }
             }
+
             return sbnPaths;
         }
 
@@ -354,7 +285,7 @@ namespace EUFramework.Extension.EUUI.Editor
         {
             var config = ReadSidecarConfig(sbnAssetPath);
             return config?.GetNamespaceVariables()
-                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                   ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -376,14 +307,17 @@ namespace EUFramework.Extension.EUUI.Editor
             {
                 return ReadAsmdef(fullPath).rootNamespace ?? string.Empty;
             }
-            catch { return string.Empty; }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private static SidecarConfig ReadSidecarConfig(string sbnAssetPath)
         {
             if (string.IsNullOrEmpty(sbnAssetPath)) return null;
 
-            string sbnFull  = Path.GetFullPath(
+            string sbnFull = Path.GetFullPath(
                 Path.Combine(Path.GetDirectoryName(Application.dataPath), sbnAssetPath));
             string jsonFull = Path.ChangeExtension(sbnFull, ".json");
             if (!File.Exists(jsonFull)) return null;
@@ -429,22 +363,13 @@ namespace EUFramework.Extension.EUUI.Editor
 
         // ── 输出目录定位（与 EUUIExtensionPanel 共享逻辑）──────────────────────
 
-        internal static string GetPanelBaseOutputDirectory()
+        internal static string GetStaticGeneratedOutputDirectory()
         {
-            string scriptPath = FindScriptExact("EUUIPanelBase");
+            string scriptPath = FindScriptExact("EUUIInterface");
             if (string.IsNullOrEmpty(scriptPath)) return null;
-            string scriptDir   = Path.GetDirectoryName(scriptPath)?.Replace("\\", "/");
-            string generateDir = Path.Combine(scriptDir, "Generate", "PanelBase").Replace("\\", "/");
-            EnsureDirectory(generateDir);
-            return generateDir;
-        }
-
-        internal static string GetUIKitOutputDirectory()
-        {
-            string scriptPath = FindScriptExact("EUUIKit");
-            if (string.IsNullOrEmpty(scriptPath)) return null;
-            string scriptDir   = Path.GetDirectoryName(scriptPath)?.Replace("\\", "/");
-            string generateDir = Path.Combine(scriptDir, "Generate", "UIKit").Replace("\\", "/");
+            string scriptDir = Path.GetDirectoryName(scriptPath)?.Replace("\\", "/");
+            string scriptRoot = Path.GetDirectoryName(scriptDir)?.Replace("\\", "/");
+            string generateDir = Path.Combine(scriptRoot, "Generate", "Static").Replace("\\", "/");
             EnsureDirectory(generateDir);
             return generateDir;
         }
@@ -463,6 +388,7 @@ namespace EUFramework.Extension.EUUI.Editor
                 if (Path.GetFileNameWithoutExtension(path) == scriptName)
                     return path;
             }
+
             return null;
         }
 
